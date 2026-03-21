@@ -44,12 +44,16 @@ export default async function HomePage() {
           })}
         </p>
         <h1 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">
-          {hasData
-            ? "오늘 가장 많이 떨어진 아파트는?"
-            : "부동산 실거래가 & 금리 대시보드"}
+          {drops && drops.length > 0
+            ? `${drops[0].apt_name} ${Math.abs(drops[0].change_rate)}% 하락`
+            : hasData
+              ? "오늘 가장 많이 떨어진 아파트는?"
+              : "부동산 실거래가 & 금리 대시보드"}
         </h1>
         <p className="mt-2 text-gray-400">
-          매일 자동 업데이트되는 아파트 폭락/신고가 랭킹과 금리 변동 정보
+          {drops && drops.length > 0
+            ? `최고가 ${formatPrice(drops[0].highest_price)} → ${formatPrice(drops[0].trade_price)} | 매일 자동 업데이트`
+            : "매일 자동 업데이트되는 아파트 폭락/신고가 랭킹과 금리 변동 정보"}
         </p>
       </section>
 
@@ -68,6 +72,7 @@ export default async function HomePage() {
                   <TransactionCard
                     key={t.id}
                     rank={i + 1}
+                    regionCode={t.region_code}
                     regionName={t.region_name}
                     aptName={t.apt_name}
                     sizeSqm={t.size_sqm}
@@ -82,6 +87,19 @@ export default async function HomePage() {
             ) : (
               <EmptyState message="아직 수집된 폭락 거래 데이터가 없습니다." />
             )}
+
+            {/* 내 아파트 검색 CTA */}
+            <div className="mt-4 rounded-xl bg-gray-100 p-4 text-center">
+              <p className="text-sm text-gray-600">
+                내가 보는 아파트는 얼마나 떨어졌을까?
+              </p>
+              <Link
+                href="/rate/calculator"
+                className="mt-2 inline-block rounded-lg bg-gray-900 px-6 py-2 text-sm font-bold text-white transition hover:bg-gray-800"
+              >
+                내 대출이자 계산하기
+              </Link>
+            </div>
           </section>
 
           {/* 신고가 TOP 5 */}
@@ -96,6 +114,7 @@ export default async function HomePage() {
                   <TransactionCard
                     key={t.id}
                     rank={i + 1}
+                    regionCode={t.region_code}
                     regionName={t.region_name}
                     aptName={t.apt_name}
                     sizeSqm={t.size_sqm}
@@ -158,6 +177,7 @@ export default async function HomePage() {
 
 function TransactionCard({
   rank,
+  regionCode,
   regionName,
   aptName,
   sizeSqm,
@@ -168,6 +188,7 @@ function TransactionCard({
   type,
 }: {
   rank: number;
+  regionCode: string;
   regionName: string;
   aptName: string;
   sizeSqm: number;
@@ -181,9 +202,11 @@ function TransactionCard({
   const rateColor = isDrop ? "text-red-600" : "text-green-600";
   const rateBg = isDrop ? "bg-red-50" : "bg-green-50";
   const arrow = isDrop ? "▼" : "▲";
+  const slug = `${regionCode}-${aptName.replace(/[^가-힣a-zA-Z0-9]/g, "-").replace(/-+/g, "-").toLowerCase()}`;
 
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md">
+    <Link href={`/apt/${regionCode}/${slug}`} className="block">
+    <div className="flex items-start gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md hover:border-gray-300">
       <div
         className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
           isDrop ? "bg-red-500" : "bg-green-500"
@@ -215,6 +238,7 @@ function TransactionCard({
         <p className="mt-1 text-xs text-gray-300">{tradeDate}</p>
       </div>
     </div>
+    </Link>
   );
 }
 

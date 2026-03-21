@@ -146,19 +146,65 @@ export default function CalculatorPage() {
             />
           </div>
 
-          {/* CPA 영역 */}
-          <div className="mt-6 rounded-xl border-2 border-blue-100 bg-blue-50 p-6 text-center">
-            <p className="text-lg font-bold text-blue-900">
-              더 낮은 금리를 찾고 계신가요?
-            </p>
-            <p className="mt-1 text-sm text-blue-600">
-              주요 은행의 주택담보대출 금리를 비교해 보세요.
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <span className="rounded-full bg-white px-4 py-2 text-sm font-medium text-blue-700 shadow-sm">
-                대출 금리 비교 (준비 중)
-              </span>
+          {/* CPA 퍼널 — 3단계 (수익 핵심) */}
+          <div className="mt-6 space-y-4">
+            {/* 1단계: 감정 자극 */}
+            <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 text-center">
+              <p className="text-xl font-bold text-blue-900">
+                월 {result.comparison.equal_payment.monthlyPayment.toLocaleString()}원, 더 줄일 수 있어요
+              </p>
+              <p className="mt-1 text-sm text-blue-600">
+                금리 0.5%p만 낮춰도 월{" "}
+                {Math.round(
+                  (result.comparison.equal_payment.monthlyPayment -
+                    result.comparison.equal_payment.monthlyPayment * 0.92)
+                ).toLocaleString()}
+                원 절약
+              </p>
             </div>
+
+            {/* 2단계: CPA 링크 */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <a
+                href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_FINDA"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
+              >
+                <div>
+                  <p className="font-bold text-gray-900">핀다</p>
+                  <p className="text-sm text-gray-500">88개 금융사 금리 비교</p>
+                </div>
+                <span className="text-sm font-medium text-blue-600">비교하기 &rarr;</span>
+              </a>
+              <a
+                href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_BANKSALAD"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
+              >
+                <div>
+                  <p className="font-bold text-gray-900">뱅크샐러드</p>
+                  <p className="text-sm text-gray-500">주담대 최저금리 찾기</p>
+                </div>
+                <span className="text-sm font-medium text-blue-600">비교하기 &rarr;</span>
+              </a>
+            </div>
+
+            {/* 3단계: 보조 CPA (낮은 허들) */}
+            <a
+              href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_CREDIT"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-xl border border-gray-100 bg-gray-50 p-4 text-center transition hover:bg-gray-100"
+            >
+              <p className="text-sm text-gray-600">
+                내 신용점수 무료 조회하고 더 낮은 금리 받기
+              </p>
+              <p className="mt-1 text-xs font-medium text-blue-600">
+                무료 조회하기 &rarr;
+              </p>
+            </a>
           </div>
 
           {/* 상환 스케줄 미리보기 */}
