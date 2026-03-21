@@ -29,7 +29,7 @@ export interface ParsedTransaction {
 }
 
 const API_BASE =
-  "http://openapi.molit.go.kr/OpenAPI_ToolInstall498/service/rest/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev";
+  "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev";
 
 /**
  * 특정 지역의 특정 월 실거래가 데이터를 가져옵니다.
