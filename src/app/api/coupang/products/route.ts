@@ -9,12 +9,20 @@ const KEYWORDS: Record<string, string> = {
 };
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const category = searchParams.get("category") ?? "book";
-  const keyword = KEYWORDS[category] ?? KEYWORDS.book;
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "4"), 10);
+  try {
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get("category") ?? "book";
+    const keyword = KEYWORDS[category] ?? KEYWORDS.book;
+    const limit = Math.min(parseInt(searchParams.get("limit") ?? "4"), 10);
 
-  const products = await searchProducts(keyword, limit);
+    const products = await searchProducts(keyword, limit);
 
-  return NextResponse.json({ products });
+    return NextResponse.json({ products });
+  } catch (error) {
+    console.error("Coupang products API error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch products" },
+      { status: 500 }
+    );
+  }
 }
