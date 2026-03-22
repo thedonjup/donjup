@@ -186,7 +186,7 @@ export default function CalculatorPage() {
             onOffsetChange={setRateOffset}
           />
 
-          {/* CPA Funnel */}
+          {/* CPA Funnel - savings info */}
           <div className="mt-6 space-y-3">
             <div className="rounded-2xl border-2 border-brand-200 bg-gradient-to-r from-brand-50 to-white p-6 text-center">
               <p className="text-xl font-extrabold text-brand-900">
@@ -201,47 +201,9 @@ export default function CalculatorPage() {
                 원 절약
               </p>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <a
-                href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_FINDA"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="card-hover flex items-center justify-between rounded-2xl border border-surface-200 bg-white p-4"
-              >
-                <div>
-                  <p className="font-bold text-dark-900">핀다</p>
-                  <p className="text-sm text-gray-500">88개 금융사 금리 비교</p>
-                </div>
-                <span className="text-sm font-semibold text-brand-600">비교하기 &rarr;</span>
-              </a>
-              <a
-                href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_BANKSALAD"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="card-hover flex items-center justify-between rounded-2xl border border-surface-200 bg-white p-4"
-              >
-                <div>
-                  <p className="font-bold text-dark-900">뱅크샐러드</p>
-                  <p className="text-sm text-gray-500">주담대 최저금리 찾기</p>
-                </div>
-                <span className="text-sm font-semibold text-brand-600">비교하기 &rarr;</span>
-              </a>
-            </div>
-
-            <a
-              href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_CREDIT"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block rounded-2xl border border-surface-200 bg-surface-50 p-4 text-center transition hover:bg-surface-100"
-            >
-              <p className="text-sm text-gray-600">
-                내 신용점수 무료 조회하고 더 낮은 금리 받기
-              </p>
-              <p className="mt-1 text-xs font-semibold text-brand-600">
-                무료 조회하기 &rarr;
-              </p>
-            </a>
+            <p className="text-center text-xs text-gray-400">
+              금융사별 금리를 비교해 보세요. 주거래 은행 외에도 더 낮은 금리를 제공하는 곳이 있을 수 있습니다.
+            </p>
           </div>
 
           {/* Coupang Partners */}
