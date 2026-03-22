@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
+import ShareButtons from "@/components/ShareButtons";
 import { formatPrice, RATE_LABELS } from "@/lib/format";
 
 export const revalidate = 0;
@@ -95,7 +96,14 @@ export default async function DailyReportPage({
 
       <div className="mb-8">
         <p className="text-xs font-medium text-brand-600">{report.report_date}</p>
-        <h1 className="mt-1 text-2xl font-extrabold text-dark-900">{report.title}</h1>
+        <div className="mt-1 flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-extrabold text-dark-900">{report.title}</h1>
+          <ShareButtons
+            url={`https://donjup.com/daily/${date}`}
+            title={report.title}
+            description={report.summary}
+          />
+        </div>
         <p className="mt-2 text-sm text-gray-500">{report.summary}</p>
       </div>
 

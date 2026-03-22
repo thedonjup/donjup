@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import React from "react";
 import { Cover } from "./templates/cover";
 import { RankItemCard } from "./templates/rank-item";
-import { Cta } from "./templates/cta";
+import { Cta, type CtaVariant } from "./templates/cta";
 import type { CardType, RankItem } from "./types";
 
 const NOTO_SANS_KR_URL =
@@ -60,8 +60,11 @@ export async function generateCardNews(
     );
   }
 
-  // 3. CTA
-  buffers.push(await renderToBuffer(React.createElement(Cta)));
+  // 3. CTA (날짜 기반 A/B/C/D 로테이션)
+  const variants: CtaVariant[] = ["A", "B", "C", "D"];
+  const hash = date.split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  const variant = variants[hash % variants.length];
+  buffers.push(await renderToBuffer(React.createElement(Cta, { variant })));
 
   return buffers;
 }

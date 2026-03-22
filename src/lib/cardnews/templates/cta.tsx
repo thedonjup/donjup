@@ -1,6 +1,33 @@
 import { colors } from "../colors";
 
-export function Cta() {
+export type CtaVariant = "A" | "B" | "C" | "D";
+
+const CTA_VARIANTS: Record<CtaVariant, { headline: string; cta: string; sub: string }> = {
+  A: {
+    headline: "이 동네 사는 친구한테\n보내줘",
+    cta: "@donjupkr",
+    sub: "친구 태그하고 같이 확인해봐",
+  },
+  B: {
+    headline: "내가 보는 아파트는\n얼마나 빠졌을까?",
+    cta: "donjup.com",
+    sub: "폭락 · 신고가 · 금리 · 거래량 한눈에",
+  },
+  C: {
+    headline: "저장해두면 나중에\n비교하기 좋아요",
+    cta: "@donjupkr",
+    sub: "매일 업데이트되는 실거래가 랭킹",
+  },
+  D: {
+    headline: "주변에 영끌한 친구 있으면\n공유해줘",
+    cta: "donjup.com",
+    sub: "최고가 대비 하락률 실시간 추적",
+  },
+};
+
+export function Cta({ variant = "B" }: { variant?: CtaVariant }) {
+  const v = CTA_VARIANTS[variant];
+
   return (
     <div
       style={{
@@ -24,7 +51,7 @@ export function Cta() {
           marginBottom: "32px",
         }}
       >
-        더 많은 부동산 데이터가{"\n"}궁금하다면?
+        {v.headline}
       </div>
 
       <div
@@ -54,7 +81,7 @@ export function Cta() {
             color: colors.textWhite,
           }}
         >
-          donjup.com
+          {v.cta}
         </div>
       </div>
 
@@ -65,7 +92,7 @@ export function Cta() {
           marginBottom: "48px",
         }}
       >
-        폭락 · 신고가 · 금리 · 거래량 한눈에
+        {v.sub}
       </div>
 
       <div

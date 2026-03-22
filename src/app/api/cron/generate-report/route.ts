@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import webpush from "web-push";
 
 export const maxDuration = 60;
 
@@ -97,6 +98,55 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
+    // 웹 푸시 알림 발송
+    let pushSent = 0;
+    if (
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
+      process.env.VAPID_PRIVATE_KEY
+    ) {
+      webpush.setVapidDetails(
+        "mailto:admin@donjup.com",
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+      );
+
+      const { data: subs } = await supabase
+        .from("push_subscriptions")
+        .select("endpoint,p256dh,auth");
+
+      if (subs && subs.length > 0) {
+        const payload = JSON.stringify({
+          title: `오늘의 폭락 아파트: ${topDrop?.apt_name ?? "확인하기"}`,
+          body: summary,
+          url: `/daily/${today}`,
+        });
+
+        const results = await Promise.allSettled(
+          subs.map((sub) =>
+            webpush
+              .sendNotification(
+                {
+                  endpoint: sub.endpoint,
+                  keys: { p256dh: sub.p256dh, auth: sub.auth },
+                },
+                payload
+              )
+              .catch(async (err) => {
+                if (err.statusCode === 410 || err.statusCode === 404) {
+                  await supabase
+                    .from("push_subscriptions")
+                    .delete()
+                    .eq("endpoint", sub.endpoint);
+                }
+                throw err;
+              })
+          )
+        );
+
+        pushSent = results.filter((r) => r.status === "fulfilled").length;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       reportDate: today,
@@ -106,6 +156,7 @@ export async function GET(request: Request) {
         highs: topHighs?.length ?? 0,
         rates: rateSummary.length,
         volumeRegions: volumeSummary.length,
+        pushSent,
       },
     });
   } catch (e) {

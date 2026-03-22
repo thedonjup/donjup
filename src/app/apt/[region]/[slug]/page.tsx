@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
+import ShareButtons from "@/components/ShareButtons";
 import { formatPrice } from "@/lib/format";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChartWrapper";
 
@@ -50,7 +51,7 @@ export default async function AptDetailPage({
 }: {
   params: Promise<{ region: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, region } = await params;
   const supabase = await createClient();
 
   const { data: complex } = await supabase
@@ -116,9 +117,16 @@ export default async function AptDetailPage({
 
       {/* 단지 헤더 */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-          <h1 className="text-2xl font-extrabold t-text">{complex.apt_name}</h1>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
+            <h1 className="text-2xl font-extrabold t-text">{complex.apt_name}</h1>
+          </div>
+          <ShareButtons
+            url={`https://donjup.com/apt/${region}/${slug}`}
+            title={`${complex.apt_name} 실거래가`}
+            description={`${complex.apt_name} 최근 거래가 ${formatPrice(latestPrice)} | 돈줍`}
+          />
         </div>
         <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
           {complex.region_name} {complex.dong_name ?? ""}

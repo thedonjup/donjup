@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 import MobileNav, { ThemeToggle } from "@/components/layout/MobileNav";
+import PushPrompt from "@/components/PushPrompt";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://donjup.com"),
@@ -73,6 +74,7 @@ export default function RootLayout({
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
+          <PushPrompt />
         </ThemeProvider>
       </body>
     </html>
