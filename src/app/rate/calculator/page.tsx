@@ -35,7 +35,7 @@ export default function CalculatorPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          principal: principalNum * 10000, // 만원 → 원
+          principal: principalNum * 10000,
           rate: parseFloat(rate),
           years: parseInt(years),
         }),
@@ -51,16 +51,19 @@ export default function CalculatorPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-bold">대출 이자 계산기</h1>
-      <p className="mt-1 text-sm text-gray-500">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
+        <h1 className="text-2xl font-extrabold text-dark-900">대출 이자 계산기</h1>
+      </div>
+      <p className="text-sm text-gray-500">
         주택담보대출 이자를 상환 방식별로 비교해 보세요.
       </p>
 
-      {/* 입력 폼 */}
-      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6">
+      {/* Input Form */}
+      <div className="mt-6 rounded-2xl border border-surface-200 bg-white p-6">
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-dark-900">
               대출 원금 (만원)
             </label>
             <input
@@ -72,7 +75,7 @@ export default function CalculatorPage() {
                 setPrincipal(raw ? parseInt(raw).toLocaleString() : "");
               }}
               placeholder="30,000"
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1.5 block w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 text-lg font-bold tabular-nums text-dark-900 placeholder:text-gray-300 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
             {principal && (
               <p className="mt-1 text-xs text-gray-400">
@@ -81,7 +84,7 @@ export default function CalculatorPage() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-dark-900">
               연 금리 (%)
             </label>
             <input
@@ -89,17 +92,17 @@ export default function CalculatorPage() {
               step="0.01"
               value={rate}
               onChange={(e) => setRate(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1.5 block w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 text-lg font-bold tabular-nums text-dark-900 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              상환 기간 (년)
+            <label className="block text-sm font-medium text-dark-900">
+              상환 기간
             </label>
             <select
               value={years}
               onChange={(e) => setYears(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-lg font-semibold focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1.5 block w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 text-lg font-bold text-dark-900 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             >
               {[10, 15, 20, 25, 30, 35, 40].map((y) => (
                 <option key={y} value={y}>
@@ -112,16 +115,16 @@ export default function CalculatorPage() {
         <button
           onClick={handleCalculate}
           disabled={loading || !principal}
-          className="mt-4 w-full rounded-lg bg-blue-600 py-3 text-lg font-bold text-white transition hover:bg-blue-700 disabled:bg-gray-300"
+          className="mt-5 w-full rounded-xl bg-brand-600 py-3.5 text-lg font-bold text-white transition hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400"
         >
           {loading ? "계산 중..." : "계산하기"}
         </button>
       </div>
 
-      {/* 결과 */}
+      {/* Results */}
       {result && (
         <>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <ResultCard
               title="원리금균등"
               description="매월 같은 금액 상환"
@@ -143,7 +146,7 @@ export default function CalculatorPage() {
             />
           </div>
 
-          {/* 금리 시나리오 슬라이더 */}
+          {/* Rate Scenario Slider */}
           <RateScenarioSlider
             principal={result.input.principal}
             rate={result.input.rate}
@@ -153,94 +156,91 @@ export default function CalculatorPage() {
             onOffsetChange={setRateOffset}
           />
 
-          {/* CPA 퍼널 — 3단계 (수익 핵심) */}
-          <div className="mt-6 space-y-4">
-            {/* 1단계: 감정 자극 */}
-            <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 text-center">
-              <p className="text-xl font-bold text-blue-900">
+          {/* CPA Funnel */}
+          <div className="mt-6 space-y-3">
+            <div className="rounded-2xl border-2 border-brand-200 bg-gradient-to-r from-brand-50 to-white p-6 text-center">
+              <p className="text-xl font-extrabold text-brand-900">
                 월 {result.comparison.equal_payment.monthlyPayment.toLocaleString()}원, 더 줄일 수 있어요
               </p>
-              <p className="mt-1 text-sm text-blue-600">
+              <p className="mt-1 text-sm text-brand-600">
                 금리 0.5%p만 낮춰도 월{" "}
                 {Math.round(
-                  (result.comparison.equal_payment.monthlyPayment -
-                    result.comparison.equal_payment.monthlyPayment * 0.92)
+                  result.comparison.equal_payment.monthlyPayment -
+                    result.comparison.equal_payment.monthlyPayment * 0.92
                 ).toLocaleString()}
                 원 절약
               </p>
             </div>
 
-            {/* 2단계: CPA 링크 */}
             <div className="grid gap-3 sm:grid-cols-2">
               <a
                 href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_FINDA"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
+                className="card-hover flex items-center justify-between rounded-2xl border border-surface-200 bg-white p-4"
               >
                 <div>
-                  <p className="font-bold text-gray-900">핀다</p>
+                  <p className="font-bold text-dark-900">핀다</p>
                   <p className="text-sm text-gray-500">88개 금융사 금리 비교</p>
                 </div>
-                <span className="text-sm font-medium text-blue-600">비교하기 &rarr;</span>
+                <span className="text-sm font-semibold text-brand-600">비교하기 &rarr;</span>
               </a>
               <a
                 href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_BANKSALAD"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
+                className="card-hover flex items-center justify-between rounded-2xl border border-surface-200 bg-white p-4"
               >
                 <div>
-                  <p className="font-bold text-gray-900">뱅크샐러드</p>
+                  <p className="font-bold text-dark-900">뱅크샐러드</p>
                   <p className="text-sm text-gray-500">주담대 최저금리 찾기</p>
                 </div>
-                <span className="text-sm font-medium text-blue-600">비교하기 &rarr;</span>
+                <span className="text-sm font-semibold text-brand-600">비교하기 &rarr;</span>
               </a>
             </div>
 
-            {/* 3단계: 보조 CPA (낮은 허들) */}
             <a
               href="https://link.tenping.kr/redirect?campaignId=PLACEHOLDER_CREDIT"
               target="_blank"
               rel="noopener noreferrer"
-              className="block rounded-xl border border-gray-100 bg-gray-50 p-4 text-center transition hover:bg-gray-100"
+              className="block rounded-2xl border border-surface-200 bg-surface-50 p-4 text-center transition hover:bg-surface-100"
             >
               <p className="text-sm text-gray-600">
                 내 신용점수 무료 조회하고 더 낮은 금리 받기
               </p>
-              <p className="mt-1 text-xs font-medium text-blue-600">
+              <p className="mt-1 text-xs font-semibold text-brand-600">
                 무료 조회하기 &rarr;
               </p>
             </a>
           </div>
 
-          {/* 상환 스케줄 미리보기 */}
+          {/* Schedule Preview */}
           {result.schedule_preview && result.schedule_preview.length > 0 && (
             <div className="mt-8">
-              <h2 className="mb-3 text-lg font-bold">
+              <h2 className="mb-3 text-lg font-bold text-dark-900">
                 월별 상환 스케줄 (원리금균등, 12개월)
               </h2>
-              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+              <div className="overflow-x-auto rounded-2xl border border-surface-200 bg-white">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50 text-left text-xs text-gray-500">
-                      <th className="px-4 py-2">회차</th>
-                      <th className="px-4 py-2 text-right">원금</th>
-                      <th className="px-4 py-2 text-right">이자</th>
-                      <th className="px-4 py-2 text-right">잔금</th>
+                    <tr className="border-b bg-surface-50 text-left text-xs text-gray-500">
+                      <th className="px-4 py-3">회차</th>
+                      <th className="px-4 py-3 text-right">원금</th>
+                      <th className="px-4 py-3 text-right">이자</th>
+                      <th className="px-4 py-3 text-right">잔금</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.schedule_preview.map((row) => (
-                      <tr key={row.month} className="border-b last:border-0">
-                        <td className="px-4 py-2">{row.month}개월</td>
-                        <td className="px-4 py-2 text-right">
+                      <tr key={row.month} className="border-b border-surface-100 last:border-0">
+                        <td className="px-4 py-2.5 text-dark-900">{row.month}개월</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-medium">
                           {row.principal.toLocaleString()}원
                         </td>
-                        <td className="px-4 py-2 text-right text-red-500">
+                        <td className="px-4 py-2.5 text-right tabular-nums font-medium text-drop">
                           {row.interest.toLocaleString()}원
                         </td>
-                        <td className="px-4 py-2 text-right text-gray-500">
+                        <td className="px-4 py-2.5 text-right tabular-nums text-gray-500">
                           {row.balance.toLocaleString()}원
                         </td>
                       </tr>
@@ -283,8 +283,8 @@ function RateScenarioSlider({
   const diff = newMonthly - currentMonthly;
 
   return (
-    <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
-      <h2 className="text-lg font-bold">금리가 바뀌면?</h2>
+    <div className="mt-6 rounded-2xl border border-surface-200 bg-white p-6">
+      <h2 className="text-lg font-bold text-dark-900">금리가 바뀌면?</h2>
       <p className="mt-1 text-sm text-gray-500">
         슬라이더를 움직여 금리 변동에 따른 월 상환액 변화를 확인하세요
       </p>
@@ -297,7 +297,7 @@ function RateScenarioSlider({
           step={0.25}
           value={rateOffset}
           onChange={(e) => onOffsetChange(parseFloat(e.target.value))}
-          className="w-full accent-blue-600"
+          className="w-full accent-brand-600"
         />
         <div className="mt-1 flex justify-between text-xs text-gray-400">
           <span>-2.0%p</span>
@@ -306,20 +306,20 @@ function RateScenarioSlider({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">현재 금리</p>
-          <p className="mt-1 text-lg font-bold">{rate.toFixed(2)}%</p>
+      <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+        <div className="rounded-xl bg-surface-50 p-3">
+          <p className="text-[11px] text-gray-500">현재 금리</p>
+          <p className="mt-1 text-lg font-bold tabular-nums text-dark-900">{rate.toFixed(2)}%</p>
         </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">변경 후 금리</p>
-          <p className="mt-1 text-lg font-bold">{newRate.toFixed(2)}%</p>
+        <div className="rounded-xl bg-surface-50 p-3">
+          <p className="text-[11px] text-gray-500">변경 후</p>
+          <p className="mt-1 text-lg font-bold tabular-nums text-dark-900">{newRate.toFixed(2)}%</p>
         </div>
-        <div className="rounded-lg bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">월 상환액 차이</p>
+        <div className="rounded-xl bg-surface-50 p-3">
+          <p className="text-[11px] text-gray-500">월 상환액 차이</p>
           <p
-            className={`mt-1 text-lg font-bold ${
-              diff > 0 ? "text-red-500" : diff < 0 ? "text-blue-500" : "text-gray-700"
+            className={`mt-1 text-lg font-bold tabular-nums ${
+              diff > 0 ? "text-drop" : diff < 0 ? "text-brand-600" : "text-dark-900"
             }`}
           >
             {diff > 0 ? "+" : ""}
@@ -330,8 +330,8 @@ function RateScenarioSlider({
 
       {rateOffset !== 0 && (
         <p
-          className={`mt-3 text-center text-sm font-medium ${
-            diff < 0 ? "text-blue-600" : "text-red-600"
+          className={`mt-3 text-center text-sm font-semibold ${
+            diff < 0 ? "text-brand-600" : "text-drop"
           }`}
         >
           {diff < 0
@@ -358,17 +358,17 @@ function ResultCard({
 }) {
   return (
     <div
-      className={`rounded-xl border p-5 ${
+      className={`rounded-2xl border p-5 ${
         highlight
-          ? "border-blue-200 bg-blue-50"
-          : "border-gray-200 bg-white"
+          ? "border-brand-200 bg-gradient-to-br from-brand-50 to-white"
+          : "border-surface-200 bg-white"
       }`}
     >
-      <p className="text-sm font-medium text-gray-500">{title}</p>
+      <p className={`text-sm font-semibold ${highlight ? "text-brand-700" : "text-gray-500"}`}>{title}</p>
       <p className="text-xs text-gray-400">{description}</p>
-      <p className="mt-3 text-2xl font-bold">
+      <p className="mt-3 text-2xl font-extrabold tabular-nums text-dark-900">
         {monthlyPayment.toLocaleString()}
-        <span className="text-sm font-normal text-gray-400">원/월</span>
+        <span className="ml-0.5 text-sm font-normal text-gray-400">원/월</span>
       </p>
       <p className="mt-1 text-xs text-gray-400">
         총 이자: {totalInterest.toLocaleString()}원

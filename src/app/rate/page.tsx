@@ -31,14 +31,12 @@ const RATE_ORDER = ["BASE_RATE", "COFIX_NEW", "COFIX_BAL", "CD_91", "TREASURY_3Y
 export default async function RateDashboardPage() {
   const supabase = await createClient();
 
-  // 각 타입별 최신 금리 + 최근 6개월 히스토리
   const { data: allRates } = await supabase
     .from("finance_rates")
     .select("*")
     .order("base_date", { ascending: false })
     .limit(100);
 
-  // 타입별 최신 1건
   const latestByType = new Map<string, {
     rate_type: string;
     rate_value: number;
@@ -47,7 +45,6 @@ export default async function RateDashboardPage() {
     base_date: string;
   }>();
 
-  // 타입별 히스토리
   const historyByType = new Map<string, Array<{ date: string; value: number }>>();
 
   for (const r of allRates ?? []) {
@@ -64,23 +61,24 @@ export default async function RateDashboardPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold">금리 현황</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
+          <h1 className="text-2xl font-extrabold text-dark-900">금리 현황</h1>
+        </div>
+        <p className="text-sm text-gray-500">
           주택담보대출과 관련된 주요 금리 지표를 한눈에 확인하세요.
         </p>
       </div>
 
       {hasData ? (
         <>
-          {/* 주요 금리 카드 그리드 */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {RATE_ORDER.map((type) => {
               const rate = latestByType.get(type);
               if (!rate) return null;
               return (
                 <RateDetailCard
                   key={type}
-                  rateType={type}
                   label={RATE_LABELS[type] ?? type}
                   description={RATE_DESCRIPTIONS[type] ?? ""}
                   value={rate.rate_value}
@@ -94,13 +92,12 @@ export default async function RateDashboardPage() {
 
           <AdSlot slotId="rate-mid-banner" format="banner" />
 
-          {/* 금리 변동 타임라인 */}
           <section className="mt-10">
-            <h2 className="mb-4 text-lg font-bold">최근 금리 변동 이력</h2>
-            <div className="rounded-xl border border-gray-200 bg-white overflow-x-auto">
+            <h2 className="mb-4 text-lg font-bold text-dark-900">최근 금리 변동 이력</h2>
+            <div className="rounded-2xl border border-surface-200 bg-white overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-gray-50 text-left text-xs text-gray-500">
+                  <tr className="border-b bg-surface-50 text-left text-xs text-gray-500">
                     <th className="px-4 py-3">지표</th>
                     <th className="px-4 py-3 text-right">현재</th>
                     <th className="px-4 py-3 text-right">이전</th>
@@ -113,14 +110,14 @@ export default async function RateDashboardPage() {
                     const rate = latestByType.get(type);
                     if (!rate) return null;
                     return (
-                      <tr key={type} className="border-b last:border-0">
-                        <td className="px-4 py-3 font-medium">
+                      <tr key={type} className="border-b border-surface-100 last:border-0">
+                        <td className="px-4 py-3 font-medium text-dark-900">
                           {RATE_LABELS[type]}
                         </td>
-                        <td className="px-4 py-3 text-right font-bold">
+                        <td className="px-4 py-3 text-right font-bold tabular-nums">
                           {rate.rate_value}%
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-400">
+                        <td className="px-4 py-3 text-right text-gray-400 tabular-nums">
                           {rate.prev_value !== null ? `${rate.prev_value}%` : "-"}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -128,8 +125,8 @@ export default async function RateDashboardPage() {
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
                                 rate.change_bp > 0
-                                  ? "bg-red-50 text-red-600"
-                                  : "bg-blue-50 text-blue-600"
+                                  ? "bg-drop-bg text-drop"
+                                  : "bg-rise-bg text-rise"
                               }`}
                             >
                               {rate.change_bp > 0 ? "▲" : "▼"}{" "}
@@ -151,35 +148,41 @@ export default async function RateDashboardPage() {
           </section>
         </>
       ) : (
-        <div className="rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
-          <p className="text-3xl">📊</p>
-          <p className="mt-3 text-gray-500">
+        <div className="rounded-2xl border-2 border-dashed border-surface-200 p-12 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-surface-100 text-xl">
+            📊
+          </div>
+          <p className="mt-3 text-sm text-gray-500">
             아직 수집된 금리 데이터가 없습니다.
           </p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-xs text-gray-400">
             ECOS API 키가 설정되면 매일 자동으로 금리 데이터가 수집됩니다.
           </p>
         </div>
       )}
 
       {/* CTA */}
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <div className="mt-10 grid gap-3 sm:grid-cols-2">
         <Link
           href="/rate/calculator"
-          className="rounded-xl border-2 border-blue-100 bg-blue-50 p-6 text-center transition hover:border-blue-200 hover:bg-blue-100"
+          className="card-hover rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 text-center"
         >
-          <p className="text-2xl">🏠</p>
-          <p className="mt-2 font-bold text-blue-900">대출 이자 계산기</p>
-          <p className="mt-1 text-sm text-blue-600">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-lg">
+            🏠
+          </div>
+          <p className="mt-2 font-bold text-brand-900">대출 이자 계산기</p>
+          <p className="mt-1 text-sm text-brand-600">
             현재 금리로 내 대출 이자를 계산해 보세요
           </p>
         </Link>
         <Link
           href="/"
-          className="rounded-xl border-2 border-gray-100 bg-white p-6 text-center transition hover:border-gray-200 hover:bg-gray-50"
+          className="card-hover rounded-2xl border border-surface-200 bg-white p-6 text-center"
         >
-          <p className="text-2xl">📉</p>
-          <p className="mt-2 font-bold">폭락/신고가 랭킹</p>
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-dark-900 text-lg text-white">
+            📉
+          </div>
+          <p className="mt-2 font-bold text-dark-900">폭락/신고가 랭킹</p>
           <p className="mt-1 text-sm text-gray-500">
             오늘 가장 많이 떨어진 아파트 확인
           </p>
@@ -190,7 +193,6 @@ export default async function RateDashboardPage() {
 }
 
 function RateDetailCard({
-  rateType,
   label,
   description,
   value,
@@ -198,7 +200,6 @@ function RateDetailCard({
   baseDate,
   history,
 }: {
-  rateType: string;
   label: string;
   description: string;
   value: number;
@@ -206,22 +207,21 @@ function RateDetailCard({
   baseDate: string;
   history: Array<{ date: string; value: number }>;
 }) {
-  // 간단한 미니 트렌드 표시 (CSS 바 차트)
   const minVal = history.length > 0 ? Math.min(...history.map((h) => h.value)) : value;
   const maxVal = history.length > 0 ? Math.max(...history.map((h) => h.value)) : value;
   const range = maxVal - minVal || 0.1;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className="card-hover rounded-2xl border border-surface-200 bg-white p-5">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-gray-500">{label}</p>
-          <p className="mt-1 text-3xl font-bold">{value}%</p>
+          <p className="mt-1 text-3xl font-extrabold tabular-nums text-dark-900">{value}%</p>
         </div>
         {changeBp !== null && changeBp !== 0 && (
           <span
             className={`mt-1 inline-flex items-center rounded-full px-2 py-1 text-xs font-bold ${
-              changeBp > 0 ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+              changeBp > 0 ? "bg-drop-bg text-drop" : "bg-rise-bg text-rise"
             }`}
           >
             {changeBp > 0 ? "▲" : "▼"} {Math.abs(changeBp)}bp
@@ -229,9 +229,8 @@ function RateDetailCard({
         )}
       </div>
       <p className="mt-1 text-xs text-gray-400">{description}</p>
-      <p className="mt-0.5 text-xs text-gray-300">기준일: {baseDate}</p>
+      <p className="mt-0.5 text-[11px] text-gray-300">기준일: {baseDate}</p>
 
-      {/* 미니 바 차트 (최근 히스토리) */}
       {history.length > 1 && (
         <div className="mt-3 flex items-end gap-0.5 h-8">
           {history.slice(-12).map((h, i) => {
@@ -239,7 +238,7 @@ function RateDetailCard({
             return (
               <div
                 key={i}
-                className="flex-1 rounded-t bg-blue-200"
+                className="flex-1 rounded-t bg-brand-300"
                 style={{ height: `${Math.max(height, 10)}%` }}
                 title={`${h.date}: ${h.value}%`}
               />

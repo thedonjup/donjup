@@ -1,18 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import Script from "next/script";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -30,11 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">
+    <html lang="ko" className="h-full">
+      <body className="min-h-full flex flex-col">
         {process.env.NEXT_PUBLIC_GA_ID && (
           <>
             <Script
@@ -63,52 +49,93 @@ export default function RootLayout({
 
 function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-xl font-bold text-gray-900">
-          돈줍
+    <header className="sticky top-0 z-50 border-b border-surface-200 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-black text-white">
+            ₩
+          </div>
+          <span className="text-lg font-extrabold tracking-tight text-dark-900">
+            돈줍
+          </span>
         </Link>
-        <nav className="flex items-center gap-6 text-sm font-medium text-gray-600">
-          <Link href="/market" className="hover:text-gray-900">
-            지역별
-          </Link>
-          <Link href="/rate/calculator" className="hover:text-gray-900">
-            금리계산기
-          </Link>
-          <Link href="/rate" className="hover:text-gray-900">
-            금리현황
-          </Link>
-          <Link href="/daily/archive" className="hover:text-gray-900">
-            데일리리포트
-          </Link>
+
+        {/* Navigation */}
+        <nav className="hidden items-center gap-1 sm:flex">
+          <NavLink href="/market">지역별</NavLink>
+          <NavLink href="/rate">금리현황</NavLink>
+          <NavLink href="/rate/calculator">계산기</NavLink>
+          <NavLink href="/daily/archive">데일리</NavLink>
+        </nav>
+
+        {/* Mobile nav */}
+        <nav className="flex items-center gap-3 sm:hidden text-sm">
+          <Link href="/market" className="text-gray-600">지역별</Link>
+          <Link href="/rate/calculator" className="text-gray-600">계산기</Link>
+          <Link href="/daily/archive" className="text-gray-600">데일리</Link>
         </nav>
       </div>
     </header>
   );
 }
 
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-surface-100 hover:text-dark-900"
+    >
+      {children}
+    </Link>
+  );
+}
+
 function Footer() {
   return (
-    <footer className="border-t border-gray-200 bg-white py-8">
-      <div className="mx-auto max-w-6xl px-4 text-center text-xs text-gray-400">
-        <div className="mb-3 flex items-center justify-center gap-4">
-          <Link href="/about" className="hover:text-gray-600">
-            About
-          </Link>
-          <Link href="/privacy" className="hover:text-gray-600">
-            Privacy
-          </Link>
+    <footer className="border-t border-surface-200 bg-white">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
+          {/* Brand */}
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-600 text-xs font-black text-white">
+              ₩
+            </div>
+            <span className="text-sm font-bold text-dark-900">돈줍</span>
+            <span className="text-xs text-gray-400">DonJup</span>
+          </div>
+
+          {/* Links */}
+          <div className="flex items-center gap-6 text-xs text-gray-400">
+            <Link href="/about" className="transition hover:text-gray-600">
+              서비스 소개
+            </Link>
+            <Link href="/privacy" className="transition hover:text-gray-600">
+              개인정보처리방침
+            </Link>
+            <a
+              href="https://instagram.com/donjupkr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition hover:text-gray-600"
+            >
+              Instagram
+            </a>
+          </div>
         </div>
-        <p>
-          출처: 국토교통부 실거래가 공개시스템, 한국은행 ECOS
-        </p>
-        <p className="mt-1">
-          본 서비스의 분석 데이터는 공공데이터를 가공한 것이며, 투자 판단의
-          책임은 이용자에게 있습니다.
-        </p>
-        <p className="mt-2 text-gray-300">
-          &copy; {new Date().getFullYear()} 돈줍(DonJup)
-        </p>
+
+        <div className="mt-6 border-t border-surface-100 pt-6 text-center text-xs text-gray-400">
+          <p>
+            출처: 국토교통부 실거래가 공개시스템 · 한국은행 ECOS
+          </p>
+          <p className="mt-1">
+            본 서비스의 분석 데이터는 공공데이터를 가공한 것이며, 투자 판단의
+            책임은 이용자에게 있습니다.
+          </p>
+          <p className="mt-2 text-gray-300">
+            &copy; {new Date().getFullYear()} 돈줍(DonJup). All rights reserved.
+          </p>
+        </div>
       </div>
     </footer>
   );
