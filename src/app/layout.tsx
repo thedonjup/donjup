@@ -1,10 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Link from "next/link";
 import Script from "next/script";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 import MobileNav, { ThemeToggle } from "@/components/layout/MobileNav";
 import PushPrompt from "@/components/PushPrompt";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1120" },
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://donjup.com"),
