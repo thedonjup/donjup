@@ -53,6 +53,10 @@
       "schedule": "0 22 * * *"
     },
     {
+      "path": "/api/cron/validate-data",
+      "schedule": "50 22 * * *"
+    },
+    {
       "path": "/api/cron/generate-report",
       "schedule": "0 23 * * *"
     },

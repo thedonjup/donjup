@@ -9,6 +9,7 @@ import ShareButtons from "@/components/ShareButtons";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChartWrapper";
 import TransactionTabs from "@/components/apt/TransactionTabs";
+import NotifyButton from "@/components/apt/NotifyButton";
 
 export const revalidate = 3600;
 
@@ -203,11 +204,14 @@ export default async function AptDetailPage({
             <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
             <h1 className="text-2xl font-extrabold t-text">{complex.apt_name}</h1>
           </div>
-          <ShareButtons
-            url={`https://donjup.com/apt/${region}/${slug}`}
-            title={`${complex.apt_name} 실거래가`}
-            description={`${complex.apt_name} 최근 거래가 ${formatPrice(latestPrice)} | 돈줍`}
-          />
+          <div className="flex items-center gap-2">
+            <NotifyButton aptName={complex.apt_name} />
+            <ShareButtons
+              url={`https://donjup.com/apt/${region}/${slug}`}
+              title={`${complex.apt_name} 실거래가`}
+              description={`${complex.apt_name} 최근 거래가 ${formatPrice(latestPrice)} | 돈줍`}
+            />
+          </div>
         </div>
         <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
           {complex.region_name} {complex.dong_name ?? ""}

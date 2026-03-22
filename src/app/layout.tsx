@@ -204,7 +204,19 @@ function Footer() {
           </div>
 
           {/* Links */}
-          <div className="flex items-center gap-6 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+            <Link href="/rent" className="transition hover:opacity-80">
+              전월세 시세
+            </Link>
+            <Link href="/trend" className="transition hover:opacity-80">
+              트렌드
+            </Link>
+            <Link href="/search" className="transition hover:opacity-80">
+              검색
+            </Link>
+            <Link href="/rate/calculator?tab=dsr" className="transition hover:opacity-80">
+              DSR 계산기
+            </Link>
             <Link href="/about" className="transition hover:opacity-80">
               서비스 소개
             </Link>

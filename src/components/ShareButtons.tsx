@@ -28,6 +28,12 @@ export default function ShareButtons({ url, title, description }: ShareButtonsPr
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${link}`, "_blank");
   }
 
+  function handleNaverBlog() {
+    const text = encodeURIComponent(title);
+    const link = encodeURIComponent(fullUrl("naver_blog"));
+    window.open(`https://blog.naver.com/openapi/share?url=${link}&title=${text}`, "_blank");
+  }
+
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(fullUrl("copy"));
@@ -74,6 +80,21 @@ export default function ShareButtons({ url, title, description }: ShareButtonsPr
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
         </svg>
         X
+      </button>
+
+      <button
+        onClick={handleNaverBlog}
+        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-80"
+        style={{
+          borderColor: "var(--color-border)",
+          color: "var(--color-text-secondary)",
+          background: "var(--color-surface-card)",
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z" />
+        </svg>
+        블로그
       </button>
 
       <button

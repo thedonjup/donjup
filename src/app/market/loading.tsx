@@ -1,0 +1,108 @@
+export default function MarketLoading() {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      {/* Header skeleton */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-block h-5 w-1.5 rounded-full"
+            style={{ background: "var(--color-border)" }}
+          />
+          <div
+            className="h-7 w-56 rounded"
+            style={{ background: "var(--color-border)" }}
+          />
+        </div>
+        <div
+          className="mt-2 h-4 w-80 rounded"
+          style={{ background: "var(--color-border)" }}
+        />
+        <div
+          className="mt-4 h-3 w-32 rounded"
+          style={{ background: "var(--color-border)" }}
+        />
+      </div>
+
+      {/* Card grid skeleton */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(9)].map((_, i) => (
+          <div
+            key={i}
+            className="market-skeleton-card rounded-2xl border p-5"
+            style={{
+              borderColor: "var(--color-border)",
+              background: "var(--color-surface-card)",
+              animationDelay: `${i * 80}ms`,
+            }}
+          >
+            {/* Title row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-5 w-5 rounded-md"
+                  style={{ background: "var(--color-border)" }}
+                />
+                <div
+                  className="h-5 w-20 rounded"
+                  style={{ background: "var(--color-border)" }}
+                />
+              </div>
+              <div
+                className="h-5 w-14 rounded-full"
+                style={{ background: "var(--color-surface-elevated, var(--color-border))" }}
+              />
+            </div>
+
+            {/* Stats row */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div
+                className="rounded-lg px-3 py-2"
+                style={{ background: "var(--color-surface-elevated, #f3f4f6)" }}
+              >
+                <div
+                  className="h-2.5 w-10 rounded"
+                  style={{ background: "var(--color-border)" }}
+                />
+                <div
+                  className="mt-1.5 h-3 w-16 rounded"
+                  style={{ background: "var(--color-border)" }}
+                />
+                <div
+                  className="mt-1 h-4 w-12 rounded"
+                  style={{ background: "var(--color-border)" }}
+                />
+              </div>
+              <div
+                className="rounded-lg px-3 py-2"
+                style={{ background: "var(--color-surface-elevated, #f3f4f6)" }}
+              >
+                <div
+                  className="h-2.5 w-10 rounded"
+                  style={{ background: "var(--color-border)" }}
+                />
+                <div
+                  className="mt-1.5 h-3 w-16 rounded"
+                  style={{ background: "var(--color-border)" }}
+                />
+                <div
+                  className="mt-1 h-4 w-12 rounded"
+                  style={{ background: "var(--color-border)" }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <style>{`
+        .market-skeleton-card {
+          animation: skeleton-fade 1.2s ease-in-out infinite;
+        }
+        @keyframes skeleton-fade {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
+    </div>
+  );
+}
