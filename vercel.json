@@ -17,6 +17,10 @@
       "schedule": "0 19 * * *"
     },
     {
+      "path": "/api/cron/send-push",
+      "schedule": "5 23 * * *"
+    },
+    {
       "path": "/api/cron/generate-seeding",
       "schedule": "30 23 * * *"
     }

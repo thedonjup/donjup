@@ -38,7 +38,9 @@ export const metadata: Metadata = {
     description: "매일 자동 업데이트되는 아파트 폭락/신고가 랭킹과 금리 변동 정보",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
   },
   other: {
     "google-adsense-account": "ca-pub-7637714403564102",
