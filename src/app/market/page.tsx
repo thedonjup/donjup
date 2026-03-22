@@ -23,44 +23,59 @@ export default async function MarketIndexPage() {
 
   const sidoEntries = Object.entries(REGION_HIERARCHY);
 
-  const sidoStats = await Promise.all(
-    sidoEntries.map(async ([sidoCode, sido]) => {
-      const sigunguCodes = Object.keys(sido.sigungu);
+  let sidoStats: {
+    code: string;
+    name: string;
+    shortName: string;
+    slug: string;
+    sigunguCount: number;
+    count: number;
+    topDrop: { apt_name: string; change_rate: number; trade_price: number } | null;
+    topHigh: { apt_name: string; trade_price: number } | null;
+  }[] = [];
 
-      const [countResult, dropResult, highResult] = await Promise.all([
-        supabase
-          .from("apt_transactions")
-          .select("id", { count: "exact", head: true })
-          .in("region_code", sigunguCodes),
-        supabase
-          .from("apt_transactions")
-          .select("apt_name,change_rate,trade_price")
-          .in("region_code", sigunguCodes)
-          .not("change_rate", "is", null)
-          .lt("change_rate", 0)
-          .order("change_rate", { ascending: true })
-          .limit(1),
-        supabase
-          .from("apt_transactions")
-          .select("apt_name,trade_price")
-          .in("region_code", sigunguCodes)
-          .eq("is_new_high", true)
-          .order("trade_date", { ascending: false })
-          .limit(1),
-      ]);
+  try {
+    sidoStats = await Promise.all(
+      sidoEntries.map(async ([sidoCode, sido]) => {
+        const sigunguCodes = Object.keys(sido.sigungu);
 
-      return {
-        code: sidoCode,
-        name: sido.name,
-        shortName: sido.shortName,
-        slug: sido.slug,
-        sigunguCount: sigunguCodes.length,
-        count: countResult.count ?? 0,
-        topDrop: dropResult.data?.[0] ?? null,
-        topHigh: highResult.data?.[0] ?? null,
-      };
-    })
-  );
+        const [countResult, dropResult, highResult] = await Promise.all([
+          supabase
+            .from("apt_transactions")
+            .select("id", { count: "exact", head: true })
+            .in("region_code", sigunguCodes),
+          supabase
+            .from("apt_transactions")
+            .select("apt_name,change_rate,trade_price")
+            .in("region_code", sigunguCodes)
+            .not("change_rate", "is", null)
+            .lt("change_rate", 0)
+            .order("change_rate", { ascending: true })
+            .limit(1),
+          supabase
+            .from("apt_transactions")
+            .select("apt_name,trade_price")
+            .in("region_code", sigunguCodes)
+            .eq("is_new_high", true)
+            .order("trade_date", { ascending: false })
+            .limit(1),
+        ]);
+
+        return {
+          code: sidoCode,
+          name: sido.name,
+          shortName: sido.shortName,
+          slug: sido.slug,
+          sigunguCount: sigunguCodes.length,
+          count: countResult.count ?? 0,
+          topDrop: dropResult.data?.[0] ?? null,
+          topHigh: highResult.data?.[0] ?? null,
+        };
+      })
+    );
+  } catch (error) {
+    console.error("시도별 통계 조회 실패:", error);
+  }
 
   const sorted = [...sidoStats].sort((a, b) => b.count - a.count);
   const totalCount = sidoStats.reduce((a, b) => a + b.count, 0);

@@ -10,6 +10,8 @@ import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChartWrapper";
 import TransactionTabs from "@/components/apt/TransactionTabs";
 import NotifyButton from "@/components/apt/NotifyButton";
+import FavoriteButton from "@/components/apt/FavoriteButton";
+import MiniLoanCalculator from "@/components/apt/MiniLoanCalculator";
 
 export const revalidate = 3600;
 
@@ -205,6 +207,7 @@ export default async function AptDetailPage({
             <h1 className="text-2xl font-extrabold t-text">{complex.apt_name}</h1>
           </div>
           <div className="flex items-center gap-2">
+            <FavoriteButton slug={slug} aptName={complex.apt_name} regionName={complex.region_name} />
             <NotifyButton aptName={complex.apt_name} />
             <ShareButtons
               url={`https://donjup.com/apt/${region}/${slug}`}
@@ -309,18 +312,8 @@ export default async function AptDetailPage({
             </div>
           </div>
 
-          {/* CTA */}
-          <Link
-            href="/rate/calculator"
-            className="card-hover block rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-5 text-center"
-          >
-            <p className="font-bold text-brand-900">대출 이자 계산기</p>
-            <p className="mt-1 text-sm text-brand-600">
-              {latestPrice > 0
-                ? `${formatPrice(latestPrice)} 대출 시 이자는?`
-                : "내 대출 이자 계산하기"}
-            </p>
-          </Link>
+          {/* 미니 대출 계산기 */}
+          <MiniLoanCalculator defaultPrice={latestPrice > 0 ? latestPrice : 30000} />
 
           <CoupangBanner category="interior" title="새 집 인테리어 추천" className="hidden lg:block" />
 

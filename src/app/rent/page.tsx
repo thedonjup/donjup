@@ -84,13 +84,20 @@ export default async function RentPage({
     wolseQuery = wolseQuery.in("region_code", regionFilter);
   }
 
-  const [jeonseResult, wolseResult] = await Promise.all([
-    jeonseQuery,
-    wolseQuery,
-  ]);
+  let jeonseItems: Record<string, unknown>[] = [];
+  let wolseItems: Record<string, unknown>[] = [];
 
-  const jeonseItems = jeonseResult.data ?? [];
-  const wolseItems = wolseResult.data ?? [];
+  try {
+    const [jeonseResult, wolseResult] = await Promise.all([
+      jeonseQuery,
+      wolseQuery,
+    ]);
+
+    jeonseItems = jeonseResult.data ?? [];
+    wolseItems = wolseResult.data ?? [];
+  } catch (error) {
+    console.error("전월세 데이터 조회 실패:", error);
+  }
 
   // 시도 목록 (필터 버튼용)
   const sidoList = Object.values(REGION_HIERARCHY).map((s) => ({

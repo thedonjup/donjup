@@ -51,29 +51,38 @@ async function fetchRebIndex(
   startDate: string,
   endDate: string
 ): Promise<RebApiRow[]> {
-  const apiKey = process.env.REB_API_KEY;
-  if (!apiKey) throw new Error("REB_API_KEY 환경변수가 설정되지 않았습니다.");
+  try {
+    const apiKey = process.env.REB_API_KEY;
+    if (!apiKey) {
+      console.error("REB_API_KEY 환경변수가 설정되지 않았습니다.");
+      return [];
+    }
 
-  const params = new URLSearchParams({
-    serviceKey: apiKey,
-    sido,
-    startDate,
-    endDate,
-    numOfRows: "100",
-    pageNo: "1",
-  });
+    const params = new URLSearchParams({
+      serviceKey: apiKey,
+      sido,
+      startDate,
+      endDate,
+      numOfRows: "100",
+      pageNo: "1",
+    });
 
-  const url = `${API_BASE}/${endpoint}?${params.toString()}`;
+    const url = `${API_BASE}/${endpoint}?${params.toString()}`;
 
-  const res = await fetch(url, {
-    headers: { "User-Agent": "DonJup/1.0" },
-  });
-  if (!res.ok) {
-    throw new Error(`한국부동산원 API 호출 실패: ${res.status} ${res.statusText}`);
+    const res = await fetch(url, {
+      headers: { "User-Agent": "DonJup/1.0" },
+    });
+    if (!res.ok) {
+      console.error(`한국부동산원 API 호출 실패: ${res.status} ${res.statusText}`);
+      return [];
+    }
+
+    const text = await res.text();
+    return parseXmlItems(text);
+  } catch (error) {
+    console.error(`한국부동산원 API 요청 중 오류 (${endpoint}, ${sido}):`, error);
+    return [];
   }
-
-  const text = await res.text();
-  return parseXmlItems(text);
 }
 
 /**
@@ -115,8 +124,13 @@ export async function fetchAptTradeIndex(
   startDate: string,
   endDate: string
 ): Promise<RebIndexItem[]> {
-  const rows = await fetchRebIndex("getSidoAptTradeIndex", sido, startDate, endDate);
-  return rowsToItems(rows, "apt_trade", sido);
+  try {
+    const rows = await fetchRebIndex("getSidoAptTradeIndex", sido, startDate, endDate);
+    return rowsToItems(rows, "apt_trade", sido);
+  } catch (error) {
+    console.error(`매매가격지수 조회 실패 (${sido}):`, error);
+    return [];
+  }
 }
 
 /**
@@ -127,8 +141,13 @@ export async function fetchAptJeonseIndex(
   startDate: string,
   endDate: string
 ): Promise<RebIndexItem[]> {
-  const rows = await fetchRebIndex("getSidoAptJeonseIndex", sido, startDate, endDate);
-  return rowsToItems(rows, "apt_jeonse", sido);
+  try {
+    const rows = await fetchRebIndex("getSidoAptJeonseIndex", sido, startDate, endDate);
+    return rowsToItems(rows, "apt_jeonse", sido);
+  } catch (error) {
+    console.error(`전세가격지수 조회 실패 (${sido}):`, error);
+    return [];
+  }
 }
 
 function rowsToItems(
