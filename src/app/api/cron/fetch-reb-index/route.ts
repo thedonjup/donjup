@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createRentServiceClient } from "@/lib/supabase/rent-client";
 import { fetchAllIndices, type RebIndexItem } from "@/lib/api/reb";
 
 export const maxDuration = 120;
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
+  const supabase = createRentServiceClient();
   const errors: string[] = [];
   let inserted = 0;
 

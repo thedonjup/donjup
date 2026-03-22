@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createRentServiceClient } from "@/lib/supabase/rent-client";
 import { fetchRentTransactions } from "@/lib/api/molit-rent";
 import { delay } from "@/lib/api/molit";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
   const batch = batchParam !== null ? parseInt(batchParam, 10) : null;
   const isCronBatch = batch !== null && !isNaN(batch);
 
-  const supabase = createServiceClient();
+  const supabase = createRentServiceClient();
   const now = new Date();
 
   // 3개월 데이터 수집
