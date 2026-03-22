@@ -123,6 +123,45 @@ CREATE POLICY "Public read" ON page_views FOR SELECT USING (true);
 CREATE POLICY "Public insert" ON page_views FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update" ON page_views FOR UPDATE USING (true);
 
+-- 6. 카드뉴스 콘텐츠 큐
+CREATE TABLE content_queue (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    report_date     DATE NOT NULL,
+    content_type    VARCHAR(50) NOT NULL,
+    storage_urls    TEXT[] NOT NULL,
+    caption         TEXT,
+    hashtags        TEXT[],
+    status          VARCHAR(20) NOT NULL DEFAULT 'ready',
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_content_queue_date ON content_queue(report_date DESC);
+CREATE UNIQUE INDEX idx_content_queue_unique ON content_queue(report_date, content_type);
+
+-- 7. SNS 시딩 큐
+CREATE TABLE seeding_queue (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    report_date     DATE NOT NULL,
+    platform        VARCHAR(50) NOT NULL,
+    title           VARCHAR(500) NOT NULL,
+    body            TEXT NOT NULL,
+    link            VARCHAR(500),
+    status          VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_seeding_queue_date ON seeding_queue(report_date DESC, platform);
+CREATE UNIQUE INDEX idx_seeding_queue_unique ON seeding_queue(report_date, platform);
+
+-- RLS for new tables
+ALTER TABLE content_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE seeding_queue ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read" ON content_queue FOR SELECT USING (true);
+CREATE POLICY "Public read" ON seeding_queue FOR SELECT USING (true);
+
 -- ================================================
 -- 조회수 UPSERT 함수
 -- ================================================

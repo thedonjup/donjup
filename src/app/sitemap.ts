@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { createServiceClient } from "@/lib/supabase/server";
+import { SEOUL_REGION_CODES } from "@/lib/constants/region-codes";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://donjup.com";
@@ -11,7 +12,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/rate`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
     { url: `${baseUrl}/rate/calculator`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/daily/archive`, lastModified: new Date(), changeFrequency: "daily", priority: 0.7 },
+    { url: `${baseUrl}/market`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
   ];
+
+  // 서울 25개 구별 마켓 페이지
+  const marketPages: MetadataRoute.Sitemap = Object.keys(SEOUL_REGION_CODES).map((code) => ({
+    url: `${baseUrl}/market/${code}`,
+    lastModified: new Date(),
+    changeFrequency: "daily" as const,
+    priority: 0.8,
+  }));
 
   // 데일리 리포트 페이지
   const { data: reports } = await supabase
@@ -41,5 +51,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticPages, ...reportPages, ...complexPages];
+  return [...staticPages, ...marketPages, ...reportPages, ...complexPages];
 }

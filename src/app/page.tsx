@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import AdSlot from "@/components/ads/AdSlot";
 
 export const revalidate = 0; // SSR: 항상 최신 데이터
 
@@ -56,6 +57,8 @@ export default async function HomePage() {
             : "매일 자동 업데이트되는 아파트 폭락/신고가 랭킹과 금리 변동 정보"}
         </p>
       </section>
+
+      <AdSlot slotId="home-top-banner" format="banner" />
 
       <div className="grid gap-8 lg:grid-cols-3">
         {/* 왼쪽: 폭락 + 신고가 */}
@@ -169,6 +172,8 @@ export default async function HomePage() {
               3억 대출 시 월 이자는 얼마?
             </p>
           </Link>
+
+          <AdSlot slotId="home-sidebar-rect" format="rectangle" className="hidden lg:block" />
         </aside>
       </div>
     </div>

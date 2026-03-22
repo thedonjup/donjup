@@ -15,76 +15,87 @@ export async function GET(request: Request) {
 
   const supabase = createServiceClient();
   const now = new Date();
-  const dealYearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  // 이번달 + 이전 1개월 (총 2개월) 수집 — 실거래가 데이터는 1~2개월 지연 공개
+  const dealYearMonths: string[] = [];
+  for (let i = 0; i < 2; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    dealYearMonths.push(
+      `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`
+    );
+  }
 
   let totalInserted = 0;
   let totalNewHigh = 0;
   let totalSignificantDrop = 0;
   const errors: string[] = [];
 
-  // 서울 25개구 순차 호출
+  // 서울 25개구 × 2개월 순차 호출
   const regionEntries = Object.entries(SEOUL_REGION_CODES);
 
-  for (const [code, name] of regionEntries) {
-    try {
-      const transactions = await fetchTransactions(code, dealYearMonth);
+  for (const dealYearMonth of dealYearMonths) {
+    for (const [code, name] of regionEntries) {
+      try {
+        const transactions = await fetchTransactions(code, dealYearMonth);
 
-      if (transactions.length === 0) {
-        await delay(300);
-        continue;
+        if (transactions.length === 0) {
+          await delay(300);
+          continue;
+        }
+
+        // 각 거래에 대해 최고가 조회 및 변동률 계산
+        const enriched = await enrichTransactions(supabase, transactions, name);
+
+        // DB 삽입 (중복 무시)
+        const { data, error } = await supabase
+          .from("apt_transactions")
+          .upsert(
+            enriched.map((t) => ({
+              region_code: t.regionCode,
+              region_name: `${name} ${t.dongName}`,
+              apt_name: t.aptName,
+              size_sqm: t.sizeSqm,
+              floor: t.floor,
+              trade_price: t.tradePrice,
+              trade_date: t.tradeDate,
+              highest_price: t.highestPrice,
+              change_rate: t.changeRate,
+              is_new_high: t.isNewHigh,
+              is_significant_drop: t.isSignificantDrop,
+              raw_data: t.rawData,
+            })),
+            { onConflict: "apt_name,size_sqm,floor,trade_date,trade_price", ignoreDuplicates: true }
+          )
+          .select("id");
+
+        if (error) {
+          errors.push(`${name}(${dealYearMonth}): ${error.message}`);
+        } else {
+          const insertCount = data?.length ?? 0;
+          totalInserted += insertCount;
+          totalNewHigh += enriched.filter((t) => t.isNewHigh).length;
+          totalSignificantDrop += enriched.filter((t) => t.isSignificantDrop).length;
+        }
+
+        // 단지 마스터 UPSERT
+        await upsertComplexes(supabase, transactions, name);
+
+        await delay(300); // API 부하 방지
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`${name}(${dealYearMonth}): ${msg}`);
       }
-
-      // 각 거래에 대해 최고가 조회 및 변동률 계산
-      const enriched = await enrichTransactions(supabase, transactions, name);
-
-      // DB 삽입 (중복 무시)
-      const { data, error } = await supabase
-        .from("apt_transactions")
-        .upsert(
-          enriched.map((t) => ({
-            region_code: t.regionCode,
-            region_name: `${name} ${t.dongName}`,
-            apt_name: t.aptName,
-            size_sqm: t.sizeSqm,
-            floor: t.floor,
-            trade_price: t.tradePrice,
-            trade_date: t.tradeDate,
-            highest_price: t.highestPrice,
-            change_rate: t.changeRate,
-            is_new_high: t.isNewHigh,
-            is_significant_drop: t.isSignificantDrop,
-            raw_data: t.rawData,
-          })),
-          { onConflict: "apt_name,size_sqm,floor,trade_date,trade_price", ignoreDuplicates: true }
-        )
-        .select("id");
-
-      if (error) {
-        errors.push(`${name}: ${error.message}`);
-      } else {
-        const insertCount = data?.length ?? 0;
-        totalInserted += insertCount;
-        totalNewHigh += enriched.filter((t) => t.isNewHigh).length;
-        totalSignificantDrop += enriched.filter((t) => t.isSignificantDrop).length;
-      }
-
-      // 단지 마스터 UPSERT
-      await upsertComplexes(supabase, transactions, name);
-
-      await delay(300); // API 부하 방지
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      errors.push(`${name}: ${msg}`);
     }
   }
 
   return NextResponse.json({
     success: true,
-    dealYearMonth,
+    dealYearMonths,
     totalInserted,
     totalNewHigh,
     totalSignificantDrop,
     regionsProcessed: regionEntries.length,
+    monthsProcessed: dealYearMonths.length,
     errors: errors.length > 0 ? errors : undefined,
   });
 }

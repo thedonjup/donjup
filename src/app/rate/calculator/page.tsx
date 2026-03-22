@@ -1,10 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { Metadata } from "next";
-
-// CSR이므로 metadata는 별도 layout에서 설정하거나 generateMetadata 불가
-// 대신 Head에서 직접 설정
 
 interface CalcResult {
   input: { principal: number; rate: number; years: number };
@@ -27,6 +23,7 @@ export default function CalculatorPage() {
   const [years, setYears] = useState("30");
   const [result, setResult] = useState<CalcResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rateOffset, setRateOffset] = useState(0);
 
   const handleCalculate = async () => {
     const principalNum = parseInt(principal.replace(/,/g, ""), 10);
@@ -146,6 +143,16 @@ export default function CalculatorPage() {
             />
           </div>
 
+          {/* 금리 시나리오 슬라이더 */}
+          <RateScenarioSlider
+            principal={result.input.principal}
+            rate={result.input.rate}
+            years={result.input.years}
+            currentMonthly={result.comparison.equal_payment.monthlyPayment}
+            rateOffset={rateOffset}
+            onOffsetChange={setRateOffset}
+          />
+
           {/* CPA 퍼널 — 3단계 (수익 핵심) */}
           <div className="mt-6 space-y-4">
             {/* 1단계: 감정 자극 */}
@@ -244,6 +251,93 @@ export default function CalculatorPage() {
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+function calcEqualPaymentMonthly(principal: number, annualRate: number, years: number): number {
+  const monthlyRate = annualRate / 100 / 12;
+  const n = years * 12;
+  if (monthlyRate === 0) return principal / n;
+  return (principal * monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1);
+}
+
+function RateScenarioSlider({
+  principal,
+  rate,
+  years,
+  currentMonthly,
+  rateOffset,
+  onOffsetChange,
+}: {
+  principal: number;
+  rate: number;
+  years: number;
+  currentMonthly: number;
+  rateOffset: number;
+  onOffsetChange: (v: number) => void;
+}) {
+  const newRate = Math.max(0.1, rate + rateOffset);
+  const newMonthly = Math.round(calcEqualPaymentMonthly(principal, newRate, years));
+  const diff = newMonthly - currentMonthly;
+
+  return (
+    <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
+      <h2 className="text-lg font-bold">금리가 바뀌면?</h2>
+      <p className="mt-1 text-sm text-gray-500">
+        슬라이더를 움직여 금리 변동에 따른 월 상환액 변화를 확인하세요
+      </p>
+
+      <div className="mt-4">
+        <input
+          type="range"
+          min={-2}
+          max={2}
+          step={0.25}
+          value={rateOffset}
+          onChange={(e) => onOffsetChange(parseFloat(e.target.value))}
+          className="w-full accent-blue-600"
+        />
+        <div className="mt-1 flex justify-between text-xs text-gray-400">
+          <span>-2.0%p</span>
+          <span>현재</span>
+          <span>+2.0%p</span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+        <div className="rounded-lg bg-gray-50 p-3">
+          <p className="text-xs text-gray-500">현재 금리</p>
+          <p className="mt-1 text-lg font-bold">{rate.toFixed(2)}%</p>
+        </div>
+        <div className="rounded-lg bg-gray-50 p-3">
+          <p className="text-xs text-gray-500">변경 후 금리</p>
+          <p className="mt-1 text-lg font-bold">{newRate.toFixed(2)}%</p>
+        </div>
+        <div className="rounded-lg bg-gray-50 p-3">
+          <p className="text-xs text-gray-500">월 상환액 차이</p>
+          <p
+            className={`mt-1 text-lg font-bold ${
+              diff > 0 ? "text-red-500" : diff < 0 ? "text-blue-500" : "text-gray-700"
+            }`}
+          >
+            {diff > 0 ? "+" : ""}
+            {diff.toLocaleString()}원
+          </p>
+        </div>
+      </div>
+
+      {rateOffset !== 0 && (
+        <p
+          className={`mt-3 text-center text-sm font-medium ${
+            diff < 0 ? "text-blue-600" : "text-red-600"
+          }`}
+        >
+          {diff < 0
+            ? `금리 ${Math.abs(rateOffset).toFixed(2)}%p 낮추면 월 ${Math.abs(diff).toLocaleString()}원 절약`
+            : `금리 ${rateOffset.toFixed(2)}%p 오르면 월 ${diff.toLocaleString()}원 추가 부담`}
+        </p>
       )}
     </div>
   );

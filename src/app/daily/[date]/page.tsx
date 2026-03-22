@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import AdSlot from "@/components/ads/AdSlot";
 
 export const revalidate = 0;
 
@@ -75,13 +76,27 @@ export default async function DailyReportPage({
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       {/* 헤더 */}
-      <div className="mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <Link
           href="/daily/archive"
           className="text-sm text-blue-600 hover:underline"
         >
           ← 리포트 목록
         </Link>
+        <div className="flex items-center gap-4 text-sm">
+          <Link
+            href={`/daily/${getPrevDate(date)}`}
+            className="text-gray-500 hover:text-gray-900"
+          >
+            ← 이전날
+          </Link>
+          <Link
+            href={`/daily/${getNextDate(date)}`}
+            className="text-gray-500 hover:text-gray-900"
+          >
+            다음날 →
+          </Link>
+        </div>
       </div>
       <h1 className="text-2xl font-bold">{report.title}</h1>
       <p className="mt-1 text-sm text-gray-500">{report.summary}</p>
@@ -106,6 +121,8 @@ export default async function DailyReportPage({
               <p className="text-sm text-gray-400">폭락 거래 데이터 없음</p>
             )}
           </section>
+
+          <AdSlot slotId="daily-mid-infeed" format="infeed" />
 
           {/* 신고가 */}
           <section>
@@ -237,6 +254,18 @@ function TxnCard({
       </div>
     </div>
   );
+}
+
+function getPrevDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function getNextDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
 }
 
 function formatPrice(priceInManWon: number): string {

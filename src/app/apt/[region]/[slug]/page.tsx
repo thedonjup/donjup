@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import AdSlot from "@/components/ads/AdSlot";
 
 export const revalidate = 3600; // ISR: 1시간
 
@@ -135,6 +136,8 @@ export default async function AptDetailPage({
         />
       </div>
 
+      <AdSlot slotId="apt-detail-infeed" format="infeed" />
+
       <div className="grid gap-8 lg:grid-cols-3">
         {/* 좌측: 거래 이력 테이블 */}
         <div className="lg:col-span-2">
@@ -231,6 +234,8 @@ export default async function AptDetailPage({
                 : "내 대출 이자 계산하기"}
             </p>
           </Link>
+
+          <AdSlot slotId="apt-sidebar-rect" format="rectangle" className="hidden lg:block" />
         </aside>
       </div>
     </div>

@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/generate-report",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/generate-cardnews",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/generate-seeding",
+      "schedule": "30 23 * * *"
     }
   ]
 }

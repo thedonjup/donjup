@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,24 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${process.env.NEXT_PUBLIC_GA_ID}');`}
+            </Script>
+          </>
+        )}
+        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+          <Script
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        )}
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
@@ -50,6 +69,9 @@ function Header() {
           돈줍
         </Link>
         <nav className="flex items-center gap-6 text-sm font-medium text-gray-600">
+          <Link href="/market" className="hover:text-gray-900">
+            지역별
+          </Link>
           <Link href="/rate/calculator" className="hover:text-gray-900">
             금리계산기
           </Link>
@@ -69,6 +91,14 @@ function Footer() {
   return (
     <footer className="border-t border-gray-200 bg-white py-8">
       <div className="mx-auto max-w-6xl px-4 text-center text-xs text-gray-400">
+        <div className="mb-3 flex items-center justify-center gap-4">
+          <Link href="/about" className="hover:text-gray-600">
+            About
+          </Link>
+          <Link href="/privacy" className="hover:text-gray-600">
+            Privacy
+          </Link>
+        </div>
         <p>
           출처: 국토교통부 실거래가 공개시스템, 한국은행 ECOS
         </p>

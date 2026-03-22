@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
+import AdSlot from "@/components/ads/AdSlot";
 
 export const metadata: Metadata = {
   title: "금리 현황",
@@ -90,6 +91,8 @@ export default async function RateDashboardPage() {
               );
             })}
           </div>
+
+          <AdSlot slotId="rate-mid-banner" format="banner" />
 
           {/* 금리 변동 타임라인 */}
           <section className="mt-10">
