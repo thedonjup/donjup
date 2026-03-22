@@ -1,0 +1,19 @@
+{
+  "name": "돈줍 DonJup - 부동산 실거래가 & 금리",
+  "short_name": "돈줍",
+  "description": "매일 자동 업데이트되는 아파트 폭락/신고가 랭킹과 금리 변동 정보",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#059669",
+  "orientation": "portrait",
+  "categories": ["finance", "news"],
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
-  verification: {},
+  manifest: "/manifest.json",
   robots: {
     index: true,
     follow: true,
