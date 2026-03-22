@@ -11,7 +11,7 @@ const jsonLd = {
   "@type": "WebSite",
   name: "돈줍 DonJup",
   url: "https://donjup.com",
-  description: "매일 자동 업데이트되는 아파트 실거래가 폭락/신고가 랭킹과 대출 금리 정보",
+  description: "매일 자동 업데이트되는 전국 아파트 실거래가 폭락/신고가 랭킹과 대출 금리 정보",
   publisher: {
     "@type": "Organization",
     name: "돈줍",
@@ -84,14 +84,14 @@ export default async function HomePage() {
                 <span> 하락</span>
               </>
             ) : (
-              <>서울 아파트 실거래가<br />폭락·신고가 랭킹</>
+              <>전국 아파트 실거래가<br />폭락·신고가 랭킹</>
             )}
           </h1>
 
           <p className="mt-4 max-w-xl text-base text-gray-400 sm:text-lg">
             {drops && drops.length > 0
               ? `${formatPrice(drops[0].highest_price)} → ${formatPrice(drops[0].trade_price)} | 국토교통부 실거래가 기반`
-              : "매일 자동 업데이트되는 아파트 폭락/신고가 랭킹과 금리 변동 정보"}
+              : "매일 자동 업데이트되는 전국 아파트 폭락/신고가 랭킹과 금리 변동 정보"}
           </p>
 
           {/* Quick Stats */}
@@ -115,9 +115,9 @@ export default async function HomePage() {
               accent="text-gold-400"
             />
             <StatCard
-              label="서울 지역"
-              value={25}
-              suffix="개 구"
+              label="전국 지역"
+              value={17}
+              suffix="개 시/도"
               accent="text-blue-400"
             />
           </div>
@@ -163,7 +163,7 @@ export default async function HomePage() {
                 href="/market"
                 className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-surface-200 bg-white py-3 text-sm font-semibold text-gray-600 transition hover:bg-surface-50 hover:text-dark-900"
               >
-                서울 25개구 전체 보기
+                전국 시/도별 시세 보기
                 <span className="text-gray-400">&rarr;</span>
               </Link>
             </section>

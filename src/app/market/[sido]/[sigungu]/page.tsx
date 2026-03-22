@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { SEOUL_REGION_CODES } from "@/lib/constants/region-codes";
+import { REGION_HIERARCHY, getSidoBySlug, getSidoForCode } from "@/lib/constants/region-codes";
 import AdSlot from "@/components/ads/AdSlot";
 import { formatPrice } from "@/lib/format";
 
@@ -14,23 +14,36 @@ function getCurrentMonth(): string {
 }
 
 export async function generateStaticParams() {
-  return Object.keys(SEOUL_REGION_CODES).map((code) => ({
-    region: code,
-  }));
+  const params: { sido: string; sigungu: string }[] = [];
+  for (const sido of Object.values(REGION_HIERARCHY)) {
+    for (const code of Object.keys(sido.sigungu)) {
+      params.push({ sido: sido.slug, sigungu: code });
+    }
+  }
+  return params;
 }
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ region: string }>;
+  params: Promise<{ sido: string; sigungu: string }>;
 }): Promise<Metadata> {
-  const { region } = await params;
-  const name = SEOUL_REGION_CODES[region];
-  if (!name) return { title: "지역 정보" };
+  const { sido: sidoSlug, sigungu } = await params;
+  const sido = getSidoBySlug(sidoSlug);
+  if (!sido) return { title: "지역 정보" };
+
+  const sigunguName = sido.sigungu[sigungu];
+  if (!sigunguName) return { title: "지역 정보" };
 
   return {
-    title: `${name} 아파트 폭락 순위 - ${getCurrentMonth()}`,
-    description: `${name} 아파트 실거래가 폭락 순위, 신고가 갱신, 최근 거래 내역. 매일 자동 업데이트.`,
+    title: `${sido.shortName} ${sigunguName} 아파트 폭락 순위 - ${getCurrentMonth()}`,
+    description: `${sido.name} ${sigunguName} 아파트 실거래가 폭락 순위, 신고가 갱신, 최근 거래 내역. 매일 자동 업데이트.`,
+    keywords: [
+      `${sigunguName} 아파트 시세`,
+      `${sido.shortName} ${sigunguName} 부동산`,
+      "아파트 폭락",
+      "실거래가",
+    ],
   };
 }
 
@@ -49,27 +62,30 @@ interface Transaction {
   region_name: string;
 }
 
-export default async function MarketRegionPage({
+export default async function MarketSigunguPage({
   params,
 }: {
-  params: Promise<{ region: string }>;
+  params: Promise<{ sido: string; sigungu: string }>;
 }) {
-  const { region } = await params;
-  const regionName = SEOUL_REGION_CODES[region];
-  if (!regionName) notFound();
+  const { sido: sidoSlug, sigungu } = await params;
+  const sido = getSidoBySlug(sidoSlug);
+  if (!sido) notFound();
+
+  const sigunguName = sido.sigungu[sigungu];
+  if (!sigunguName) notFound();
 
   const supabase = await createClient();
 
   const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([
-    supabase.from("apt_transactions").select("*").eq("region_code", region)
+    supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
       .not("change_rate", "is", null).lt("change_rate", 0)
       .order("change_rate", { ascending: true }).limit(10),
-    supabase.from("apt_transactions").select("*").eq("region_code", region)
+    supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
       .eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10),
-    supabase.from("apt_transactions").select("*").eq("region_code", region)
+    supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
       .order("trade_date", { ascending: false }).limit(20),
     supabase.from("apt_transactions").select("id", { count: "exact", head: true })
-      .eq("region_code", region),
+      .eq("region_code", sigungu),
   ]);
 
   const drops = (dropsResult.data ?? []) as Transaction[];
@@ -77,20 +93,27 @@ export default async function MarketRegionPage({
   const recent = (recentResult.data ?? []) as Transaction[];
   const totalCount = countResult.count ?? 0;
 
+  // Sibling sigungu for quick nav
+  const siblingEntries = Object.entries(sido.sigungu);
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* Breadcrumb + Header */}
+      {/* Breadcrumb */}
       <div className="mb-2 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+        <Link href="/" className="hover:opacity-80">홈</Link>
+        <span className="mx-2">/</span>
         <Link href="/market" className="hover:opacity-80">지역별 시세</Link>
         <span className="mx-2">/</span>
-        <span style={{ color: "var(--color-text-secondary)" }}>{regionName}</span>
+        <Link href={`/market/${sidoSlug}`} className="hover:opacity-80">{sido.shortName}</Link>
+        <span className="mx-2">/</span>
+        <span style={{ color: "var(--color-text-secondary)" }}>{sigunguName}</span>
       </div>
 
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-1">
           <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
           <h1 className="text-2xl font-extrabold t-text sm:text-3xl">
-            {regionName} 아파트 현황
+            {sigunguName} 아파트 현황
           </h1>
         </div>
         <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
@@ -98,19 +121,19 @@ export default async function MarketRegionPage({
         </p>
       </div>
 
-      {/* Region Quick Nav */}
+      {/* Sigungu Quick Nav */}
       <div className="mb-8 flex flex-wrap gap-1.5">
-        {Object.entries(SEOUL_REGION_CODES).map(([code, name]) => (
+        {siblingEntries.map(([code, name]) => (
           <Link
             key={code}
-            href={`/market/${code}`}
+            href={`/market/${sidoSlug}/${code}`}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-              code === region
+              code === sigungu
                 ? "bg-brand-600 text-white"
                 : "hover:opacity-80"
             }`}
             style={
-              code !== region
+              code !== sigungu
                 ? { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
                 : undefined
             }
@@ -126,7 +149,7 @@ export default async function MarketRegionPage({
       <section className="mt-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="inline-block h-5 w-1.5 rounded-full bg-drop" />
-          <h2 className="text-lg font-bold t-text">{regionName} 하락 거래 TOP 10</h2>
+          <h2 className="text-lg font-bold t-text">{sigunguName} 하락 거래 TOP 10</h2>
         </div>
         {drops.length > 0 ? (
           <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
@@ -177,7 +200,7 @@ export default async function MarketRegionPage({
       <section className="mt-10">
         <div className="flex items-center gap-2 mb-4">
           <span className="inline-block h-5 w-1.5 rounded-full bg-rise" />
-          <h2 className="text-lg font-bold t-text">{regionName} 신고가 갱신 TOP 10</h2>
+          <h2 className="text-lg font-bold t-text">{sigunguName} 신고가 갱신 TOP 10</h2>
         </div>
         {highs.length > 0 ? (
           <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
@@ -217,7 +240,7 @@ export default async function MarketRegionPage({
       <section className="mt-10">
         <div className="flex items-center gap-2 mb-4">
           <span className="inline-block h-5 w-1.5 rounded-full bg-brand-500" />
-          <h2 className="text-lg font-bold t-text">{regionName} 최근 거래</h2>
+          <h2 className="text-lg font-bold t-text">{sigunguName} 최근 거래</h2>
         </div>
         {recent.length > 0 ? (
           <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
@@ -256,7 +279,7 @@ export default async function MarketRegionPage({
           className="card-hover block rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 text-center"
         >
           <p className="text-lg font-bold text-brand-900">
-            {regionName} 아파트, 대출 이자는 얼마일까?
+            {sigunguName} 아파트, 대출 이자는 얼마일까?
           </p>
           <p className="mt-1 text-sm text-brand-600">
             금리 계산기로 월 상환액을 확인하세요

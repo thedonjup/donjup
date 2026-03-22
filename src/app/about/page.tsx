@@ -54,9 +54,10 @@ export default function AboutPage() {
         style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
       >
         <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-          <strong className="t-text">돈줍</strong>은 매일 자동으로 업데이트되는 부동산 실거래가
-          분석 서비스입니다. 국토교통부 공공데이터와 한국은행 금리 데이터를 자동
-          수집하여, 아파트 폭락/신고가 랭킹과 대출 금리 변동 정보를 제공합니다.
+          <strong className="t-text">돈줍</strong>은 매일 자동으로 업데이트되는 전국 부동산 실거래가
+          분석 서비스입니다. 서울, 부산, 대구, 인천, 경기 등 전국 17개 시/도의
+          국토교통부 공공데이터와 한국은행 금리 데이터를 자동 수집하여, 아파트
+          폭락/신고가 랭킹과 대출 금리 변동 정보를 제공합니다.
         </p>
       </div>
 

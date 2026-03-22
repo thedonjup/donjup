@@ -1,8 +1,24 @@
 {
   "crons": [
     {
-      "path": "/api/cron/fetch-transactions",
-      "schedule": "0 21 * * *"
+      "path": "/api/cron/fetch-transactions?batch=0",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-transactions?batch=1",
+      "schedule": "10 20 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-transactions?batch=2",
+      "schedule": "20 20 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-transactions?batch=3",
+      "schedule": "30 20 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-transactions?batch=4",
+      "schedule": "40 20 * * *"
     },
     {
       "path": "/api/cron/fetch-rates",

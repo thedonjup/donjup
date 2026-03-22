@@ -1,10 +1,41 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { fetchTransactions, delay } from "@/lib/api/molit";
-import { SEOUL_REGION_CODES } from "@/lib/constants/region-codes";
+import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import type { ParsedTransaction } from "@/lib/api/molit";
 
 export const maxDuration = 300; // 5분 (Vercel Pro)
+
+/** 시/도 코드별 배치 그룹 (0-4) */
+const BATCH_GROUPS: Record<number, string[]> = {
+  0: ["11", "26", "27"],           // 서울, 부산, 대구
+  1: ["28", "29", "30", "31", "36"], // 인천, 광주, 대전, 울산, 세종
+  2: ["41"],                        // 경기
+  3: ["42", "43", "44", "45"],      // 강원, 충북, 충남, 전북
+  4: ["46", "47", "48", "50"],      // 전남, 경북, 경남, 제주
+};
+
+/** 배치 번호에 해당하는 시/도 코드 목록 반환. 없으면 전체. */
+function getSidoCodesForBatch(batch: number | null): string[] {
+  if (batch !== null && BATCH_GROUPS[batch]) {
+    return BATCH_GROUPS[batch];
+  }
+  // 배치 미지정 시 전체
+  return Object.keys(REGION_HIERARCHY);
+}
+
+/** 시/도 코드 목록 → [regionCode, regionName] 튜플 배열 */
+function getRegionEntries(sidoCodes: string[]): [string, string][] {
+  const entries: [string, string][] = [];
+  for (const sidoCode of sidoCodes) {
+    const sido = REGION_HIERARCHY[sidoCode];
+    if (!sido) continue;
+    for (const [code, sigunguName] of Object.entries(sido.sigungu)) {
+      entries.push([code, `${sido.shortName} ${sigunguName}`]);
+    }
+  }
+  return entries;
+}
 
 export async function GET(request: Request) {
   // Cron 인증
@@ -13,12 +44,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // batch 쿼리 파라미터 파싱
+  const { searchParams } = new URL(request.url);
+  const batchParam = searchParams.get("batch");
+  const batch = batchParam !== null ? parseInt(batchParam, 10) : null;
+  const isCronBatch = batch !== null && !isNaN(batch);
+
   const supabase = createServiceClient();
   const now = new Date();
 
-  // 이번달 + 이전 5개월 (총 6개월) 수집 — 실거래가 데이터는 1~2개월 지연 공개
+  // cron 배치: 3개월, 수동 전체: 6개월
+  const monthCount = isCronBatch ? 3 : 6;
   const dealYearMonths: string[] = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < monthCount; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     dealYearMonths.push(
       `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`
@@ -30,8 +68,9 @@ export async function GET(request: Request) {
   let totalSignificantDrop = 0;
   const errors: string[] = [];
 
-  // 서울 25개구 × 6개월 순차 호출
-  const regionEntries = Object.entries(SEOUL_REGION_CODES);
+  // 배치별 지역 목록 구성
+  const sidoCodes = getSidoCodesForBatch(isCronBatch ? batch : null);
+  const regionEntries = getRegionEntries(sidoCodes);
 
   for (const dealYearMonth of dealYearMonths) {
     for (const [code, name] of regionEntries) {
@@ -91,6 +130,8 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     success: true,
+    batch: isCronBatch ? batch : "all",
+    sidoCodes,
     dealYearMonths,
     totalInserted,
     totalNewHigh,
