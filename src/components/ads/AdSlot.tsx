@@ -1,20 +1,34 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 interface AdSlotProps {
   slotId: string;
   format: "banner" | "rectangle" | "infeed" | "responsive";
   className?: string;
 }
 
-/**
- * 광고 슬롯 컴포넌트
- * - 애드센스 승인 전: 카카오 애드핏 또는 플레이스홀더 표시
- * - 애드센스 승인 후: 구글 애드센스 코드로 교체
- */
+declare global {
+  interface Window {
+    adsbygoogle: unknown[];
+  }
+}
+
 export default function AdSlot({ slotId, format, className = "" }: AdSlotProps) {
   const adsenseId = process.env.NEXT_PUBLIC_ADSENSE_ID;
+  const adRef = useRef<HTMLModElement>(null);
+  const pushed = useRef(false);
 
-  // 애드센스 ID가 없으면 표시하지 않음 (개발/승인 전)
+  useEffect(() => {
+    if (!adsenseId || pushed.current) return;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      pushed.current = true;
+    } catch {
+      // adsbygoogle not ready
+    }
+  }, [adsenseId]);
+
   if (!adsenseId) {
     return null;
   }
@@ -29,10 +43,9 @@ export default function AdSlot({ slotId, format, className = "" }: AdSlotProps) 
   return (
     <div
       className={`flex items-center justify-center overflow-hidden ${sizeClass} ${className}`}
-      data-ad-slot={slotId}
-      data-ad-format={format}
     >
       <ins
+        ref={adRef}
         className="adsbygoogle"
         style={{ display: "block" }}
         data-ad-client={adsenseId}
