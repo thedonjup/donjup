@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import AdSlot from "@/components/ads/AdSlot";
+import CoupangBanner from "@/components/CoupangBanner";
 import { formatPrice, RATE_LABELS } from "@/lib/format";
 
 export const revalidate = 0;
@@ -256,6 +257,8 @@ export default async function HomePage() {
                 폭락·신고가·금리·거래량 종합
               </p>
             </Link>
+
+            <CoupangBanner category="book" title="부동산 투자 추천도서" className="hidden lg:block" />
 
             <AdSlot slotId="home-sidebar-rect" format="rectangle" className="hidden lg:block" />
           </aside>

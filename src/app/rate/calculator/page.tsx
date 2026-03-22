@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatKrw } from "@/lib/format";
+import CoupangBanner from "@/components/CoupangBanner";
 
 interface CalcResult {
   input: { principal: number; rate: number; years: number };
@@ -242,6 +243,14 @@ export default function CalculatorPage() {
               </p>
             </a>
           </div>
+
+          {/* Coupang Partners */}
+          <CoupangBanner
+            category="book"
+            title="부동산 투자 필독서"
+            limit={3}
+            className="mt-6"
+          />
 
           {/* Schedule Preview */}
           {result.schedule_preview && result.schedule_preview.length > 0 && (

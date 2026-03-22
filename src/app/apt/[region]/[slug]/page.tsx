@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
+import CoupangBanner from "@/components/CoupangBanner";
 import ShareButtons from "@/components/ShareButtons";
 import { formatPrice } from "@/lib/format";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChartWrapper";
@@ -278,6 +279,8 @@ export default async function AptDetailPage({
                 : "내 대출 이자 계산하기"}
             </p>
           </Link>
+
+          <CoupangBanner category="interior" title="새 집 인테리어 추천" className="hidden lg:block" />
 
           <AdSlot slotId="apt-sidebar-rect" format="rectangle" className="hidden lg:block" />
         </aside>
