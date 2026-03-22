@@ -30,6 +30,9 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+  other: {
+    "google-adsense-account": "ca-pub-7637714403564102",
+  },
   manifest: "/manifest.json",
   robots: {
     index: true,
