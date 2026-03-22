@@ -62,6 +62,34 @@ export default function CalculatorPage() {
 
       {/* Input Form */}
       <div className="mt-6 rounded-2xl border border-surface-200 bg-white p-6">
+        {/* Quick Amount Buttons */}
+        <div className="mb-5">
+          <p className="text-sm font-medium text-dark-900 mb-2">빠른 금액 선택</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: "1억", value: 10000 },
+              { label: "2억", value: 20000 },
+              { label: "3억", value: 30000 },
+              { label: "4억", value: 40000 },
+              { label: "5억", value: 50000 },
+              { label: "7억", value: 70000 },
+              { label: "10억", value: 100000 },
+            ].map((preset) => (
+              <button
+                key={preset.value}
+                onClick={() => setPrincipal(preset.value.toLocaleString())}
+                className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                  principal === preset.value.toLocaleString()
+                    ? "border-brand-600 bg-brand-600 text-white"
+                    : "border-surface-200 text-gray-600 hover:border-brand-300 hover:text-brand-700"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label className="block text-sm font-medium text-dark-900">

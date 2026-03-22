@@ -9,54 +9,152 @@ export const metadata: Metadata = {
 
 export const revalidate = 0;
 
-export default async function DailyArchivePage() {
+const PAGE_SIZE = 20;
+
+export default async function DailyArchivePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10));
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
   const supabase = await createClient();
 
-  const { data: reports } = await supabase
-    .from("daily_reports")
-    .select("id,report_date,title,summary")
-    .order("report_date", { ascending: false })
-    .limit(50);
+  const [{ data: reports }, { count }] = await Promise.all([
+    supabase
+      .from("daily_reports")
+      .select("id,report_date,title,summary")
+      .order("report_date", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1),
+    supabase
+      .from("daily_reports")
+      .select("id", { count: "exact", head: true }),
+  ]);
+
+  const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-bold">데일리 리포트</h1>
-      <p className="mt-1 text-sm text-gray-500">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
+        <h1 className="text-2xl font-extrabold t-text">데일리 리포트</h1>
+      </div>
+      <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
         매일 자동 생성되는 아파트 시장 분석 리포트
+        {count ? ` · 총 ${count}개` : ""}
       </p>
 
       <div className="mt-8">
         {reports && reports.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {reports.map((r) => (
               <Link
                 key={r.id}
                 href={`/daily/${r.report_date}`}
-                className="block rounded-xl border border-gray-200 bg-white p-5 transition hover:border-gray-300 hover:shadow-sm"
+                className="card-hover flex items-center gap-4 rounded-xl border px-5 py-4"
+                style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold truncate">{r.title}</p>
-                    {r.summary && (
-                      <p className="mt-1 text-sm text-gray-500 truncate">
-                        {r.summary}
-                      </p>
-                    )}
-                  </div>
-                  <time className="flex-shrink-0 text-sm text-gray-400">
-                    {r.report_date}
-                  </time>
+                {/* Date badge */}
+                <div
+                  className="flex-shrink-0 rounded-lg px-3 py-1.5 text-center"
+                  style={{ background: "var(--color-surface-elevated)" }}
+                >
+                  <p className="text-xs font-medium" style={{ color: "var(--color-text-tertiary)" }}>
+                    {r.report_date.slice(5, 7)}월
+                  </p>
+                  <p className="text-lg font-extrabold tabular-nums t-text">
+                    {r.report_date.slice(8, 10)}
+                  </p>
                 </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate t-text">{r.title}</p>
+                  {r.summary && (
+                    <p className="mt-0.5 text-sm truncate" style={{ color: "var(--color-text-secondary)" }}>
+                      {r.summary}
+                    </p>
+                  )}
+                </div>
+
+                {/* Arrow */}
+                <span style={{ color: "var(--color-text-tertiary)" }}>&rarr;</span>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
-            <p className="text-3xl">📋</p>
-            <p className="mt-3 text-gray-500">아직 생성된 리포트가 없습니다.</p>
-            <p className="mt-1 text-sm text-gray-400">
+          <div
+            className="rounded-2xl border-2 border-dashed p-12 text-center"
+            style={{ borderColor: "var(--color-border)" }}
+          >
+            <div
+              className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl text-xl"
+              style={{ background: "var(--color-surface-elevated)" }}
+            >
+              📋
+            </div>
+            <p className="mt-3 text-sm" style={{ color: "var(--color-text-secondary)" }}>
+              아직 생성된 리포트가 없습니다.
+            </p>
+            <p className="mt-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
               매일 자동으로 리포트가 생성됩니다.
             </p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-2">
+            {currentPage > 1 && (
+              <Link
+                href={`/daily/archive?page=${currentPage - 1}`}
+                className="rounded-lg border px-3 py-2 text-sm font-medium transition hover:opacity-80"
+                style={{ borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+              >
+                &larr; 이전
+              </Link>
+            )}
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+              .map((p, idx, arr) => {
+                const prev = arr[idx - 1];
+                const showEllipsis = prev && p - prev > 1;
+                return (
+                  <span key={p} className="flex items-center gap-2">
+                    {showEllipsis && (
+                      <span style={{ color: "var(--color-text-tertiary)" }}>…</span>
+                    )}
+                    <Link
+                      href={`/daily/archive?page=${p}`}
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition ${
+                        p === currentPage
+                          ? "bg-brand-600 text-white"
+                          : ""
+                      }`}
+                      style={
+                        p !== currentPage
+                          ? { color: "var(--color-text-secondary)" }
+                          : undefined
+                      }
+                    >
+                      {p}
+                    </Link>
+                  </span>
+                );
+              })}
+
+            {currentPage < totalPages && (
+              <Link
+                href={`/daily/archive?page=${currentPage + 1}`}
+                className="rounded-lg border px-3 py-2 text-sm font-medium transition hover:opacity-80"
+                style={{ borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+              >
+                다음 &rarr;
+              </Link>
+            )}
           </div>
         )}
       </div>

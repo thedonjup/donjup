@@ -5,6 +5,19 @@ import { formatPrice, RATE_LABELS } from "@/lib/format";
 
 export const revalidate = 0;
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "돈줍 DonJup",
+  url: "https://donjup.com",
+  description: "매일 자동 업데이트되는 아파트 실거래가 폭락/신고가 랭킹과 대출 금리 정보",
+  publisher: {
+    "@type": "Organization",
+    name: "돈줍",
+    url: "https://donjup.com",
+  },
+};
+
 export default async function HomePage() {
   const supabase = await createClient();
 
@@ -46,6 +59,10 @@ export default async function HomePage() {
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Hero Section */}
       <section className="hero-gradient text-white">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">

@@ -26,22 +26,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { region } = await params;
   const name = SEOUL_REGION_CODES[region];
+  if (!name) return { title: "지역 정보" };
 
-  if (!name) {
-    return { title: "지역 정보" };
-  }
-
-  const title = `${name} 아파트 폭락 순위 - ${getCurrentMonth()} | 돈줍`;
   return {
-    title,
-    description: `${name} 아파트 실거래가 폭락 순위, 신고가 갱신, 최근 거래 내역. 매일 자동 업데이트되는 ${name} 부동산 시세 정보.`,
-    keywords: [
-      `${name} 아파트`,
-      `${name} 시세`,
-      `${name} 폭락`,
-      `${name} 실거래가`,
-      "서울 아파트",
-    ],
+    title: `${name} 아파트 폭락 순위 - ${getCurrentMonth()}`,
+    description: `${name} 아파트 실거래가 폭락 순위, 신고가 갱신, 최근 거래 내역. 매일 자동 업데이트.`,
   };
 }
 
@@ -67,40 +56,21 @@ export default async function MarketRegionPage({
 }) {
   const { region } = await params;
   const regionName = SEOUL_REGION_CODES[region];
-
-  if (!regionName) {
-    notFound();
-  }
+  if (!regionName) notFound();
 
   const supabase = await createClient();
 
-  const [dropsResult, highsResult, recentResult, countResult] =
-    await Promise.all([
-      supabase
-        .from("apt_transactions")
-        .select("*")
-        .eq("region_code", region)
-        .eq("is_significant_drop", true)
-        .order("change_rate", { ascending: true })
-        .limit(10),
-      supabase
-        .from("apt_transactions")
-        .select("*")
-        .eq("region_code", region)
-        .eq("is_new_high", true)
-        .order("trade_date", { ascending: false })
-        .limit(10),
-      supabase
-        .from("apt_transactions")
-        .select("*")
-        .eq("region_code", region)
-        .order("trade_date", { ascending: false })
-        .limit(20),
-      supabase
-        .from("apt_transactions")
-        .select("id", { count: "exact", head: true })
-        .eq("region_code", region),
-    ]);
+  const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([
+    supabase.from("apt_transactions").select("*").eq("region_code", region)
+      .not("change_rate", "is", null).lt("change_rate", 0)
+      .order("change_rate", { ascending: true }).limit(10),
+    supabase.from("apt_transactions").select("*").eq("region_code", region)
+      .eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10),
+    supabase.from("apt_transactions").select("*").eq("region_code", region)
+      .order("trade_date", { ascending: false }).limit(20),
+    supabase.from("apt_transactions").select("id", { count: "exact", head: true })
+      .eq("region_code", region),
+  ]);
 
   const drops = (dropsResult.data ?? []) as Transaction[];
   const highs = (highsResult.data ?? []) as Transaction[];
@@ -109,69 +79,89 @@ export default async function MarketRegionPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* 지역 헤더 */}
-      <section className="mb-8">
-        <nav className="mb-4 text-sm text-gray-400">
-          <Link href="/market" className="hover:text-gray-600">
-            지역별 시세
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-gray-900">{regionName}</span>
-        </nav>
-        <h1 className="text-2xl font-bold sm:text-3xl">
-          {regionName} 아파트 실거래가 현황
-        </h1>
-        <p className="mt-2 text-gray-500">
-          총 {totalCount.toLocaleString()}건의 거래 데이터 | {getCurrentMonth()}{" "}
-          기준
+      {/* Breadcrumb + Header */}
+      <div className="mb-2 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+        <Link href="/market" className="hover:opacity-80">지역별 시세</Link>
+        <span className="mx-2">/</span>
+        <span style={{ color: "var(--color-text-secondary)" }}>{regionName}</span>
+      </div>
+
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
+          <h1 className="text-2xl font-extrabold t-text sm:text-3xl">
+            {regionName} 아파트 현황
+          </h1>
+        </div>
+        <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
+          총 {totalCount.toLocaleString()}건 · {getCurrentMonth()} 기준
         </p>
-      </section>
+      </div>
+
+      {/* Region Quick Nav */}
+      <div className="mb-8 flex flex-wrap gap-1.5">
+        {Object.entries(SEOUL_REGION_CODES).map(([code, name]) => (
+          <Link
+            key={code}
+            href={`/market/${code}`}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              code === region
+                ? "bg-brand-600 text-white"
+                : "hover:opacity-80"
+            }`}
+            style={
+              code !== region
+                ? { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
+                : undefined
+            }
+          >
+            {name}
+          </Link>
+        ))}
+      </div>
 
       <AdSlot slotId="market-region-top" format="banner" />
 
-      {/* 폭락 TOP 10 */}
-      <section className="mt-8">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
-          <span className="inline-block h-6 w-1 rounded bg-red-500" />
-          {regionName} 최고가 대비 폭락 TOP 10
-        </h2>
+      {/* 폭락 TOP */}
+      <section className="mt-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="inline-block h-5 w-1.5 rounded-full bg-drop" />
+          <h2 className="text-lg font-bold t-text">{regionName} 하락 거래 TOP 10</h2>
+        </div>
         {drops.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="py-3 pr-4 font-medium">순위</th>
-                  <th className="py-3 pr-4 font-medium">아파트</th>
-                  <th className="py-3 pr-4 font-medium text-right">면적</th>
-                  <th className="py-3 pr-4 font-medium text-right">최고가</th>
-                  <th className="py-3 pr-4 font-medium text-right">거래가</th>
-                  <th className="py-3 font-medium text-right">변동률</th>
+                <tr className="border-b text-left text-xs" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-tertiary)" }}>
+                  <th className="px-4 py-3 w-12">#</th>
+                  <th className="px-4 py-3">아파트</th>
+                  <th className="px-4 py-3 text-right">면적</th>
+                  <th className="px-4 py-3 text-right">최고가</th>
+                  <th className="px-4 py-3 text-right">거래가</th>
+                  <th className="px-4 py-3 text-right">변동률</th>
                 </tr>
               </thead>
               <tbody>
                 {drops.map((t, i) => (
-                  <tr
-                    key={t.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
-                    <td className="py-3 pr-4 font-bold text-red-500">
-                      {i + 1}
+                  <tr key={t.id} className="border-b last:border-0 transition hover:opacity-80" style={{ borderColor: "var(--color-border-subtle)" }}>
+                    <td className="px-4 py-3">
+                      <span className="rank-badge rank-badge-drop text-[11px]">{i + 1}</span>
                     </td>
-                    <td className="py-3 pr-4">
-                      <p className="font-semibold">{t.apt_name}</p>
-                      <p className="text-xs text-gray-400">{t.trade_date}</p>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold t-text">{t.apt_name}</p>
+                      <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</p>
                     </td>
-                    <td className="py-3 pr-4 text-right text-gray-600">
-                      {t.size_sqm}㎡
-                    </td>
-                    <td className="py-3 pr-4 text-right text-gray-400 line-through">
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.size_sqm}㎡</td>
+                    <td className="px-4 py-3 text-right tabular-nums line-through" style={{ color: "var(--color-text-tertiary)" }}>
                       {t.highest_price ? formatPrice(t.highest_price) : "-"}
                     </td>
-                    <td className="py-3 pr-4 text-right font-semibold">
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">
                       {formatPrice(t.trade_price)}
                     </td>
-                    <td className="py-3 text-right font-bold text-red-600">
-                      ▼ {t.change_rate !== null ? Math.abs(t.change_rate) : 0}%
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" }}>
+                        ▼ {t.change_rate !== null ? Math.abs(t.change_rate) : 0}%
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -179,47 +169,38 @@ export default async function MarketRegionPage({
             </table>
           </div>
         ) : (
-          <EmptyState message="해당 지역의 폭락 거래 데이터가 없습니다." />
+          <EmptyState message="해당 지역의 하락 거래 데이터가 없습니다." />
         )}
       </section>
 
-      {/* 신고가 TOP 10 */}
+      {/* 신고가 TOP */}
       <section className="mt-10">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
-          <span className="inline-block h-6 w-1 rounded bg-green-500" />
-          {regionName} 신고가 갱신 TOP 10
-        </h2>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="inline-block h-5 w-1.5 rounded-full bg-rise" />
+          <h2 className="text-lg font-bold t-text">{regionName} 신고가 갱신 TOP 10</h2>
+        </div>
         {highs.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="py-3 pr-4 font-medium">순위</th>
-                  <th className="py-3 pr-4 font-medium">아파트</th>
-                  <th className="py-3 pr-4 font-medium text-right">면적</th>
-                  <th className="py-3 pr-4 font-medium text-right">거래가</th>
-                  <th className="py-3 font-medium text-right">거래일</th>
+                <tr className="border-b text-left text-xs" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-tertiary)" }}>
+                  <th className="px-4 py-3 w-12">#</th>
+                  <th className="px-4 py-3">아파트</th>
+                  <th className="px-4 py-3 text-right">면적</th>
+                  <th className="px-4 py-3 text-right">거래가</th>
+                  <th className="px-4 py-3 text-right">거래일</th>
                 </tr>
               </thead>
               <tbody>
                 {highs.map((t, i) => (
-                  <tr
-                    key={t.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
-                    <td className="py-3 pr-4 font-bold text-green-500">
-                      {i + 1}
+                  <tr key={t.id} className="border-b last:border-0 transition hover:opacity-80" style={{ borderColor: "var(--color-border-subtle)" }}>
+                    <td className="px-4 py-3">
+                      <span className="rank-badge rank-badge-rise text-[11px]">{i + 1}</span>
                     </td>
-                    <td className="py-3 pr-4 font-semibold">{t.apt_name}</td>
-                    <td className="py-3 pr-4 text-right text-gray-600">
-                      {t.size_sqm}㎡
-                    </td>
-                    <td className="py-3 pr-4 text-right font-semibold">
-                      {formatPrice(t.trade_price)}
-                    </td>
-                    <td className="py-3 text-right text-gray-500">
-                      {t.trade_date}
-                    </td>
+                    <td className="px-4 py-3 font-semibold t-text">{t.apt_name}</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.size_sqm}㎡</td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">{formatPrice(t.trade_price)}</td>
+                    <td className="px-4 py-3 text-right" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</td>
                   </tr>
                 ))}
               </tbody>
@@ -232,43 +213,32 @@ export default async function MarketRegionPage({
 
       <AdSlot slotId="market-region-mid" format="banner" />
 
-      {/* 최근 거래 내역 */}
+      {/* 최근 거래 */}
       <section className="mt-10">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
-          <span className="inline-block h-6 w-1 rounded bg-gray-400" />
-          {regionName} 최근 거래 내역
-        </h2>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="inline-block h-5 w-1.5 rounded-full bg-brand-500" />
+          <h2 className="text-lg font-bold t-text">{regionName} 최근 거래</h2>
+        </div>
         {recent.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="py-3 pr-4 font-medium">아파트</th>
-                  <th className="py-3 pr-4 font-medium text-right">면적</th>
-                  <th className="py-3 pr-4 font-medium text-right">층</th>
-                  <th className="py-3 pr-4 font-medium text-right">거래가</th>
-                  <th className="py-3 font-medium text-right">거래일</th>
+                <tr className="border-b text-left text-xs" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-tertiary)" }}>
+                  <th className="px-4 py-3">아파트</th>
+                  <th className="px-4 py-3 text-right">면적</th>
+                  <th className="px-4 py-3 text-right">층</th>
+                  <th className="px-4 py-3 text-right">거래가</th>
+                  <th className="px-4 py-3 text-right">거래일</th>
                 </tr>
               </thead>
               <tbody>
                 {recent.map((t) => (
-                  <tr
-                    key={t.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
-                    <td className="py-3 pr-4 font-semibold">{t.apt_name}</td>
-                    <td className="py-3 pr-4 text-right text-gray-600">
-                      {t.size_sqm}㎡
-                    </td>
-                    <td className="py-3 pr-4 text-right text-gray-600">
-                      {t.floor}층
-                    </td>
-                    <td className="py-3 pr-4 text-right font-semibold">
-                      {formatPrice(t.trade_price)}
-                    </td>
-                    <td className="py-3 text-right text-gray-500">
-                      {t.trade_date}
-                    </td>
+                  <tr key={t.id} className="border-b last:border-0 transition hover:opacity-80" style={{ borderColor: "var(--color-border-subtle)" }}>
+                    <td className="px-4 py-3 font-semibold t-text">{t.apt_name}</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.size_sqm}㎡</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.floor}층</td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">{formatPrice(t.trade_price)}</td>
+                    <td className="px-4 py-3 text-right" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</td>
                   </tr>
                 ))}
               </tbody>
@@ -279,39 +249,19 @@ export default async function MarketRegionPage({
         )}
       </section>
 
-      {/* CTA: 금리 계산기 */}
+      {/* CTA */}
       <section className="mt-10">
         <Link
           href="/rate/calculator"
-          className="block rounded-xl border-2 border-blue-100 bg-blue-50 p-6 text-center transition hover:border-blue-200 hover:bg-blue-100"
+          className="card-hover block rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 text-center"
         >
-          <p className="text-lg font-bold text-blue-900">
+          <p className="text-lg font-bold text-brand-900">
             {regionName} 아파트, 대출 이자는 얼마일까?
           </p>
-          <p className="mt-1 text-sm text-blue-600">
+          <p className="mt-1 text-sm text-brand-600">
             금리 계산기로 월 상환액을 확인하세요
           </p>
         </Link>
-      </section>
-
-      {/* 서울 25개 구 네비게이션 */}
-      <section className="mt-10">
-        <h2 className="mb-4 text-lg font-bold">서울 다른 지역 보기</h2>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(SEOUL_REGION_CODES).map(([code, name]) => (
-            <Link
-              key={code}
-              href={`/market/${code}`}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                code === region
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {name}
-            </Link>
-          ))}
-        </div>
       </section>
     </div>
   );
@@ -319,9 +269,12 @@ export default async function MarketRegionPage({
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
-      <p className="text-sm text-gray-400">{message}</p>
-      <p className="mt-1 text-xs text-gray-300">
+    <div
+      className="rounded-2xl border-2 border-dashed p-8 text-center"
+      style={{ borderColor: "var(--color-border)" }}
+    >
+      <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>{message}</p>
+      <p className="mt-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
         데이터가 수집되면 자동으로 업데이트됩니다.
       </p>
     </div>

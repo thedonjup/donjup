@@ -6,13 +6,34 @@ import ThemeProvider from "@/components/providers/ThemeProvider";
 import MobileNav, { ThemeToggle } from "@/components/layout/MobileNav";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://donjup.com"),
   title: {
     default: "돈줍 DonJup - 부동산 실거래가 & 금리 대시보드",
     template: "%s | 돈줍",
   },
   description:
     "매일 자동 업데이트되는 아파트 실거래가 폭락/신고가 랭킹과 대출 금리 정보. 오늘 가장 많이 떨어진 아파트를 확인하세요.",
-  keywords: ["아파트 실거래가", "부동산", "대출 금리", "주담대", "아파트 시세"],
+  keywords: ["아파트 실거래가", "부동산", "대출 금리", "주담대", "아파트 시세", "돈줍", "부동산 폭락"],
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: "돈줍 DonJup",
+    title: "돈줍 - 부동산 실거래가 폭락/신고가 랭킹",
+    description: "매일 자동 업데이트되는 서울 아파트 폭락·신고가 랭킹과 금리 변동 정보",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "돈줍 - 부동산 실거래가 & 금리 대시보드",
+    description: "매일 자동 업데이트되는 아파트 폭락/신고가 랭킹과 금리 변동 정보",
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
+  verification: {},
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
