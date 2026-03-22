@@ -1,9 +1,11 @@
+import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { REGION_HIERARCHY, getSidoBySlug } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
+import AdSlot from "@/components/ads/AdSlot";
 
 export const revalidate = 3600;
 
@@ -33,7 +35,11 @@ export async function generateMetadata({
     keywords: [
       `${sido.name} 아파트 시세`,
       `${sido.shortName} 부동산`,
-      "아파트 폭락",
+      `${sido.shortName} 아파트 실거래가`,
+      `${sido.name} 시군구별 시세`,
+      `${sido.shortName} 아파트 폭락`,
+      `${sido.shortName} 신고가`,
+      "아파트 폭락 순위",
       "시군구별 시세",
     ],
   };
@@ -112,57 +118,66 @@ export default async function MarketSidoPage({
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {sorted.map((region, i) => (
-          <Link
-            key={region.code}
-            href={`/market/${sidoSlug}/${region.code}`}
-            className="card-hover block rounded-2xl border border-surface-200 bg-white p-5"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="rank-badge rank-badge-gold text-[11px]">{i + 1}</span>
-                <h2 className="text-base font-bold text-dark-900">{region.name}</h2>
-              </div>
-              <span className="rounded-full bg-surface-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-gray-600">
-                {region.count.toLocaleString()}건
-              </span>
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {region.topDrop ? (
-                <div className="rounded-lg bg-drop-bg px-3 py-2">
-                  <p className="text-[10px] font-medium text-gray-500">최대 하락</p>
-                  <p className="mt-0.5 truncate text-xs font-semibold text-dark-900">
-                    {region.topDrop.apt_name}
-                  </p>
-                  <p className="text-sm font-bold tabular-nums text-drop">
-                    ▼ {Math.abs(region.topDrop.change_rate)}%
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-lg bg-surface-50 px-3 py-2">
-                  <p className="text-[10px] text-gray-400">하락 거래 없음</p>
+        {sorted.map((region, i) => {
+          const midIndex = Math.floor(sorted.length / 2);
+          return (
+            <React.Fragment key={region.code}>
+              {i === midIndex && (
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <AdSlot slotId="market-sido-infeed" format="infeed" />
                 </div>
               )}
+              <Link
+                href={`/market/${sidoSlug}/${region.code}`}
+                className="card-hover block rounded-2xl border border-surface-200 bg-white p-5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="rank-badge rank-badge-gold text-[11px]">{i + 1}</span>
+                    <h2 className="text-base font-bold text-dark-900">{region.name}</h2>
+                  </div>
+                  <span className="rounded-full bg-surface-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-gray-600">
+                    {region.count.toLocaleString()}건
+                  </span>
+                </div>
 
-              {region.topHigh ? (
-                <div className="rounded-lg bg-rise-bg px-3 py-2">
-                  <p className="text-[10px] font-medium text-gray-500">신고가</p>
-                  <p className="mt-0.5 truncate text-xs font-semibold text-dark-900">
-                    {region.topHigh.apt_name}
-                  </p>
-                  <p className="text-sm font-bold tabular-nums text-rise">
-                    {formatPrice(region.topHigh.trade_price)}
-                  </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {region.topDrop ? (
+                    <div className="rounded-lg bg-drop-bg px-3 py-2">
+                      <p className="text-[10px] font-medium text-gray-500">최대 하락</p>
+                      <p className="mt-0.5 truncate text-xs font-semibold text-dark-900">
+                        {region.topDrop.apt_name}
+                      </p>
+                      <p className="text-sm font-bold tabular-nums text-drop">
+                        ▼ {Math.abs(region.topDrop.change_rate)}%
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-surface-50 px-3 py-2">
+                      <p className="text-[10px] text-gray-400">하락 거래 없음</p>
+                    </div>
+                  )}
+
+                  {region.topHigh ? (
+                    <div className="rounded-lg bg-rise-bg px-3 py-2">
+                      <p className="text-[10px] font-medium text-gray-500">신고가</p>
+                      <p className="mt-0.5 truncate text-xs font-semibold text-dark-900">
+                        {region.topHigh.apt_name}
+                      </p>
+                      <p className="text-sm font-bold tabular-nums text-rise">
+                        {formatPrice(region.topHigh.trade_price)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-surface-50 px-3 py-2">
+                      <p className="text-[10px] text-gray-400">신고가 없음</p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="rounded-lg bg-surface-50 px-3 py-2">
-                  <p className="text-[10px] text-gray-400">신고가 없음</p>
-                </div>
-              )}
-            </div>
-          </Link>
-        ))}
+              </Link>
+            </React.Fragment>
+          );
+        })}
       </div>
     </div>
   );

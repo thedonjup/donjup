@@ -20,6 +20,11 @@ const jsonLd = {
     name: "돈줍",
     url: "https://donjup.com",
   },
+  potentialAction: {
+    "@type": "SearchAction",
+    target: "https://donjup.com/search?q={search_term_string}",
+    "query-input": "required name=search_term_string",
+  },
 };
 
 export default async function HomePage() {

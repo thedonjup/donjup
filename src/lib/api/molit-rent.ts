@@ -59,7 +59,7 @@ export async function fetchRentTransactions(
   const apiKey = process.env.MOLIT_API_KEY;
   if (!apiKey) throw new Error("MOLIT_API_KEY 환경변수가 설정되지 않았습니다.");
 
-  const url = `${API_BASE}?serviceKey=${apiKey}&LAWD_CD=${regionCode}&DEAL_YMD=${dealYearMonth}&pageNo=1&numOfRows=1000`;
+  const url = `${API_BASE}?serviceKey=${apiKey}&LAWD_CD=${regionCode}&DEAL_YMD=${dealYearMonth}&pageNo=1&numOfRows=9999`;
 
   const res = await fetch(url, {
     headers: { "User-Agent": "DonJup/1.0" },

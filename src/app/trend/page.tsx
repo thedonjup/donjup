@@ -2,18 +2,23 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
+import AdSlot from "@/components/ads/AdSlot";
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "부동산 시장 트렌드",
   description:
-    "전국 아파트 거래량 추이, 시도별 평균 거래가 비교 등 부동산 시장 트렌드를 한눈에 확인하세요.",
+    "전국 아파트 거래량 추이, 시도별 평균 거래가 비교, 월별 거래 동향 등 부동산 시장 트렌드를 한눈에 확인하세요.",
   keywords: [
     "부동산 트렌드",
     "아파트 거래량",
     "부동산 시장 동향",
     "시도별 평균 시세",
+    "부동산 시장 분석",
+    "아파트 거래 추이",
+    "전국 부동산 시세",
+    "부동산 통계",
   ],
 };
 
@@ -205,6 +210,8 @@ export default async function TrendPage() {
           </>
         )}
       </section>
+
+      <AdSlot slotId="trend-infeed" format="infeed" className="my-6" />
 
       {/* 시도별 평균 거래가 비교 */}
       <section>

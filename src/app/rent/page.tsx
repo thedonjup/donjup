@@ -3,19 +3,25 @@ import type { Metadata } from "next";
 import { createRentServiceClient } from "@/lib/supabase/rent-client";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
+import AdSlot from "@/components/ads/AdSlot";
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "전국 아파트 전월세 실거래가",
   description:
-    "전국 아파트 전월세 실거래가를 한눈에. 고가 전세 TOP, 최근 월세 거래를 확인하세요.",
+    "전국 아파트 전월세 실거래가를 한눈에. 고가 전세 TOP 랭킹, 최근 월세 거래, 지역별 전세가율을 확인하세요.",
   keywords: [
     "아파트 전월세",
     "전세 시세",
     "월세 시세",
     "전월세 실거래가",
     "전세 랭킹",
+    "전세가율",
+    "아파트 월세",
+    "전세 보증금",
+    "서울 전세",
+    "경기 전세",
   ],
 };
 
@@ -211,6 +217,8 @@ export default async function RentPage({
           </div>
         )}
       </section>
+
+      <AdSlot slotId="rent-infeed" format="infeed" className="my-6" />
 
       {/* 월세 TOP */}
       <section>

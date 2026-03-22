@@ -145,31 +145,74 @@ export default async function RateDashboardPage() {
         </div>
       )}
 
-      {/* CTA */}
-      <div className="mt-10 grid gap-3 sm:grid-cols-2">
-        <Link
-          href="/rate/calculator"
-          className="card-hover rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 text-center"
-        >
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-lg">
-            🏠
-          </div>
-          <p className="mt-2 font-bold text-brand-900">대출 이자 계산기</p>
-          <p className="mt-1 text-sm text-brand-600">
-            현재 금리로 내 대출 이자를 계산해 보세요
-          </p>
-        </Link>
+      {/* Calculator Tools */}
+      <section className="mt-10">
+        <h2 className="mb-4 text-lg font-bold text-dark-900">대출/부동산 도구</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Link
+            href="/rate/calculator"
+            className="card-hover rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 text-center"
+          >
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-sm font-bold text-brand-700">
+              %%
+            </div>
+            <p className="mt-2 font-bold text-brand-900">대출 이자 계산기</p>
+            <p className="mt-1 text-sm text-brand-600">
+              원리금균등/원금균등 비교 계산
+            </p>
+          </Link>
+          <Link
+            href="/rate/calculator?tab=dsr"
+            className="card-hover rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 text-center"
+          >
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-sm font-bold text-brand-700">
+              DSR
+            </div>
+            <p className="mt-2 font-bold text-brand-900">DSR 계산기</p>
+            <p className="mt-1 text-sm text-brand-600">
+              총부채원리금상환비율 확인
+            </p>
+          </Link>
+          <Link
+            href="/rate/calculator?tab=jeonse"
+            className="card-hover rounded-2xl border border-surface-200 bg-white p-6 text-center"
+          >
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-100 text-sm font-bold text-dark-700">
+              전/월
+            </div>
+            <p className="mt-2 font-bold text-dark-900">전세-월세 전환</p>
+            <p className="mt-1 text-sm text-gray-500">
+              전세 보증금을 월세로 환산
+            </p>
+          </Link>
+        </div>
+      </section>
+
+      {/* Quick Links */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <Link
           href="/"
-          className="card-hover rounded-2xl border border-surface-200 bg-white p-6 text-center"
+          className="card-hover rounded-2xl border border-surface-200 bg-white p-5 flex items-center gap-4"
         >
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-dark-900 text-lg text-white">
-            📉
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-dark-900 text-sm font-bold text-white">
+            TOP
           </div>
-          <p className="mt-2 font-bold text-dark-900">폭락/신고가 랭킹</p>
-          <p className="mt-1 text-sm text-gray-500">
-            오늘 가장 많이 떨어진 아파트 확인
-          </p>
+          <div>
+            <p className="font-bold text-dark-900">폭락/신고가 랭킹</p>
+            <p className="text-sm text-gray-500">오늘 가장 많이 떨어진 아파트 확인</p>
+          </div>
+        </Link>
+        <Link
+          href="/daily/archive"
+          className="card-hover rounded-2xl border border-surface-200 bg-white p-5 flex items-center gap-4"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-100 text-sm font-bold text-dark-700">
+            Daily
+          </div>
+          <div>
+            <p className="font-bold text-dark-900">데일리 리포트</p>
+            <p className="text-sm text-gray-500">매일 업데이트되는 시장 동향</p>
+          </div>
         </Link>
       </div>
     </div>

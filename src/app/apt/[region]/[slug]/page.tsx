@@ -57,7 +57,15 @@ export async function generateMetadata({
   const title = `${complex.apt_name} 실거래가 - ${complex.region_name} ${complex.dong_name ?? ""}`;
   return {
     title,
-    description: `${complex.apt_name} 아파트 실거래가 시세, 최고가 대비 변동률, 거래 이력 확인`,
+    description: `${complex.apt_name} 아파트 실거래가 시세, 최고가 대비 변동률, 거래 이력을 확인하세요. ${complex.region_name} ${complex.dong_name ?? ""} 매매·전월세 시세 비교.`,
+    keywords: [
+      `${complex.apt_name} 실거래가`,
+      `${complex.apt_name} 시세`,
+      `${complex.apt_name} 아파트`,
+      `${complex.region_name} 아파트`,
+      "아파트 실거래가",
+      "아파트 시세 조회",
+    ],
   };
 }
 
@@ -145,8 +153,34 @@ export default async function AptDetailPage({
     1
   );
 
+  const aptJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateListing",
+    name: `${complex.apt_name} 아파트`,
+    description: `${complex.apt_name} - ${complex.region_name} ${complex.dong_name ?? ""} 아파트 실거래가 및 시세 정보`,
+    url: `https://donjup.com/apt/${region}/${slug}`,
+    ...(latestPrice > 0 && {
+      offers: {
+        "@type": "Offer",
+        price: latestPrice * 10000,
+        priceCurrency: "KRW",
+      },
+    }),
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: complex.region_name,
+      addressRegion: complex.sido_name ?? "",
+      addressCountry: "KR",
+    },
+    ...(complex.built_year && { yearBuilt: complex.built_year }),
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aptJsonLd) }}
+      />
       {/* 브레드크럼 */}
       <div className="mb-2 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
         <Link href="/" className="hover:opacity-80">홈</Link>

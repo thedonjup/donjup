@@ -41,7 +41,11 @@ export async function generateMetadata({
     keywords: [
       `${sigunguName} 아파트 시세`,
       `${sido.shortName} ${sigunguName} 부동산`,
-      "아파트 폭락",
+      `${sigunguName} 아파트 실거래가`,
+      `${sigunguName} 아파트 폭락`,
+      `${sigunguName} 신고가`,
+      `${sigunguName} 부동산 시세`,
+      "아파트 폭락 순위",
       "실거래가",
     ],
   };

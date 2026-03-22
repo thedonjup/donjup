@@ -2,17 +2,50 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
+import AdSlot from "@/components/ads/AdSlot";
 
-export const metadata: Metadata = {
-  title: "아파트 검색",
-  description: "전국 아파트를 검색하고 실거래가, 시세 변동을 확인하세요.",
+type SearchPageProps = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
+
+export async function generateMetadata({
+  searchParams,
+}: SearchPageProps): Promise<Metadata> {
+  const { q } = await searchParams;
+  const query = typeof q === "string" ? q.trim() : "";
+
+  if (query) {
+    return {
+      title: `"${query}" 아파트 검색 결과`,
+      description: `"${query}" 관련 전국 아파트 실거래가, 시세 변동, 매매 이력을 확인하세요. 돈줍에서 아파트 시세를 한눈에 비교.`,
+      keywords: [
+        `${query} 아파트`,
+        `${query} 실거래가`,
+        `${query} 시세`,
+        "아파트 검색",
+        "아파트 실거래가",
+        "아파트 시세 조회",
+      ],
+    };
+  }
+
+  return {
+    title: "아파트 검색",
+    description:
+      "전국 아파트를 검색하고 실거래가, 시세 변동, 매매 이력을 확인하세요. 아파트명으로 간편 검색.",
+    keywords: [
+      "아파트 검색",
+      "아파트 실거래가 검색",
+      "아파트 시세 조회",
+      "전국 아파트",
+      "부동산 검색",
+    ],
+  };
+}
 
 export default async function SearchPage({
   searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+}: SearchPageProps) {
   const { q } = await searchParams;
   const query = typeof q === "string" ? q.trim() : "";
 
@@ -146,6 +179,8 @@ export default async function SearchPage({
               </Link>
             ))}
           </div>
+
+          <AdSlot slotId="search-infeed" format="infeed" className="mt-6" />
         </>
       )}
     </div>
