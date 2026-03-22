@@ -20,6 +20,7 @@ interface Transaction {
   change_rate: number | null;
   is_new_high: boolean;
   is_significant_drop: boolean;
+  deal_type: string | null;
 }
 
 export async function generateMetadata({
@@ -182,6 +183,7 @@ export default async function AptDetailPage({
                     <th className="px-4 py-3">면적</th>
                     <th className="px-4 py-3">층</th>
                     <th className="px-4 py-3 text-right">거래가</th>
+                    <th className="px-4 py-3">거래유형</th>
                     <th className="px-4 py-3 text-right">변동률</th>
                   </tr>
                 </thead>
@@ -193,6 +195,20 @@ export default async function AptDetailPage({
                       <td className="px-4 py-3 t-text">{t.floor}층</td>
                       <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">
                         {formatPrice(t.trade_price)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {t.deal_type === "직거래" ? (
+                          <span
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
+                            style={{ background: "var(--color-semantic-rise-bg)", color: "var(--color-semantic-rise)" }}
+                          >
+                            직거래
+                          </span>
+                        ) : (
+                          <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                            {t.deal_type === "중개거래" ? "중개" : t.deal_type || "-"}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {t.change_rate !== null ? (

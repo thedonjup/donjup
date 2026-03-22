@@ -18,6 +18,7 @@ interface MolitRawItem {
   excluUseAr: string;
   floor: string;
   sggCd: string;
+  dealingGbn: string;
 }
 
 export interface ParsedTransaction {
@@ -29,6 +30,7 @@ export interface ParsedTransaction {
   tradePrice: number; // 만원 단위
   tradeDate: string; // YYYY-MM-DD
   builtYear: number;
+  dealType: string;
   rawData: MolitRawItem;
 }
 
@@ -90,6 +92,7 @@ function parseXmlResponse(
       const size = extractTag(itemXml, "excluUseAr")?.trim();
       const floor = extractTag(itemXml, "floor")?.trim();
       const builtYear = extractTag(itemXml, "buildYear")?.trim();
+      const dealingGbn = extractTag(itemXml, "dealingGbn")?.trim() || "";
 
       if (!rawPrice || !year || !month || !day || !aptName || !size) continue;
 
@@ -105,6 +108,7 @@ function parseXmlResponse(
         tradePrice,
         tradeDate,
         builtYear: parseInt(builtYear || "0", 10),
+        dealType: dealingGbn,
         rawData: {
           dealAmount: rawPrice,
           buildYear: builtYear || "",
@@ -116,6 +120,7 @@ function parseXmlResponse(
           excluUseAr: size,
           floor: floor || "",
           sggCd: regionCode,
+          dealingGbn,
         },
       });
     } catch (e) {

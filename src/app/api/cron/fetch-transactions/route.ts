@@ -16,9 +16,9 @@ export async function GET(request: Request) {
   const supabase = createServiceClient();
   const now = new Date();
 
-  // 이번달 + 이전 1개월 (총 2개월) 수집 — 실거래가 데이터는 1~2개월 지연 공개
+  // 이번달 + 이전 5개월 (총 6개월) 수집 — 실거래가 데이터는 1~2개월 지연 공개
   const dealYearMonths: string[] = [];
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 6; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     dealYearMonths.push(
       `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   let totalSignificantDrop = 0;
   const errors: string[] = [];
 
-  // 서울 25개구 × 2개월 순차 호출
+  // 서울 25개구 × 6개월 순차 호출
   const regionEntries = Object.entries(SEOUL_REGION_CODES);
 
   for (const dealYearMonth of dealYearMonths) {
@@ -62,6 +62,7 @@ export async function GET(request: Request) {
               change_rate: t.changeRate,
               is_new_high: t.isNewHigh,
               is_significant_drop: t.isSignificantDrop,
+              deal_type: t.dealType,
               raw_data: t.rawData,
             })),
             { onConflict: "apt_name,size_sqm,floor,trade_date,trade_price", ignoreDuplicates: true }

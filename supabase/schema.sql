@@ -36,6 +36,7 @@ CREATE TABLE apt_transactions (
     change_rate           DECIMAL(5,2),
     is_new_high           BOOLEAN DEFAULT FALSE,
     is_significant_drop   BOOLEAN DEFAULT FALSE,
+    deal_type             VARCHAR(20),
     raw_data              JSONB,
     created_at            TIMESTAMPTZ DEFAULT NOW()
 );
