@@ -40,3 +40,13 @@ export const RATE_DESCRIPTIONS: Record<string, string> = {
 };
 
 export const RATE_ORDER = ["BASE_RATE", "COFIX_NEW", "COFIX_BAL", "CD_91", "TREASURY_3Y"];
+
+/** ㎡ → 평 변환 (소수점 1자리) */
+export function sqmToPyeong(sqm: number): number {
+  return Math.round(sqm / 3.3058 * 10) / 10;
+}
+
+/** ㎡와 평을 함께 표시 */
+export function formatSizeWithPyeong(sqm: number): string {
+  return `${sqm}㎡ (${sqmToPyeong(sqm)}평)`;
+}

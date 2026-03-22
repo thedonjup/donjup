@@ -113,14 +113,18 @@ function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 sm:flex">
           <NavLink href="/market">지역별</NavLink>
+          <NavLink href="/rent">전월세</NavLink>
+          <NavLink href="/trend">트렌드</NavLink>
           <NavLink href="/rate">금리현황</NavLink>
           <NavLink href="/rate/calculator">계산기</NavLink>
           <NavLink href="/daily/archive">데일리</NavLink>
+          <HeaderSearchForm />
           <ThemeToggle />
         </nav>
 
-        {/* Mobile: theme toggle + hamburger */}
+        {/* Mobile: theme toggle + search + hamburger */}
         <div className="flex items-center gap-1 sm:hidden">
+          <MobileSearchToggle />
           <ThemeToggle />
           <MobileNav />
         </div>
@@ -138,6 +142,50 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
     >
       {children}
     </Link>
+  );
+}
+
+function HeaderSearchForm() {
+  return (
+    <form action="/search" method="GET" className="ml-1">
+      <div className="relative">
+        <svg
+          className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          style={{ color: "var(--color-text-tertiary)" }}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          name="q"
+          placeholder="아파트 검색"
+          className="w-32 rounded-lg border py-1.5 pl-8 pr-2 text-xs transition focus:w-48 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          style={{
+            borderColor: "var(--color-border)",
+            background: "var(--color-surface-card)",
+            color: "var(--color-text-primary)",
+          }}
+        />
+      </div>
+    </form>
+  );
+}
+
+function MobileSearchToggle() {
+  return (
+    <a
+      href="/search"
+      className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+      style={{ color: "var(--color-text-secondary)" }}
+      aria-label="검색"
+    >
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    </a>
   );
 }
 

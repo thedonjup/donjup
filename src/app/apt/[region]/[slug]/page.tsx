@@ -6,8 +6,9 @@ import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
 import CoupangBanner from "@/components/CoupangBanner";
 import ShareButtons from "@/components/ShareButtons";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChartWrapper";
+import TransactionTabs from "@/components/apt/TransactionTabs";
 
 export const revalidate = 3600;
 
@@ -84,7 +85,7 @@ export default async function AptDetailPage({
     .eq("apt_name", complex.apt_name)
     .eq("region_code", complex.region_code)
     .order("trade_date", { ascending: false })
-    .limit(100);
+    .limit(200);
 
   const txns = (transactions ?? []) as Transaction[];
 
@@ -98,10 +99,22 @@ export default async function AptDetailPage({
       .eq("apt_name", complex.apt_name)
       .eq("region_code", complex.region_code)
       .order("trade_date", { ascending: false })
-      .limit(100);
+      .limit(200);
     rentTxns = (rentData ?? []) as RentTransaction[];
   } catch {
     // rent DB 미설정 시 무시
+  }
+
+  // 같은 동네 다른 단지 조회
+  let nearbyComplexes: { slug: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; total_units: number | null }[] = [];
+  if (complex.dong_name) {
+    const { data: nearby } = await supabase
+      .from("apt_complexes")
+      .select("slug,apt_name,region_code,region_name,dong_name,built_year,total_units")
+      .eq("dong_name", complex.dong_name)
+      .neq("slug", slug)
+      .limit(5);
+    nearbyComplexes = nearby ?? [];
   }
 
   // 전세가율 계산
@@ -172,8 +185,8 @@ export default async function AptDetailPage({
         </p>
       </div>
 
-      {/* 핵심 지표 카드 */}
-      <div className="grid gap-3 sm:grid-cols-4 mb-8">
+      {/* 핵심 지표 카드 - Row 1 */}
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 mb-3">
         <StatCard label="최근 거래가" value={formatPrice(latestPrice)} />
         <StatCard label="역대 최고가" value={formatPrice(maxPrice)} />
         <StatCard label="역대 최저가" value={formatPrice(minPrice)} />
@@ -190,20 +203,18 @@ export default async function AptDetailPage({
         />
       </div>
 
-      {/* 전월세 핵심 지표 */}
-      {latestJeonseDeposit > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 mb-8">
-          <StatCard label="최근 전세가" value={formatPrice(latestJeonseDeposit)} />
-          <StatCard
-            label="전세가율"
-            value={
-              latestPrice > 0
-                ? `${((latestJeonseDeposit / latestPrice) * 100).toFixed(1)}%`
-                : "-"
-            }
-          />
-        </div>
-      )}
+      {/* 핵심 지표 카드 - Row 2 */}
+      <div className="grid gap-3 grid-cols-2 mb-8">
+        <StatCard label="최근 전세가" value={latestJeonseDeposit > 0 ? formatPrice(latestJeonseDeposit) : "-"} />
+        <StatCard
+          label="전세가율"
+          value={
+            latestPrice > 0 && latestJeonseDeposit > 0
+              ? `${((latestJeonseDeposit / latestPrice) * 100).toFixed(1)}%`
+              : "-"
+          }
+        />
+      </div>
 
       {/* 가격 추이 차트 */}
       {txns.length >= 2 && (
@@ -221,150 +232,10 @@ export default async function AptDetailPage({
       <AdSlot slotId="apt-detail-infeed" format="infeed" />
 
       <div className="mt-6 grid gap-8 lg:grid-cols-3">
-        {/* 좌측: 거래 이력 테이블 */}
+        {/* 좌측: 거래 이력 탭 */}
         <div className="lg:col-span-2">
           <h2 className="mb-4 text-lg font-bold t-text">거래 이력</h2>
-          {txns.length > 0 ? (
-            <div className="overflow-x-auto rounded-2xl border t-card" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-tertiary)" }}>
-                    <th className="px-4 py-3">거래일</th>
-                    <th className="px-4 py-3">면적</th>
-                    <th className="px-4 py-3">층</th>
-                    <th className="px-4 py-3 text-right">거래가</th>
-                    <th className="px-4 py-3">거래유형</th>
-                    <th className="px-4 py-3 text-right">변동률</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {txns.map((t) => (
-                    <tr key={t.id} className="border-b last:border-0" style={{ borderColor: "var(--color-border-subtle)" }}>
-                      <td className="px-4 py-3 t-text">{t.trade_date}</td>
-                      <td className="px-4 py-3 t-text">{t.size_sqm}㎡</td>
-                      <td className="px-4 py-3 t-text">{t.floor}층</td>
-                      <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">
-                        {formatPrice(t.trade_price)}
-                      </td>
-                      <td className="px-4 py-3">
-                        {t.deal_type === "직거래" ? (
-                          <span
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
-                            style={{ background: "var(--color-semantic-rise-bg)", color: "var(--color-semantic-rise)" }}
-                          >
-                            직거래
-                          </span>
-                        ) : (
-                          <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                            {t.deal_type === "중개거래" ? "중개" : t.deal_type || "-"}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {t.change_rate !== null ? (
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
-                              t.change_rate < 0
-                                ? "t-drop-bg t-drop"
-                                : t.change_rate > 0
-                                  ? "t-rise-bg t-rise"
-                                  : ""
-                            }`}
-                            style={
-                              t.change_rate < 0
-                                ? { background: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" }
-                                : t.change_rate > 0
-                                  ? { background: "var(--color-semantic-rise-bg)", color: "var(--color-semantic-rise)" }
-                                  : { color: "var(--color-text-tertiary)" }
-                            }
-                          >
-                            {t.change_rate < 0 ? "▼" : t.change_rate > 0 ? "▲" : ""}
-                            {" "}{Math.abs(t.change_rate)}%
-                          </span>
-                        ) : (
-                          <span style={{ color: "var(--color-text-tertiary)" }}>-</span>
-                        )}
-                        {t.is_new_high && (
-                          <span className="ml-1 text-xs font-bold" style={{ color: "var(--color-semantic-rise)" }}>
-                            신고가
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>거래 이력이 없습니다.</p>
-          )}
-        </div>
-
-        {/* 전월세 이력 테이블 */}
-        <div className="lg:col-span-2 mt-8">
-          <h2 className="mb-4 text-lg font-bold t-text">전월세 이력</h2>
-          {rentTxns.length > 0 ? (
-            <div className="overflow-x-auto rounded-2xl border t-card" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-tertiary)" }}>
-                    <th className="px-4 py-3">거래일</th>
-                    <th className="px-4 py-3">면적</th>
-                    <th className="px-4 py-3">층</th>
-                    <th className="px-4 py-3 text-right">보증금</th>
-                    <th className="px-4 py-3 text-right">월세</th>
-                    <th className="px-4 py-3">유형</th>
-                    <th className="px-4 py-3">계약유형</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rentTxns.map((r) => (
-                    <tr key={r.id} className="border-b last:border-0" style={{ borderColor: "var(--color-border-subtle)" }}>
-                      <td className="px-4 py-3 t-text">{r.trade_date}</td>
-                      <td className="px-4 py-3 t-text">{r.size_sqm}㎡</td>
-                      <td className="px-4 py-3 t-text">{r.floor != null ? `${r.floor}층` : "-"}</td>
-                      <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">
-                        {formatPrice(r.deposit)}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums t-text">
-                        {r.monthly_rent > 0 ? formatPrice(r.monthly_rent) : "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {r.rent_type === "월세" ? (
-                          <span
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
-                            style={{ background: "var(--color-semantic-rise-bg)", color: "var(--color-semantic-rise)" }}
-                          >
-                            월세 {formatPrice(r.monthly_rent)}
-                          </span>
-                        ) : (
-                          <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                            전세
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {r.contract_type === "갱신" ? (
-                          <span
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
-                            style={{ background: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" }}
-                          >
-                            갱신
-                          </span>
-                        ) : (
-                          <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                            {r.contract_type || "신규"}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>전월세 이력이 없습니다.</p>
-          )}
+          <TransactionTabs saleTxns={txns} rentTxns={rentTxns} />
         </div>
 
         {/* 우측 사이드바 */}
@@ -380,7 +251,7 @@ export default async function AptDetailPage({
                 return (
                   <div key={size}>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium t-text">{size}㎡</span>
+                      <span className="font-medium t-text">{formatSizeWithPyeong(size)}</span>
                       <span className="font-bold tabular-nums t-text">{formatPrice(latest.trade_price)}</span>
                     </div>
                     <div className="mt-1.5 flex items-center gap-2">
@@ -418,6 +289,34 @@ export default async function AptDetailPage({
           <AdSlot slotId="apt-sidebar-rect" format="rectangle" className="hidden lg:block" />
         </aside>
       </div>
+
+      {/* 같은 동네 다른 단지 */}
+      {nearbyComplexes.length > 0 && (
+        <div className="mt-12">
+          <h2 className="mb-4 text-lg font-bold t-text">같은 동네 다른 단지</h2>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+            {nearbyComplexes.map((nc) => (
+              <Link
+                key={nc.slug}
+                href={`/apt/${nc.region_code}/${nc.slug}`}
+                className="card-hover rounded-2xl border p-4 transition-colors"
+                style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
+              >
+                <p className="font-bold t-text text-sm truncate">{nc.apt_name}</p>
+                <p className="mt-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                  {nc.dong_name ?? nc.region_name}
+                  {nc.built_year ? ` · ${nc.built_year}년` : ""}
+                </p>
+                {nc.total_units && (
+                  <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                    {nc.total_units}세대
+                  </p>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,6 +7,8 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 const NAV_ITEMS = [
   { href: "/", label: "홈" },
   { href: "/market", label: "지역별 시세" },
+  { href: "/rent", label: "전월세" },
+  { href: "/trend", label: "트렌드" },
   { href: "/rate", label: "금리 현황" },
   { href: "/rate/calculator", label: "대출 계산기" },
   { href: "/daily/archive", label: "데일리 리포트" },

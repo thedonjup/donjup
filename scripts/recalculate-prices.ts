@@ -305,6 +305,8 @@ const REGION_CODES: Record<string, string> = {
 
 interface TransactionRow {
   id: string;
+  apt_name: string;
+  size_sqm: number;
   trade_price: number;
   trade_date: string;
 }

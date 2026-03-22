@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { REGION_HIERARCHY, getSidoBySlug, getSidoForCode } from "@/lib/constants/region-codes";
 import AdSlot from "@/components/ads/AdSlot";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 
 export const revalidate = 3600;
 
@@ -174,7 +174,7 @@ export default async function MarketSigunguPage({
                       <p className="font-semibold t-text">{t.apt_name}</p>
                       <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</p>
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.size_sqm}㎡</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(t.size_sqm)}</td>
                     <td className="px-4 py-3 text-right tabular-nums line-through" style={{ color: "var(--color-text-tertiary)" }}>
                       {t.highest_price ? formatPrice(t.highest_price) : "-"}
                     </td>
@@ -221,7 +221,7 @@ export default async function MarketSigunguPage({
                       <span className="rank-badge rank-badge-rise text-[11px]">{i + 1}</span>
                     </td>
                     <td className="px-4 py-3 font-semibold t-text">{t.apt_name}</td>
-                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.size_sqm}㎡</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(t.size_sqm)}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">{formatPrice(t.trade_price)}</td>
                     <td className="px-4 py-3 text-right" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</td>
                   </tr>
@@ -258,7 +258,7 @@ export default async function MarketSigunguPage({
                 {recent.map((t) => (
                   <tr key={t.id} className="border-b last:border-0 transition hover:opacity-80" style={{ borderColor: "var(--color-border-subtle)" }}>
                     <td className="px-4 py-3 font-semibold t-text">{t.apt_name}</td>
-                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.size_sqm}㎡</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(t.size_sqm)}</td>
                     <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.floor}층</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">{formatPrice(t.trade_price)}</td>
                     <td className="px-4 py-3 text-right" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</td>
