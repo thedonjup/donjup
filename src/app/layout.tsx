@@ -63,6 +63,13 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('donjup-theme');if(t)document.documentElement.setAttribute('data-theme',t);else if(matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.setAttribute('data-theme','dark')}catch(e){}})()`,
           }}
         />
+        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
+            crossOrigin="anonymous"
+          />
+        )}
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
@@ -76,13 +83,6 @@ export default function RootLayout({
                 {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${process.env.NEXT_PUBLIC_GA_ID}');`}
               </Script>
             </>
-          )}
-          {process.env.NEXT_PUBLIC_ADSENSE_ID && (
-            <Script
-              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
-              strategy="afterInteractive"
-              crossOrigin="anonymous"
-            />
           )}
           <Header />
           <main className="flex-1">{children}</main>
