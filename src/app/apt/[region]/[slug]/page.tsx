@@ -134,6 +134,9 @@ export default async function AptDetailPage({
           {complex.region_name} {complex.dong_name ?? ""}
           {complex.built_year ? ` · ${complex.built_year}년 준공` : ""}
           {complex.total_units ? ` · ${complex.total_units}세대` : ""}
+          {complex.floor_count ? ` · ${complex.floor_count}층` : ""}
+          {complex.parking_count ? ` · 주차 ${complex.parking_count}대` : ""}
+          {complex.heating_method ? ` · ${complex.heating_method}` : ""}
         </p>
       </div>
 

@@ -21,6 +21,11 @@ CREATE TABLE apt_complexes (
 CREATE INDEX idx_complexes_region ON apt_complexes(region_code);
 CREATE INDEX idx_complexes_name ON apt_complexes(apt_name);
 
+-- 건축물대장 보강 컬럼
+ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS parking_count INTEGER;
+ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS heating_method VARCHAR(50);
+ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS floor_count INTEGER;
+
 -- 2. 아파트 실거래가
 CREATE TABLE apt_transactions (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -54,7 +59,31 @@ CREATE UNIQUE INDEX idx_txn_unique ON apt_transactions(
     apt_name, size_sqm, floor, trade_date, trade_price
 );
 
--- 3. 금리 지표
+-- 3. 아파트 전월세 실거래가
+CREATE TABLE apt_rent_transactions (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    region_code         VARCHAR(10) NOT NULL,
+    region_name         VARCHAR(100) NOT NULL,
+    apt_name            VARCHAR(200) NOT NULL,
+    size_sqm            DECIMAL(6,2) NOT NULL,
+    floor               INTEGER,
+    deposit             BIGINT NOT NULL,        -- 보증금 (만원)
+    monthly_rent        BIGINT DEFAULT 0,       -- 월세 (만원, 전세=0)
+    rent_type           VARCHAR(10) NOT NULL,   -- '전세' or '월세'
+    contract_type       VARCHAR(20),            -- 신규/갱신
+    trade_date          DATE NOT NULL,
+    pre_deposit         BIGINT,                 -- 종전 보증금
+    pre_monthly_rent    BIGINT,                 -- 종전 월세
+    raw_data            JSONB,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_rent_region_date ON apt_rent_transactions(region_code, trade_date DESC);
+CREATE UNIQUE INDEX idx_rent_unique ON apt_rent_transactions(
+    apt_name, size_sqm, floor, trade_date, deposit, monthly_rent
+);
+
+-- 4. 금리 지표
 CREATE TABLE finance_rates (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rate_type       VARCHAR(50) NOT NULL,
@@ -109,6 +138,7 @@ CREATE INDEX idx_views_complex ON page_views(complex_id, view_date DESC)
 
 ALTER TABLE apt_complexes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE apt_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE apt_rent_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_rates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE page_views ENABLE ROW LEVEL SECURITY;
@@ -116,6 +146,7 @@ ALTER TABLE page_views ENABLE ROW LEVEL SECURITY;
 -- 공개 읽기
 CREATE POLICY "Public read" ON apt_complexes FOR SELECT USING (true);
 CREATE POLICY "Public read" ON apt_transactions FOR SELECT USING (true);
+CREATE POLICY "Public read" ON apt_rent_transactions FOR SELECT USING (true);
 CREATE POLICY "Public read" ON finance_rates FOR SELECT USING (true);
 CREATE POLICY "Public read" ON daily_reports FOR SELECT USING (true);
 CREATE POLICY "Public read" ON page_views FOR SELECT USING (true);
@@ -162,6 +193,24 @@ ALTER TABLE seeding_queue ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public read" ON content_queue FOR SELECT USING (true);
 CREATE POLICY "Public read" ON seeding_queue FOR SELECT USING (true);
+
+-- 8. 한국부동산원 가격지수
+CREATE TABLE reb_price_indices (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    index_type      VARCHAR(50) NOT NULL,   -- 'apt_trade' or 'apt_jeonse'
+    region_name     VARCHAR(100) NOT NULL,
+    index_value     DECIMAL(8,2) NOT NULL,
+    base_date       DATE NOT NULL,
+    prev_value      DECIMAL(8,2),
+    change_rate     DECIMAL(5,2),
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_reb_unique ON reb_price_indices(index_type, region_name, base_date);
+CREATE INDEX idx_reb_type_date ON reb_price_indices(index_type, base_date DESC);
+
+ALTER TABLE reb_price_indices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON reb_price_indices FOR SELECT USING (true);
 
 -- ================================================
 -- 조회수 UPSERT 함수
