@@ -4,6 +4,51 @@
    돈줍 Design System
    =========================== */
 
+/* ── Theming Variables ── */
+:root {
+  --color-surface-page: #f8fafc;
+  --color-surface-card: #ffffff;
+  --color-surface-elevated: #f1f5f9;
+  --color-surface-inset: #e2e8f0;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #94a3b8;
+  --color-text-inverted: #ffffff;
+  --color-semantic-drop: #ef4444;
+  --color-semantic-drop-bg: #fef2f2;
+  --color-semantic-rise: #10b981;
+  --color-semantic-rise-bg: #ecfdf5;
+  --color-header-bg: rgba(255, 255, 255, 0.9);
+  --color-hero-from: #0f172a;
+  --color-hero-via: #1e293b;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-card-hover: 0 8px 25px -5px rgba(0,0,0,0.1), 0 4px 10px -6px rgba(0,0,0,0.05);
+}
+
+[data-theme="dark"] {
+  --color-surface-page: #0b1120;
+  --color-surface-card: #141b2d;
+  --color-surface-elevated: #1e293b;
+  --color-surface-inset: #0f172a;
+  --color-border: #1e293b;
+  --color-border-subtle: #162032;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-tertiary: #64748b;
+  --color-text-inverted: #0f172a;
+  --color-semantic-drop: #f87171;
+  --color-semantic-drop-bg: #2d1515;
+  --color-semantic-rise: #34d399;
+  --color-semantic-rise-bg: #152d1a;
+  --color-header-bg: rgba(20, 27, 45, 0.9);
+  --color-hero-from: #020617;
+  --color-hero-via: #0f172a;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-card-hover: 0 8px 25px -5px rgba(0,0,0,0.3);
+}
+
 @theme inline {
   /* Brand Colors */
   --color-brand-50: #ecfdf5;
@@ -23,7 +68,7 @@
   --color-gold-500: #f59e0b;
   --color-gold-600: #d97706;
 
-  /* Surface Colors */
+  /* Surface (static fallbacks for Tailwind) */
   --color-surface-0: #ffffff;
   --color-surface-50: #f8fafc;
   --color-surface-100: #f1f5f9;
@@ -46,27 +91,62 @@
 }
 
 /* Pretendard 폰트 */
-@font-face {
-  font-family: "Pretendard Variable";
-  font-weight: 45 920;
-  font-style: normal;
-  font-display: swap;
-  src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
-}
-
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+html {
+  scroll-behavior: smooth;
+}
 
 body {
   font-family: var(--font-sans);
-  background: var(--color-surface-50);
-  color: var(--color-dark-900);
+  background: var(--color-surface-page);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+/* ── Theme-aware overrides ── */
+.t-card {
+  background: var(--color-surface-card);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+.t-text {
+  color: var(--color-text-primary);
+}
+
+.t-text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.t-text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.t-border {
+  border-color: var(--color-border);
+}
+
+.t-elevated {
+  background: var(--color-surface-elevated);
+}
+
+.t-drop {
+  color: var(--color-semantic-drop);
+}
+
+.t-drop-bg {
+  background: var(--color-semantic-drop-bg);
+}
+
+.t-rise {
+  color: var(--color-semantic-rise);
+}
+
+.t-rise-bg {
+  background: var(--color-semantic-rise-bg);
 }
 
 /* Number font feature */
@@ -80,7 +160,7 @@ html {
 }
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* Gradient text */
@@ -93,7 +173,7 @@ html {
 
 /* Hero gradient */
 .hero-gradient {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  background: linear-gradient(135deg, var(--color-hero-from) 0%, var(--color-hero-via) 50%, var(--color-hero-from) 100%);
 }
 
 /* Rank badge */
@@ -139,9 +219,10 @@ html {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--color-text-tertiary);
   border-radius: 3px;
+  opacity: 0.5;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  opacity: 1;
 }

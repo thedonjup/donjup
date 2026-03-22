@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
 import Script from "next/script";
+import ThemeProvider from "@/components/providers/ThemeProvider";
+import MobileNav, { ThemeToggle } from "@/components/layout/MobileNav";
 
 export const metadata: Metadata = {
   title: {
@@ -19,29 +21,38 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className="h-full">
+    <html lang="ko" className="h-full" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('donjup-theme');if(t)document.documentElement.setAttribute('data-theme',t);else if(matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.setAttribute('data-theme','dark')}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <>
+        <ThemeProvider>
+          {process.env.NEXT_PUBLIC_GA_ID && (
+            <>
+              <Script
+                src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+                strategy="afterInteractive"
+              />
+              <Script id="ga4-init" strategy="afterInteractive">
+                {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${process.env.NEXT_PUBLIC_GA_ID}');`}
+              </Script>
+            </>
+          )}
+          {process.env.NEXT_PUBLIC_ADSENSE_ID && (
             <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
               strategy="afterInteractive"
+              crossOrigin="anonymous"
             />
-            <Script id="ga4-init" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${process.env.NEXT_PUBLIC_GA_ID}');`}
-            </Script>
-          </>
-        )}
-        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
-          <Script
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-          />
-        )}
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+          )}
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );
@@ -49,32 +60,32 @@ export default function RootLayout({
 
 function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b border-surface-200 bg-white/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b" style={{ borderColor: "var(--color-border)", background: "var(--color-header-bg)", backdropFilter: "blur(12px)" }}>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-black text-white">
             ₩
           </div>
-          <span className="text-lg font-extrabold tracking-tight text-dark-900">
+          <span className="text-lg font-extrabold tracking-tight t-text">
             돈줍
           </span>
         </Link>
 
-        {/* Navigation */}
+        {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 sm:flex">
           <NavLink href="/market">지역별</NavLink>
           <NavLink href="/rate">금리현황</NavLink>
           <NavLink href="/rate/calculator">계산기</NavLink>
           <NavLink href="/daily/archive">데일리</NavLink>
+          <ThemeToggle />
         </nav>
 
-        {/* Mobile nav */}
-        <nav className="flex items-center gap-3 sm:hidden text-sm">
-          <Link href="/market" className="text-gray-600">지역별</Link>
-          <Link href="/rate/calculator" className="text-gray-600">계산기</Link>
-          <Link href="/daily/archive" className="text-gray-600">데일리</Link>
-        </nav>
+        {/* Mobile: theme toggle + hamburger */}
+        <div className="flex items-center gap-1 sm:hidden">
+          <ThemeToggle />
+          <MobileNav />
+        </div>
       </div>
     </header>
   );
@@ -84,7 +95,8 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-surface-100 hover:text-dark-900"
+      className="rounded-lg px-3 py-2 text-sm font-medium transition-colors t-text-secondary hover:t-text"
+      style={{ color: "var(--color-text-secondary)" }}
     >
       {children}
     </Link>
@@ -93,7 +105,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 
 function Footer() {
   return (
-    <footer className="border-t border-surface-200 bg-white">
+    <footer className="border-t" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
           {/* Brand */}
@@ -101,30 +113,30 @@ function Footer() {
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-600 text-xs font-black text-white">
               ₩
             </div>
-            <span className="text-sm font-bold text-dark-900">돈줍</span>
-            <span className="text-xs text-gray-400">DonJup</span>
+            <span className="text-sm font-bold t-text">돈줍</span>
+            <span className="text-xs t-text-tertiary">DonJup</span>
           </div>
 
           {/* Links */}
-          <div className="flex items-center gap-6 text-xs text-gray-400">
-            <Link href="/about" className="transition hover:text-gray-600">
+          <div className="flex items-center gap-6 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+            <Link href="/about" className="transition hover:opacity-80">
               서비스 소개
             </Link>
-            <Link href="/privacy" className="transition hover:text-gray-600">
+            <Link href="/privacy" className="transition hover:opacity-80">
               개인정보처리방침
             </Link>
             <a
               href="https://instagram.com/donjupkr"
               target="_blank"
               rel="noopener noreferrer"
-              className="transition hover:text-gray-600"
+              className="transition hover:opacity-80"
             >
               Instagram
             </a>
           </div>
         </div>
 
-        <div className="mt-6 border-t border-surface-100 pt-6 text-center text-xs text-gray-400">
+        <div className="mt-6 border-t pt-6 text-center text-xs" style={{ borderColor: "var(--color-border-subtle)", color: "var(--color-text-tertiary)" }}>
           <p>
             출처: 국토교통부 실거래가 공개시스템 · 한국은행 ECOS
           </p>
@@ -132,7 +144,7 @@ function Footer() {
             본 서비스의 분석 데이터는 공공데이터를 가공한 것이며, 투자 판단의
             책임은 이용자에게 있습니다.
           </p>
-          <p className="mt-2 text-gray-300">
+          <p className="mt-2" style={{ color: "var(--color-text-tertiary)", opacity: 0.6 }}>
             &copy; {new Date().getFullYear()} 돈줍(DonJup). All rights reserved.
           </p>
         </div>

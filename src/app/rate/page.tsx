@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";
 import { RATE_LABELS, RATE_DESCRIPTIONS, RATE_ORDER } from "@/lib/format";
+import MiniAreaChart from "@/components/charts/MiniAreaChartWrapper";
 
 export const metadata: Metadata = {
   title: "금리 현황",
@@ -190,10 +191,6 @@ function RateDetailCard({
   baseDate: string;
   history: Array<{ date: string; value: number }>;
 }) {
-  const minVal = history.length > 0 ? Math.min(...history.map((h) => h.value)) : value;
-  const maxVal = history.length > 0 ? Math.max(...history.map((h) => h.value)) : value;
-  const range = maxVal - minVal || 0.1;
-
   return (
     <div className="card-hover rounded-2xl border border-surface-200 bg-white p-5">
       <div className="flex items-start justify-between">
@@ -215,18 +212,12 @@ function RateDetailCard({
       <p className="mt-0.5 text-[11px] text-gray-300">기준일: {baseDate}</p>
 
       {history.length > 1 && (
-        <div className="mt-3 flex items-end gap-0.5 h-8">
-          {history.slice(-12).map((h, i) => {
-            const height = ((h.value - minVal) / range) * 100;
-            return (
-              <div
-                key={i}
-                className="flex-1 rounded-t bg-brand-300"
-                style={{ height: `${Math.max(height, 10)}%` }}
-                title={`${h.date}: ${h.value}%`}
-              />
-            );
-          })}
+        <div className="mt-3">
+          <MiniAreaChart
+            data={history.slice(-12).map((h) => ({ value: h.value }))}
+            color={changeBp !== null && changeBp > 0 ? "#ef4444" : "#059669"}
+            height={48}
+          />
         </div>
       )}
     </div>
