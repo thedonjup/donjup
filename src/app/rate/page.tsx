@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";
+import { RATE_LABELS, RATE_DESCRIPTIONS, RATE_ORDER } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "금리 현황",
@@ -9,24 +10,6 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 0;
-
-const RATE_LABELS: Record<string, string> = {
-  BASE_RATE: "한국은행 기준금리",
-  COFIX_NEW: "COFIX (신규취급액)",
-  COFIX_BAL: "COFIX (잔액기준)",
-  CD_91: "CD 91일물",
-  TREASURY_3Y: "국고채 3년",
-};
-
-const RATE_DESCRIPTIONS: Record<string, string> = {
-  BASE_RATE: "한국은행 금융통화위원회에서 결정하는 기준금리",
-  COFIX_NEW: "신규 주택담보대출 변동금리의 기준이 되는 지표",
-  COFIX_BAL: "기존 대출 변동금리 갱신 시 기준이 되는 지표",
-  CD_91: "은행 간 단기 자금 거래 금리 (91일 만기)",
-  TREASURY_3Y: "정부가 발행하는 3년 만기 국채 수익률",
-};
-
-const RATE_ORDER = ["BASE_RATE", "COFIX_NEW", "COFIX_BAL", "CD_91", "TREASURY_3Y"];
 
 export default async function RateDashboardPage() {
   const supabase = await createClient();

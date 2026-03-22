@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import AdSlot from "@/components/ads/AdSlot";
+import { formatPrice, RATE_LABELS } from "@/lib/format";
 
 export const revalidate = 0;
 
@@ -375,18 +376,10 @@ function RateRow({
   changeBp: number | null;
   baseDate: string;
 }) {
-  const LABELS: Record<string, string> = {
-    BASE_RATE: "기준금리",
-    COFIX_NEW: "COFIX(신규)",
-    COFIX_BAL: "COFIX(잔액)",
-    CD_91: "CD 91일",
-    TREASURY_3Y: "국고채 3년",
-  };
-
   return (
     <div className="flex items-center justify-between py-1">
       <div>
-        <p className="text-sm font-medium text-dark-900">{LABELS[rateType] || rateType}</p>
+        <p className="text-sm font-medium text-dark-900">{RATE_LABELS[rateType] || rateType}</p>
         <p className="text-[11px] text-gray-400">{baseDate}</p>
       </div>
       <div className="text-right">
@@ -419,11 +412,3 @@ function EmptyState() {
   );
 }
 
-function formatPrice(priceInManWon: number): string {
-  if (priceInManWon >= 10000) {
-    const eok = Math.floor(priceInManWon / 10000);
-    const rest = priceInManWon % 10000;
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`;
-  }
-  return `${priceInManWon.toLocaleString()}만`;
-}

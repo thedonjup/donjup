@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SEOUL_REGION_CODES } from "@/lib/constants/region-codes";
+import { formatPrice } from "@/lib/format";
 
 export const revalidate = 3600;
 
@@ -137,11 +138,3 @@ export default async function MarketIndexPage() {
   );
 }
 
-function formatPrice(priceInManWon: number): string {
-  if (priceInManWon >= 10000) {
-    const eok = Math.floor(priceInManWon / 10000);
-    const rest = priceInManWon % 10000;
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`;
-  }
-  return `${priceInManWon.toLocaleString()}만`;
-}

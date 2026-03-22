@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatKrw } from "@/lib/format";
 
 interface CalcResult {
   input: { principal: number; rate: number; years: number };
@@ -377,14 +378,3 @@ function ResultCard({
   );
 }
 
-function formatKrw(won: number): string {
-  if (won >= 100000000) {
-    const eok = Math.floor(won / 100000000);
-    const rest = Math.floor((won % 100000000) / 10000);
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만원` : `${eok}억원`;
-  }
-  if (won >= 10000) {
-    return `${Math.floor(won / 10000).toLocaleString()}만원`;
-  }
-  return `${won.toLocaleString()}원`;
-}

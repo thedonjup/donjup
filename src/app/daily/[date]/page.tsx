@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
+import { formatPrice, RATE_LABELS } from "@/lib/format";
 
 export const revalidate = 0;
 
@@ -65,13 +66,6 @@ export default async function DailyReportPage({
   const rateSummary = (report.rate_summary ?? []) as ReportRate[];
   const volumeSummary = (report.volume_summary ?? []) as VolumeItem[];
 
-  const RATE_LABELS: Record<string, string> = {
-    BASE_RATE: "기준금리",
-    COFIX_NEW: "COFIX(신규)",
-    COFIX_BAL: "COFIX(잔액)",
-    CD_91: "CD 91일",
-    TREASURY_3Y: "국고채 3년",
-  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -284,11 +278,3 @@ function getNextDate(dateStr: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-function formatPrice(priceInManWon: number): string {
-  if (priceInManWon >= 10000) {
-    const eok = Math.floor(priceInManWon / 10000);
-    const rest = priceInManWon % 10000;
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`;
-  }
-  return `${priceInManWon.toLocaleString()}만`;
-}

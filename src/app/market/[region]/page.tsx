@@ -4,17 +4,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SEOUL_REGION_CODES } from "@/lib/constants/region-codes";
 import AdSlot from "@/components/ads/AdSlot";
+import { formatPrice } from "@/lib/format";
 
 export const revalidate = 3600;
-
-function formatPrice(priceInManWon: number): string {
-  if (priceInManWon >= 10000) {
-    const eok = Math.floor(priceInManWon / 10000);
-    const rest = priceInManWon % 10000;
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`;
-  }
-  return `${priceInManWon.toLocaleString()}만`;
-}
 
 function getCurrentMonth(): string {
   const now = new Date();

@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
+import { formatPrice } from "@/lib/format";
 
 export const revalidate = 3600; // ISR: 1시간
 
@@ -259,12 +260,3 @@ function StatCard({
   );
 }
 
-function formatPrice(priceInManWon: number): string {
-  if (priceInManWon >= 10000) {
-    const eok = Math.floor(priceInManWon / 10000);
-    const rest = priceInManWon % 10000;
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`;
-  }
-  if (priceInManWon === 0) return "-";
-  return `${priceInManWon.toLocaleString()}만`;
-}
