@@ -119,7 +119,7 @@ export default function AboutPage() {
       {/* Contact */}
       <div className="mt-8 text-center">
         <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>
-          문의: donjupkr@gmail.com
+          문의: donjup.official@gmail.com
         </p>
         <div className="mt-4 flex justify-center gap-3">
           <Link
@@ -129,7 +129,7 @@ export default function AboutPage() {
             서비스 이용하기
           </Link>
           <a
-            href="https://instagram.com/donjupkr"
+            href="https://instagram.com/donjup.official"
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-xl border px-5 py-2 text-sm font-bold transition hover:opacity-80"

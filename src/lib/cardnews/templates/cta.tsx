@@ -5,7 +5,7 @@ export type CtaVariant = "A" | "B" | "C" | "D";
 const CTA_VARIANTS: Record<CtaVariant, { headline: string; cta: string; sub: string }> = {
   A: {
     headline: "이 동네 사는 친구한테\n보내줘",
-    cta: "@donjupkr",
+    cta: "@donjup.official",
     sub: "친구 태그하고 같이 확인해봐",
   },
   B: {
@@ -15,7 +15,7 @@ const CTA_VARIANTS: Record<CtaVariant, { headline: string; cta: string; sub: str
   },
   C: {
     headline: "저장해두면 나중에\n비교하기 좋아요",
-    cta: "@donjupkr",
+    cta: "@donjup.official",
     sub: "매일 업데이트되는 실거래가 랭킹",
   },
   D: {
@@ -101,7 +101,7 @@ export function Cta({ variant = "B" }: { variant?: CtaVariant }) {
           color: colors.textSecondary,
         }}
       >
-        @donjupkr
+        @donjup.official
       </div>
     </div>
   );

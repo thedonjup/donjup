@@ -162,7 +162,7 @@ function Footer() {
               개인정보처리방침
             </Link>
             <a
-              href="https://instagram.com/donjupkr"
+              href="https://instagram.com/donjup.official"
               target="_blank"
               rel="noopener noreferrer"
               className="transition hover:opacity-80"

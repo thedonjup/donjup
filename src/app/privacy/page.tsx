@@ -43,7 +43,7 @@ const SECTIONS = [
   },
   {
     title: "6. 문의",
-    content: "개인정보 관련 문의: donjupkr@gmail.com",
+    content: "개인정보 관련 문의: donjup.official@gmail.com",
   },
 ];
 
