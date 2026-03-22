@@ -28,55 +28,37 @@ const jsonLd = {
 };
 
 export default async function HomePage() {
-  const supabase = await createClient();
+  let drops: any[] = [];
+  let highs: any[] = [];
+  let volume: any[] = [];
+  let recent: any[] = [];
+  let rates: any[] = [];
+  let totalTxns: number | null = 0;
+  let totalComplexes: number | null = 0;
 
-  // 폭락 TOP 10
-  const { data: drops } = await supabase
-    .from("apt_transactions")
-    .select("*")
-    .not("change_rate", "is", null)
-    .lt("change_rate", 0)
-    .order("change_rate", { ascending: true })
-    .limit(10);
+  try {
+    const supabase = await createClient();
 
-  // 신고가 TOP 10
-  const { data: highs } = await supabase
-    .from("apt_transactions")
-    .select("*")
-    .eq("is_new_high", true)
-    .order("trade_date", { ascending: false })
-    .limit(10);
+    const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount] = await Promise.allSettled([
+      supabase.from("apt_transactions").select("*").not("change_rate", "is", null).lt("change_rate", 0).order("change_rate", { ascending: true }).limit(10),
+      supabase.from("apt_transactions").select("*").eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10),
+      supabase.from("apt_transactions").select("*").order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10),
+      supabase.from("apt_transactions").select("*").order("trade_date", { ascending: false }).limit(10),
+      supabase.from("finance_rates").select("*").order("base_date", { ascending: false }).limit(5),
+      supabase.from("apt_transactions").select("id", { count: "exact", head: true }),
+      supabase.from("apt_complexes").select("id", { count: "exact", head: true }),
+    ]);
 
-  // 거래량 TOP 10 (most recent high-value transactions)
-  const { data: volume } = await supabase
-    .from("apt_transactions")
-    .select("*")
-    .order("trade_date", { ascending: false })
-    .order("trade_price", { ascending: false })
-    .limit(10);
-
-  // 최근 거래 10
-  const { data: recent } = await supabase
-    .from("apt_transactions")
-    .select("*")
-    .order("trade_date", { ascending: false })
-    .limit(10);
-
-  // 최신 금리
-  const { data: rates } = await supabase
-    .from("finance_rates")
-    .select("*")
-    .order("base_date", { ascending: false })
-    .limit(5);
-
-  // 통계
-  const { count: totalTxns } = await supabase
-    .from("apt_transactions")
-    .select("id", { count: "exact", head: true });
-
-  const { count: totalComplexes } = await supabase
-    .from("apt_complexes")
-    .select("id", { count: "exact", head: true });
+    drops = dropsRes.status === "fulfilled" ? dropsRes.value.data ?? [] : [];
+    highs = highsRes.status === "fulfilled" ? highsRes.value.data ?? [] : [];
+    volume = volumeRes.status === "fulfilled" ? volumeRes.value.data ?? [] : [];
+    recent = recentRes.status === "fulfilled" ? recentRes.value.data ?? [] : [];
+    rates = ratesRes.status === "fulfilled" ? ratesRes.value.data ?? [] : [];
+    totalTxns = txnCount.status === "fulfilled" ? txnCount.value.count : 0;
+    totalComplexes = complexCount.status === "fulfilled" ? complexCount.value.count : 0;
+  } catch {
+    // DB 연결 실패 시 빈 데이터로 페이지 렌더링
+  }
 
   const dropCount = drops?.length ?? 0;
   const highCount = highs?.length ?? 0;
