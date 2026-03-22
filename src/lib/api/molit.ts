@@ -1,19 +1,23 @@
 /**
  * 국토교통부 아파트매매 실거래가 API 래퍼
  * https://www.data.go.kr/data/15126469/openapi.do
+ *
+ * 실제 API 응답 필드 (영문):
+ *   aptNm, dealAmount, dealYear, dealMonth, dealDay,
+ *   umdNm, excluUseAr, floor, buildYear, sggCd 등
  */
 
 interface MolitRawItem {
-  거래금액: string;
-  건축년도: string;
-  년: string;
-  월: string;
-  일: string;
-  법정동: string;
-  아파트: string;
-  전용면적: string;
-  층: string;
-  지역코드: string;
+  dealAmount: string;
+  buildYear: string;
+  dealYear: string;
+  dealMonth: string;
+  dealDay: string;
+  umdNm: string;
+  aptNm: string;
+  excluUseAr: string;
+  floor: string;
+  sggCd: string;
 }
 
 export interface ParsedTransaction {
@@ -43,14 +47,12 @@ export async function fetchTransactions(
   const apiKey = process.env.MOLIT_API_KEY;
   if (!apiKey) throw new Error("MOLIT_API_KEY 환경변수가 설정되지 않았습니다.");
 
-  const url = new URL(API_BASE);
-  url.searchParams.set("serviceKey", apiKey);
-  url.searchParams.set("LAWD_CD", regionCode);
-  url.searchParams.set("DEAL_YMD", dealYearMonth);
-  url.searchParams.set("pageNo", "1");
-  url.searchParams.set("numOfRows", "1000");
+  // User-Agent 필요 (data.go.kr이 빈 UA 차단)
+  const url = `${API_BASE}?serviceKey=${apiKey}&LAWD_CD=${regionCode}&DEAL_YMD=${dealYearMonth}&pageNo=1&numOfRows=1000`;
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url, {
+    headers: { "User-Agent": "DonJup/1.0" },
+  });
   if (!res.ok) {
     throw new Error(`국토부 API 호출 실패: ${res.status} ${res.statusText}`);
   }
@@ -65,9 +67,9 @@ function parseXmlResponse(
 ): ParsedTransaction[] {
   const items: ParsedTransaction[] = [];
 
-  // 에러 체크
+  // 에러 체크 — API는 성공 시 "000" 반환
   const resultCode = extractTag(xml, "resultCode");
-  if (resultCode && resultCode !== "00") {
+  if (resultCode && resultCode !== "000" && resultCode !== "00") {
     const resultMsg = extractTag(xml, "resultMsg");
     console.error(`국토부 API 에러: [${resultCode}] ${resultMsg}`);
     return [];
@@ -79,15 +81,15 @@ function parseXmlResponse(
 
   for (const itemXml of itemMatches) {
     try {
-      const rawPrice = extractTag(itemXml, "거래금액")?.trim();
-      const year = extractTag(itemXml, "년")?.trim();
-      const month = extractTag(itemXml, "월")?.trim();
-      const day = extractTag(itemXml, "일")?.trim();
-      const dong = extractTag(itemXml, "법정동")?.trim();
-      const aptName = extractTag(itemXml, "아파트")?.trim();
-      const size = extractTag(itemXml, "전용면적")?.trim();
-      const floor = extractTag(itemXml, "층")?.trim();
-      const builtYear = extractTag(itemXml, "건축년도")?.trim();
+      const rawPrice = extractTag(itemXml, "dealAmount")?.trim();
+      const year = extractTag(itemXml, "dealYear")?.trim();
+      const month = extractTag(itemXml, "dealMonth")?.trim();
+      const day = extractTag(itemXml, "dealDay")?.trim();
+      const dong = extractTag(itemXml, "umdNm")?.trim();
+      const aptName = extractTag(itemXml, "aptNm")?.trim();
+      const size = extractTag(itemXml, "excluUseAr")?.trim();
+      const floor = extractTag(itemXml, "floor")?.trim();
+      const builtYear = extractTag(itemXml, "buildYear")?.trim();
 
       if (!rawPrice || !year || !month || !day || !aptName || !size) continue;
 
@@ -97,23 +99,23 @@ function parseXmlResponse(
       items.push({
         regionCode,
         dongName: dong || "",
-        aptName: aptName,
+        aptName,
         sizeSqm: parseFloat(size),
         floor: parseInt(floor || "0", 10),
         tradePrice,
         tradeDate,
         builtYear: parseInt(builtYear || "0", 10),
         rawData: {
-          거래금액: rawPrice,
-          건축년도: builtYear || "",
-          년: year,
-          월: month,
-          일: day,
-          법정동: dong || "",
-          아파트: aptName,
-          전용면적: size,
-          층: floor || "",
-          지역코드: regionCode,
+          dealAmount: rawPrice,
+          buildYear: builtYear || "",
+          dealYear: year,
+          dealMonth: month,
+          dealDay: day,
+          umdNm: dong || "",
+          aptNm: aptName,
+          excluUseAr: size,
+          floor: floor || "",
+          sggCd: regionCode,
         },
       });
     } catch (e) {
