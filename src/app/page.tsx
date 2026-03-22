@@ -38,16 +38,20 @@ export default async function HomePage() {
 
   try {
     const supabase = await createClient();
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 5000);
 
     const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount] = await Promise.allSettled([
-      supabase.from("apt_transactions").select("*").not("change_rate", "is", null).lt("change_rate", 0).order("change_rate", { ascending: true }).limit(10),
-      supabase.from("apt_transactions").select("*").eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10),
-      supabase.from("apt_transactions").select("*").order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10),
-      supabase.from("apt_transactions").select("*").order("trade_date", { ascending: false }).limit(10),
-      supabase.from("finance_rates").select("*").order("base_date", { ascending: false }).limit(5),
-      supabase.from("apt_transactions").select("id", { count: "exact", head: true }),
-      supabase.from("apt_complexes").select("id", { count: "exact", head: true }),
+      supabase.from("apt_transactions").select("*").not("change_rate", "is", null).lt("change_rate", 0).order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("*").eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("*").order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("*").order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
+      supabase.from("finance_rates").select("*").order("base_date", { ascending: false }).limit(5).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
+      supabase.from("apt_complexes").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
     ]);
+
+    clearTimeout(timer);
 
     drops = dropsRes.status === "fulfilled" ? dropsRes.value.data ?? [] : [];
     highs = highsRes.status === "fulfilled" ? highsRes.value.data ?? [] : [];
@@ -57,7 +61,7 @@ export default async function HomePage() {
     totalTxns = txnCount.status === "fulfilled" ? txnCount.value.count : 0;
     totalComplexes = complexCount.status === "fulfilled" ? complexCount.value.count : 0;
   } catch {
-    // DB 연결 실패 시 빈 데이터로 페이지 렌더링
+    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
   }
 
   const dropCount = drops?.length ?? 0;
