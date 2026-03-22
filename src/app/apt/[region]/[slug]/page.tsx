@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createRentServiceClient } from "@/lib/supabase/rent-client";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -21,6 +22,17 @@ interface Transaction {
   is_new_high: boolean;
   is_significant_drop: boolean;
   deal_type: string | null;
+}
+
+interface RentTransaction {
+  id: string;
+  size_sqm: number;
+  floor: number | null;
+  deposit: number;
+  monthly_rent: number;
+  rent_type: string;
+  contract_type: string | null;
+  trade_date: string;
 }
 
 export async function generateMetadata({
@@ -75,6 +87,26 @@ export default async function AptDetailPage({
     .limit(100);
 
   const txns = (transactions ?? []) as Transaction[];
+
+  // 전월세 이력 조회 (보조 DB)
+  let rentTxns: RentTransaction[] = [];
+  try {
+    const rentDb = createRentServiceClient();
+    const { data: rentData } = await rentDb
+      .from("apt_rent_transactions")
+      .select("id,size_sqm,floor,deposit,monthly_rent,rent_type,contract_type,trade_date")
+      .eq("apt_name", complex.apt_name)
+      .eq("region_code", complex.region_code)
+      .order("trade_date", { ascending: false })
+      .limit(100);
+    rentTxns = (rentData ?? []) as RentTransaction[];
+  } catch {
+    // rent DB 미설정 시 무시
+  }
+
+  // 전세가율 계산
+  const latestJeonse = rentTxns.find((r) => r.rent_type === "전세");
+  const latestJeonseDeposit = latestJeonse?.deposit ?? 0;
 
   const prices = txns.map((t) => t.trade_price);
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
@@ -157,6 +189,21 @@ export default async function AptDetailPage({
           }
         />
       </div>
+
+      {/* 전월세 핵심 지표 */}
+      {latestJeonseDeposit > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 mb-8">
+          <StatCard label="최근 전세가" value={formatPrice(latestJeonseDeposit)} />
+          <StatCard
+            label="전세가율"
+            value={
+              latestPrice > 0
+                ? `${((latestJeonseDeposit / latestPrice) * 100).toFixed(1)}%`
+                : "-"
+            }
+          />
+        </div>
+      )}
 
       {/* 가격 추이 차트 */}
       {txns.length >= 2 && (
@@ -250,6 +297,73 @@ export default async function AptDetailPage({
             </div>
           ) : (
             <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>거래 이력이 없습니다.</p>
+          )}
+        </div>
+
+        {/* 전월세 이력 테이블 */}
+        <div className="lg:col-span-2 mt-8">
+          <h2 className="mb-4 text-lg font-bold t-text">전월세 이력</h2>
+          {rentTxns.length > 0 ? (
+            <div className="overflow-x-auto rounded-2xl border t-card" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-elevated)", color: "var(--color-text-tertiary)" }}>
+                    <th className="px-4 py-3">거래일</th>
+                    <th className="px-4 py-3">면적</th>
+                    <th className="px-4 py-3">층</th>
+                    <th className="px-4 py-3 text-right">보증금</th>
+                    <th className="px-4 py-3 text-right">월세</th>
+                    <th className="px-4 py-3">유형</th>
+                    <th className="px-4 py-3">계약유형</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rentTxns.map((r) => (
+                    <tr key={r.id} className="border-b last:border-0" style={{ borderColor: "var(--color-border-subtle)" }}>
+                      <td className="px-4 py-3 t-text">{r.trade_date}</td>
+                      <td className="px-4 py-3 t-text">{r.size_sqm}㎡</td>
+                      <td className="px-4 py-3 t-text">{r.floor != null ? `${r.floor}층` : "-"}</td>
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">
+                        {formatPrice(r.deposit)}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums t-text">
+                        {r.monthly_rent > 0 ? formatPrice(r.monthly_rent) : "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.rent_type === "월세" ? (
+                          <span
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
+                            style={{ background: "var(--color-semantic-rise-bg)", color: "var(--color-semantic-rise)" }}
+                          >
+                            월세 {formatPrice(r.monthly_rent)}
+                          </span>
+                        ) : (
+                          <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                            전세
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.contract_type === "갱신" ? (
+                          <span
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
+                            style={{ background: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" }}
+                          >
+                            갱신
+                          </span>
+                        ) : (
+                          <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                            {r.contract_type || "신규"}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>전월세 이력이 없습니다.</p>
           )}
         </div>
 
