@@ -12,6 +12,8 @@ import TransactionTabs from "@/components/apt/TransactionTabs";
 import NotifyButton from "@/components/apt/NotifyButton";
 import FavoriteButton from "@/components/apt/FavoriteButton";
 import MiniLoanCalculator from "@/components/apt/MiniLoanCalculator";
+import AptNews from "@/components/apt/AptNews";
+import Comments from "@/components/apt/Comments";
 
 export const revalidate = 3600;
 
@@ -336,6 +338,16 @@ export default async function AptDetailPage({
 
           <AdSlot slotId="apt-sidebar-rect" format="rectangle" className="hidden lg:block" />
         </aside>
+      </div>
+
+      {/* 관련 뉴스 */}
+      <div className="mt-8">
+        <AptNews aptName={complex.apt_name} regionName={complex.region_name} />
+      </div>
+
+      {/* 댓글 */}
+      <div className="mt-8">
+        <Comments aptSlug={slug} />
       </div>
 
       {/* 같은 동네 다른 단지 */}

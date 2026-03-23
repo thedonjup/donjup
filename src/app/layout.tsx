@@ -3,7 +3,9 @@ import "./globals.css";
 import Link from "next/link";
 import Script from "next/script";
 import ThemeProvider from "@/components/providers/ThemeProvider";
+import AuthProvider from "@/components/providers/AuthProvider";
 import MobileNav, { ThemeToggle } from "@/components/layout/MobileNav";
+import UserMenu from "@/components/auth/UserMenu";
 import PushPrompt from "@/components/PushPrompt";
 
 export const viewport: Viewport = {
@@ -75,6 +77,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
+          <AuthProvider>
           {process.env.NEXT_PUBLIC_KAKAO_JS_KEY && (
             <Script
               src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}&autoload=false&libraries=services,clusterer`}
@@ -96,6 +99,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <PushPrompt />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
@@ -127,12 +131,14 @@ function Header() {
           <NavLink href="/map">지도</NavLink>
           <HeaderSearchForm />
           <ThemeToggle />
+          <UserMenu />
         </nav>
 
         {/* Mobile: theme toggle + search + hamburger */}
         <div className="flex items-center gap-1 sm:hidden">
           <MobileSearchToggle />
           <ThemeToggle />
+          <UserMenu />
           <MobileNav />
         </div>
       </div>
@@ -217,6 +223,9 @@ function Footer() {
             </Link>
             <Link href="/trend" className="transition hover:opacity-80">
               트렌드
+            </Link>
+            <Link href="/map" className="transition hover:opacity-80">
+              지도
             </Link>
             <Link href="/search" className="transition hover:opacity-80">
               검색
