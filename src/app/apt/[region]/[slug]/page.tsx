@@ -243,6 +243,33 @@ export default async function AptDetailPage({
           {complex.parking_count ? ` · 주차 ${complex.parking_count}대` : ""}
           {complex.heating_method ? ` · ${complex.heating_method}` : ""}
         </p>
+
+        {/* 건축물 상세 정보 */}
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+          {complex.built_year && (() => {
+            const currentYear = new Date().getFullYear();
+            const age = currentYear - complex.built_year;
+            const reconstructionYear = complex.built_year + 30;
+            const yearsUntilReconstruction = reconstructionYear - currentYear;
+            return (
+              <>
+                <span>{age}년차</span>
+                <span>
+                  재건축연한 {reconstructionYear}년
+                  {yearsUntilReconstruction > 0
+                    ? ` (${yearsUntilReconstruction}년 후)`
+                    : " (도래)"}
+                </span>
+              </>
+            );
+          })()}
+          {complex.floor_area_ratio && <span>용적률 {complex.floor_area_ratio}%</span>}
+          {complex.building_coverage && <span>건폐율 {complex.building_coverage}%</span>}
+          {complex.energy_grade && <span>에너지등급 {complex.energy_grade}</span>}
+          {complex.elevator_count && <span>승강기 {complex.elevator_count}대</span>}
+          {complex.land_area && <span>대지면적 {Number(complex.land_area).toLocaleString()}㎡</span>}
+          {complex.total_floor_area && <span>연면적 {Number(complex.total_floor_area).toLocaleString()}㎡</span>}
+        </div>
       </div>
 
       {/* 핵심 지표 카드 - Row 1 */}

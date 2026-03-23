@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 300; // 5분
 
@@ -154,7 +155,14 @@ export async function GET(request: Request) {
   results.outOfRangeCount = outOfRangeCount ?? 0;
   log.push(`변동률 범위 초과: ${outOfRangeCount ?? 0}건`);
 
-  // Logging removed — response already contains the log array
+  // Slack alert on anomalies
+  const totalAnomalies =
+    (anomalyCount ?? 0) + (invalidPriceCount ?? 0) + (flagMismatchCount ?? 0) + (outOfRangeCount ?? 0);
+  if (totalAnomalies > 0) {
+    await sendSlackAlert(
+      `데이터 검증 이상 발견: 이상치 ${anomalyCount ?? 0}건, 유효하지 않은 가격 ${invalidPriceCount ?? 0}건, 플래그 불일치 ${flagMismatchCount ?? 0}건, 범위 초과 ${outOfRangeCount ?? 0}건`
+    );
+  }
 
   return NextResponse.json({
     success: true,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { sendSlackAlert } from "@/lib/alert";
 import { fetchTransactions, delay } from "@/lib/api/molit";
 import {
   fetchMultiTransactions,
@@ -148,6 +149,12 @@ export async function GET(request: Request) {
         errors.push(`${name}(${dealYearMonth}): ${msg}`);
       }
     }
+  }
+
+  if (errors.length > 0) {
+    await sendSlackAlert(
+      `실거래가 수집 오류 ${errors.length}건 (batch=${isCronBatch ? batch : "all"}): ${errors.slice(0, 3).join("; ")}`
+    );
   }
 
   return NextResponse.json({
@@ -415,6 +422,12 @@ async function handleMultiPropertyType(
         errors.push(`${name}(${dealYearMonth}): ${msg}`);
       }
     }
+  }
+
+  if (errors.length > 0) {
+    await sendSlackAlert(
+      `${typeLabel} 수집 오류 ${errors.length}건: ${errors.slice(0, 3).join("; ")}`
+    );
   }
 
   return NextResponse.json({
