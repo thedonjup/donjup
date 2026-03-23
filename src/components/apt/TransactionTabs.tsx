@@ -14,7 +14,14 @@ interface Transaction {
   is_new_high: boolean;
   is_significant_drop: boolean;
   deal_type: string | null;
+  drop_level?: "normal" | "decline" | "crash" | "severe";
 }
+
+const DROP_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  decline: { label: "하락", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  crash: { label: "폭락", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
+  severe: { label: "대폭락", color: "#dc2626", bg: "rgba(220,38,38,0.12)" },
+};
 
 interface RentTransaction {
   id: string;
@@ -169,6 +176,17 @@ export default function TransactionTabs({
                             style={{ color: "var(--color-semantic-rise)" }}
                           >
                             신고가
+                          </span>
+                        )}
+                        {t.drop_level && DROP_LEVEL_CONFIG[t.drop_level] && (
+                          <span
+                            className="ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                            style={{
+                              backgroundColor: DROP_LEVEL_CONFIG[t.drop_level].bg,
+                              color: DROP_LEVEL_CONFIG[t.drop_level].color,
+                            }}
+                          >
+                            {DROP_LEVEL_CONFIG[t.drop_level].label}
                           </span>
                         )}
                       </td>

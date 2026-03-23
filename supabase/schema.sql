@@ -54,6 +54,9 @@ CREATE INDEX idx_txn_significant ON apt_transactions(is_significant_drop, is_new
 CREATE INDEX idx_txn_change_rate ON apt_transactions(change_rate ASC)
     WHERE change_rate IS NOT NULL;
 
+-- 하락 단계 컬럼 (normal | decline | crash | severe)
+ALTER TABLE apt_transactions ADD COLUMN IF NOT EXISTS drop_level VARCHAR(10) DEFAULT 'normal';
+
 -- 중복 거래 방지용 유니크 인덱스
 CREATE UNIQUE INDEX idx_txn_unique ON apt_transactions(
     apt_name, size_sqm, floor, trade_date, trade_price

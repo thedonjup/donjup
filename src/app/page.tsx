@@ -113,10 +113,33 @@ export default async function HomePage() {
                 <span className="text-red-400">{heroTx.apt_name}</span>
                 <br />
                 <span>최고가 대비 </span>
-                <span className="inline-block rounded-lg bg-red-500/20 px-3 py-1 text-red-400">
+                <span
+                  className="inline-block rounded-lg px-3 py-1"
+                  style={{
+                    backgroundColor:
+                      heroTx.drop_level === "severe"
+                        ? "rgba(220,38,38,0.2)"
+                        : heroTx.drop_level === "crash"
+                          ? "rgba(239,68,68,0.2)"
+                          : "rgba(245,158,11,0.2)",
+                    color:
+                      heroTx.drop_level === "severe"
+                        ? "#dc2626"
+                        : heroTx.drop_level === "crash"
+                          ? "#ef4444"
+                          : "#f59e0b",
+                  }}
+                >
                   -{Math.abs(heroTx.change_rate!)}%
                 </span>
-                <span> 폭락</span>
+                <span>
+                  {" "}
+                  {heroTx.drop_level === "severe"
+                    ? "대폭락"
+                    : heroTx.drop_level === "crash"
+                      ? "폭락"
+                      : "하락"}
+                </span>
               </>
             ) : heroHigh ? (
               <>

@@ -5,6 +5,16 @@ export const maxDuration = 300; // 5분
 
 const MAX_NULL_RECORDS = 500;
 
+type DropLevel = "normal" | "decline" | "crash" | "severe";
+
+function calcDropLevel(changeRate: number | null): DropLevel {
+  if (changeRate === null) return "normal";
+  if (changeRate <= -25) return "severe";
+  if (changeRate <= -15) return "crash";
+  if (changeRate <= -10) return "decline";
+  return "normal";
+}
+
 export async function GET(request: Request) {
   // Cron 인증
   const authHeader = request.headers.get("Authorization");
@@ -79,10 +89,11 @@ export async function GET(request: Request) {
           changeRate = parseFloat(
             (((t.trade_price - runningMax) / runningMax) * 100).toFixed(2)
           );
-          isSignificantDrop = changeRate <= -20;
+          isSignificantDrop = changeRate <= -15;
         }
 
         runningMax = Math.max(runningMax, t.trade_price);
+        const dropLevel = calcDropLevel(changeRate);
 
         await supabase
           .from("apt_transactions")
@@ -91,6 +102,7 @@ export async function GET(request: Request) {
             change_rate: changeRate,
             is_new_high: isNewHigh,
             is_significant_drop: isSignificantDrop,
+            drop_level: dropLevel,
           })
           .eq("id", t.id);
 
@@ -127,7 +139,7 @@ export async function GET(request: Request) {
     .from("apt_transactions")
     .select("id", { count: "exact", head: true })
     .eq("is_significant_drop", true)
-    .or("change_rate.is.null,change_rate.gt.-20");
+    .or("change_rate.is.null,change_rate.gt.-15");
 
   results.flagMismatchCount = flagMismatchCount ?? 0;
   log.push(`폭락 플래그 불일치: ${flagMismatchCount ?? 0}건`);

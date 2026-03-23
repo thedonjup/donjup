@@ -101,6 +101,7 @@ export async function GET(request: Request) {
               change_rate: t.changeRate,
               is_new_high: t.isNewHigh,
               is_significant_drop: t.isSignificantDrop,
+              drop_level: t.dropLevel,
               deal_type: t.dealType,
               raw_data: t.rawData,
             })),
@@ -142,11 +143,22 @@ export async function GET(request: Request) {
   });
 }
 
+type DropLevel = "normal" | "decline" | "crash" | "severe";
+
+function calcDropLevel(changeRate: number | null): DropLevel {
+  if (changeRate === null) return "normal";
+  if (changeRate <= -25) return "severe";
+  if (changeRate <= -15) return "crash";
+  if (changeRate <= -10) return "decline";
+  return "normal";
+}
+
 interface EnrichedTransaction extends ParsedTransaction {
   highestPrice: number | null;
   changeRate: number | null;
   isNewHigh: boolean;
   isSignificantDrop: boolean;
+  dropLevel: DropLevel;
 }
 
 async function enrichTransactions(
@@ -156,18 +168,39 @@ async function enrichTransactions(
 ): Promise<EnrichedTransaction[]> {
   const enriched: EnrichedTransaction[] = [];
 
+  // 최근 3년 기준일
+  const threeYearsAgo = new Date();
+  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+  const threeYearsAgoStr = threeYearsAgo.toISOString().split("T")[0];
+
   for (const t of transactions) {
-    // 해당 단지+면적의 역대 최고가 조회
-    const { data: maxRow } = await supabase
+    // 최근 3년 내 최고가 조회
+    const { data: recentMaxRow } = await supabase
       .from("apt_transactions")
       .select("trade_price")
       .eq("apt_name", t.aptName)
       .eq("size_sqm", t.sizeSqm)
+      .gte("trade_date", threeYearsAgoStr)
       .order("trade_price", { ascending: false })
       .limit(1)
       .single();
 
-    const previousHighest = maxRow?.trade_price ?? 0;
+    let previousHighest = recentMaxRow?.trade_price ?? 0;
+
+    // 3년 내 거래 없으면 역대 최고가 fallback
+    if (previousHighest === 0) {
+      const { data: allTimeMaxRow } = await supabase
+        .from("apt_transactions")
+        .select("trade_price")
+        .eq("apt_name", t.aptName)
+        .eq("size_sqm", t.sizeSqm)
+        .order("trade_price", { ascending: false })
+        .limit(1)
+        .single();
+
+      previousHighest = allTimeMaxRow?.trade_price ?? 0;
+    }
+
     const highestPrice = Math.max(previousHighest, t.tradePrice);
     const isNewHigh = t.tradePrice > previousHighest && previousHighest > 0;
 
@@ -178,8 +211,10 @@ async function enrichTransactions(
       changeRate = parseFloat(
         (((t.tradePrice - previousHighest) / previousHighest) * 100).toFixed(2)
       );
-      isSignificantDrop = changeRate <= -20;
+      isSignificantDrop = changeRate <= -15;
     }
+
+    const dropLevel = calcDropLevel(changeRate);
 
     enriched.push({
       ...t,
@@ -187,6 +222,7 @@ async function enrichTransactions(
       changeRate,
       isNewHigh,
       isSignificantDrop,
+      dropLevel,
     });
   }
 
