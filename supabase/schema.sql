@@ -26,6 +26,11 @@ ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS parking_count INTEGER;
 ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS heating_method VARCHAR(50);
 ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS floor_count INTEGER;
 
+-- 지도 좌표 컬럼
+ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,7);
+ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7);
+CREATE INDEX IF NOT EXISTS idx_complexes_coords ON apt_complexes(latitude, longitude) WHERE latitude IS NOT NULL;
+
 -- 2. 아파트 실거래가
 CREATE TABLE apt_transactions (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),

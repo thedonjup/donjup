@@ -75,6 +75,12 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
+          {process.env.NEXT_PUBLIC_KAKAO_JS_KEY && (
+            <Script
+              src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}&autoload=false&libraries=services,clusterer`}
+              strategy="afterInteractive"
+            />
+          )}
           {process.env.NEXT_PUBLIC_GA_ID && (
             <>
               <Script
@@ -118,6 +124,7 @@ function Header() {
           <NavLink href="/rate">금리현황</NavLink>
           <NavLink href="/rate/calculator">계산기</NavLink>
           <NavLink href="/daily/archive">데일리</NavLink>
+          <NavLink href="/map">지도</NavLink>
           <HeaderSearchForm />
           <ThemeToggle />
         </nav>

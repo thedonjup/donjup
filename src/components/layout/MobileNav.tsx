@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/rate", label: "금리 현황" },
   { href: "/rate/calculator", label: "대출 계산기" },
   { href: "/daily/archive", label: "데일리 리포트" },
+  { href: "/map", label: "지도" },
 ];
 
 export function HamburgerButton({ onClick }: { onClick: () => void }) {
