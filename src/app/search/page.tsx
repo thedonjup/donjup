@@ -68,16 +68,34 @@ export default async function SearchPage({
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), 5000);
 
-      const { data } = await supabase
+      // "동대문 두산", "강남 원베일리" 등 공백으로 분리
+      const parts = query.split(/\s+/).filter(Boolean);
+
+      let supabaseQuery = supabase
         .from("apt_complexes")
-        .select("id,apt_name,region_code,region_name,dong_name,sido_name,sigungu_name,built_year,slug,latest_trade_price")
-        .ilike("apt_name", `%${query}%`)
+        .select("id,apt_name,region_code,region_name,dong_name,built_year,slug");
+
+      if (parts.length >= 2) {
+        // 지역 + 아파트명 검색
+        const regionPart = parts[0];
+        const aptPart = parts.slice(1).join(" ");
+        // region_name 또는 dong_name에 지역 포함 AND apt_name에 아파트명 포함
+        supabaseQuery = supabaseQuery
+          .ilike("apt_name", `%${aptPart}%`)
+          .or(`region_name.ilike.%${regionPart}%,dong_name.ilike.%${regionPart}%`);
+      } else {
+        // 단일 키워드: 아파트명 또는 지역명 검색
+        supabaseQuery = supabaseQuery
+          .or(`apt_name.ilike.%${query}%,region_name.ilike.%${query}%,dong_name.ilike.%${query}%`);
+      }
+
+      const { data } = await supabaseQuery
         .order("apt_name")
-        .limit(30)
+        .limit(50)
         .abortSignal(ac.signal);
 
       clearTimeout(timer);
-      results = data ?? [];
+      results = (data ?? []).map((d) => ({ ...d, sido_name: null, sigungu_name: null, latest_trade_price: null }));
     } catch {
       // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
     }
@@ -92,7 +110,7 @@ export default async function SearchPage({
           <h1 className="text-2xl font-extrabold t-text">아파트 검색</h1>
         </div>
         <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-          아파트명으로 검색하여 실거래가를 확인하세요
+          지역 + 아파트명으로 검색하여 실거래가를 확인하세요
         </p>
       </div>
 
@@ -103,7 +121,7 @@ export default async function SearchPage({
             type="text"
             name="q"
             defaultValue={query}
-            placeholder="아파트명을 입력하세요 (예: 래미안, 자이, 힐스테이트)"
+            placeholder="지역+아파트명 검색 (예: 동대문 두산, 강남 원베일리, 송파 주공)"
             className="flex-1 rounded-xl border px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-brand-500"
             style={{
               borderColor: "var(--color-border)",
