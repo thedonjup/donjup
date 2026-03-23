@@ -83,7 +83,7 @@ export default async function AptDetailPage({
   const supabase = await createClient();
 
   const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), 5000);
+  const timer = setTimeout(() => ac.abort(), 30000);
 
   const { data: complex } = await supabase
     .from("apt_complexes")

@@ -53,7 +53,7 @@ export default async function DailyReportPage({
   const supabase = await createClient();
 
   const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), 5000);
+  const timer = setTimeout(() => ac.abort(), 30000);
 
   let report: any = null;
   try {

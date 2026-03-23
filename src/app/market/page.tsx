@@ -45,7 +45,7 @@ export default async function MarketIndexPage({
 
   try {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 5000);
+    const timer = setTimeout(() => ac.abort(), 30000);
 
     const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
 

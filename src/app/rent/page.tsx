@@ -89,7 +89,7 @@ export default async function RentPage({
 
   try {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 5000);
+    const timer = setTimeout(() => ac.abort(), 30000);
 
     const [jeonseResult, wolseResult] = await Promise.all([
       jeonseQuery.abortSignal(ac.signal),

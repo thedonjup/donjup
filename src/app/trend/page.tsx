@@ -31,7 +31,7 @@ export default async function TrendPage() {
 
   try {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 5000);
+    const timer = setTimeout(() => ac.abort(), 30000);
 
     // RPC 시도 → 실패 시 직접 쿼리 fallback
     const rpcResult = await supabase.rpc("get_monthly_volume", {

@@ -47,7 +47,7 @@ export default async function HomePage({
   try {
     const supabase = await createClient();
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 5000);
+    const timer = setTimeout(() => ac.abort(), 30000); // 30초 타임아웃 (CockroachDB 해외 리전)
 
     const txFields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level,property_type";
 
@@ -72,8 +72,8 @@ export default async function HomePage({
     rates = ratesRes.status === "fulfilled" ? ratesRes.value.data ?? [] : [];
     totalTxns = txnCount.status === "fulfilled" ? txnCount.value.count : 0;
     totalComplexes = complexCount.status === "fulfilled" ? complexCount.value.count : 0;
-  } catch {
-    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+  } catch (e) {
+    console.error("[Homepage] DB query failed:", e instanceof Error ? e.message : e);
   }
 
   const dropCount = drops?.length ?? 0;

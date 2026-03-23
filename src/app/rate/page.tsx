@@ -42,7 +42,7 @@ export default async function RateDashboardPage() {
 
   try {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 5000);
+    const timer = setTimeout(() => ac.abort(), 30000);
 
     const [ratesRes, bankRes] = await Promise.all([
       supabase
