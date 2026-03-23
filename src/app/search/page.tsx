@@ -132,6 +132,7 @@ export default async function SearchPage({
             name="q"
             defaultValue={query}
             placeholder="지역+아파트명 검색 (예: 동대문 두산, 강남 원베일리, 송파 주공)"
+            aria-label="아파트 검색어 입력"
             className="flex-1 rounded-xl border px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-brand-500"
             style={{
               borderColor: "var(--color-border)",

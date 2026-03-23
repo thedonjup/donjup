@@ -154,7 +154,7 @@ export async function GET(request: Request) {
   results.outOfRangeCount = outOfRangeCount ?? 0;
   log.push(`변동률 범위 초과: ${outOfRangeCount ?? 0}건`);
 
-  console.log("[validate-data]", log.join(" | "));
+  // Logging removed — response already contains the log array
 
   return NextResponse.json({
     success: true,

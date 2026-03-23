@@ -33,15 +33,20 @@ export const metadata: Metadata = {
     siteName: "돈줍 DonJup",
     title: "돈줍 - 부동산 실거래가 폭락/신고가 랭킹",
     description: "매일 자동 업데이트되는 전국 아파트 폭락·신고가 랭킹과 금리 변동 정보",
+    images: [{ url: "/logo.svg", width: 512, height: 512, alt: "돈줍 로고" }],
   },
   twitter: {
     card: "summary_large_image",
+    site: "@donjup.official",
     title: "돈줍 - 부동산 실거래가 & 금리 대시보드",
     description: "매일 자동 업데이트되는 아파트 폭락/신고가 랭킹과 금리 변동 정보",
   },
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/logo.svg", sizes: "512x512", type: "image/svg+xml" },
     ],
   },
   other: {
@@ -76,6 +81,12 @@ export default function RootLayout({
         )}
       </head>
       <body className="min-h-full flex flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:outline-none"
+        >
+          본문으로 건너뛰기
+        </a>
         <ThemeProvider>
           <AuthProvider>
           {process.env.NEXT_PUBLIC_KAKAO_JS_KEY && (
@@ -96,7 +107,7 @@ export default function RootLayout({
             </>
           )}
           <Header />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1">{children}</main>
           <Footer />
           <PushPrompt />
           </AuthProvider>
@@ -175,6 +186,7 @@ function HeaderSearchForm() {
           type="text"
           name="q"
           placeholder="아파트 검색"
+          aria-label="아파트 검색"
           className="w-32 rounded-lg border py-1.5 pl-8 pr-2 text-xs transition focus:w-48 focus:outline-none focus:ring-2 focus:ring-brand-500"
           style={{
             borderColor: "var(--color-border)",

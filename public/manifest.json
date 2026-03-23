@@ -22,5 +22,11 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    { "name": "검색", "url": "/search", "icons": [{"src": "/favicon.svg", "sizes": "any"}] },
+    { "name": "지도", "url": "/map", "icons": [{"src": "/favicon.svg", "sizes": "any"}] },
+    { "name": "전월세", "url": "/rent", "icons": [{"src": "/favicon.svg", "sizes": "any"}] }
   ]
 }
