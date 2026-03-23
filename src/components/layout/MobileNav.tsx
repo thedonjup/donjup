@@ -69,9 +69,10 @@ export default function MobileNav() {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 z-[70] h-full w-72 transform bg-[var(--color-surface-card)] shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 z-[70] h-full w-72 transform shadow-2xl transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
+        style={{ background: "var(--color-surface-card)" }}
       >
         {/* Close button */}
         <div className="flex h-16 items-center justify-between px-5">
