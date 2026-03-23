@@ -2,25 +2,28 @@
  * 로컬 데이터 수집 스크립트
  * 실행: npx tsx scripts/seed-transactions.ts
  *
- * 서울 25개구 × 2개월 실거래가 데이터를 수집하여 Supabase에 저장
+ * 서울 25개구 x 2개월 실거래가 데이터를 수집하여 CockroachDB에 저장
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { Pool } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const DATABASE_URL = process.env.DATABASE_URL!;
 const MOLIT_API_KEY = process.env.MOLIT_API_KEY!;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !MOLIT_API_KEY) {
-  console.error("환경변수 누락: SUPABASE_URL, SERVICE_ROLE_KEY, MOLIT_API_KEY 필요");
+if (!DATABASE_URL || !MOLIT_API_KEY) {
+  console.error("환경변수 누락: DATABASE_URL, MOLIT_API_KEY 필요");
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: true },
+  max: 5,
+});
 
 const SEOUL_REGION_CODES: Record<string, string> = {
   "11110": "종로구", "11140": "중구", "11170": "용산구", "11200": "성동구",
@@ -125,7 +128,7 @@ async function main() {
   const regionEntries = Object.entries(SEOUL_REGION_CODES);
 
   for (const dealYearMonth of dealYearMonths) {
-    console.log(`\n📅 ${dealYearMonth} 수집 중...`);
+    console.log(`\n${dealYearMonth} 수집 중...`);
 
     for (const [code, name] of regionEntries) {
       try {
@@ -139,37 +142,30 @@ async function main() {
 
         // 1) 단지 마스터 UPSERT
         const seen = new Set<string>();
-        const complexes = [];
         for (const t of transactions) {
           const key = `${t.regionCode}-${t.aptName}`;
           if (seen.has(key)) continue;
           seen.add(key);
-          complexes.push({
-            region_code: t.regionCode,
-            region_name: name,
-            dong_name: t.dongName,
-            apt_name: t.aptName,
-            built_year: t.builtYear || null,
-            slug: `${t.regionCode}-${toSlug(t.aptName)}`,
-          });
-        }
-        if (complexes.length > 0) {
-          await supabase.from("apt_complexes").upsert(complexes, { onConflict: "slug", ignoreDuplicates: true });
+          const slug = `${t.regionCode}-${toSlug(t.aptName)}`;
+          await pool.query(
+            `INSERT INTO "apt_complexes" ("region_code", "region_name", "dong_name", "apt_name", "built_year", "slug")
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT ("slug") DO NOTHING`,
+            [t.regionCode, name, t.dongName, t.aptName, t.builtYear || null, slug]
+          );
         }
 
-        // 2) 기존 최고가 조회 (단지+면적별)
-        const enriched = [];
+        // 2) 기존 최고가 조회 (단지+면적별) 및 거래 데이터 UPSERT
+        let insertedCount = 0;
         for (const t of transactions) {
-          const { data: maxRow } = await supabase
-            .from("apt_transactions")
-            .select("trade_price")
-            .eq("apt_name", t.aptName)
-            .eq("size_sqm", t.sizeSqm)
-            .order("trade_price", { ascending: false })
-            .limit(1)
-            .single();
+          const maxResult = await pool.query(
+            `SELECT "trade_price" FROM "apt_transactions"
+             WHERE "apt_name" = $1 AND "size_sqm" = $2
+             ORDER BY "trade_price" DESC LIMIT 1`,
+            [t.aptName, t.sizeSqm]
+          );
 
-          const previousHighest = maxRow?.trade_price ?? 0;
+          const previousHighest = maxResult.rows[0]?.trade_price ?? 0;
           const highestPrice = Math.max(previousHighest, t.tradePrice);
           const isNewHigh = t.tradePrice > previousHighest && previousHighest > 0;
 
@@ -186,38 +182,34 @@ async function main() {
           if (isNewHigh) totalNewHigh++;
           if (isSignificantDrop) totalSignificantDrop++;
 
-          enriched.push({
-            region_code: t.regionCode,
-            region_name: `${name} ${t.dongName}`,
-            apt_name: t.aptName,
-            size_sqm: t.sizeSqm,
-            floor: t.floor,
-            trade_price: t.tradePrice,
-            trade_date: t.tradeDate,
-            highest_price: highestPrice,
-            change_rate: changeRate,
-            is_new_high: isNewHigh,
-            is_significant_drop: isSignificantDrop,
-            raw_data: {},
-          });
+          const result = await pool.query(
+            `INSERT INTO "apt_transactions"
+             ("region_code", "region_name", "apt_name", "size_sqm", "floor",
+              "trade_price", "trade_date", "highest_price", "change_rate",
+              "is_new_high", "is_significant_drop", "raw_data")
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             ON CONFLICT ("apt_name", "size_sqm", "floor", "trade_date", "trade_price") DO NOTHING
+             RETURNING "id"`,
+            [
+              t.regionCode,
+              `${name} ${t.dongName}`,
+              t.aptName,
+              t.sizeSqm,
+              t.floor,
+              t.tradePrice,
+              t.tradeDate,
+              highestPrice,
+              changeRate,
+              isNewHigh,
+              isSignificantDrop,
+              JSON.stringify({}),
+            ]
+          );
+          insertedCount += result.rows.length;
         }
 
-        // 3) 거래 데이터 UPSERT
-        const { data, error } = await supabase
-          .from("apt_transactions")
-          .upsert(enriched, {
-            onConflict: "apt_name,size_sqm,floor,trade_date,trade_price",
-            ignoreDuplicates: true,
-          })
-          .select("id");
-
-        if (error) {
-          console.error(`  ${name}: DB 에러 - ${error.message}`);
-        } else {
-          const count = data?.length ?? 0;
-          totalInserted += count;
-          process.stdout.write(`  ${name}: ${transactions.length}건 수집, ${count}건 저장\n`);
-        }
+        totalInserted += insertedCount;
+        process.stdout.write(`  ${name}: ${transactions.length}건 수집, ${insertedCount}건 저장\n`);
 
         await delay(350);
       } catch (e) {
@@ -227,74 +219,79 @@ async function main() {
   }
 
   // 4) 데일리 리포트 생성
-  console.log("\n\n📊 데일리 리포트 생성 중...");
+  console.log("\n\n데일리 리포트 생성 중...");
   await generateDailyReport();
 
   console.log(`\n=== 수집 완료 ===`);
   console.log(`총 저장: ${totalInserted}건`);
   console.log(`신고가: ${totalNewHigh}건`);
-  console.log(`폭락(20%↓이상): ${totalSignificantDrop}건`);
+  console.log(`폭락(20%이상): ${totalSignificantDrop}건`);
+
+  await pool.end();
 }
 
 async function generateDailyReport() {
   const today = new Date().toISOString().split("T")[0];
 
   // 최근 거래 데이터 기반 리포트
-  const { data: drops } = await supabase
-    .from("apt_transactions")
-    .select("*")
-    .not("change_rate", "is", null)
-    .lt("change_rate", 0)
-    .order("change_rate", { ascending: true })
-    .limit(10);
+  const dropsResult = await pool.query(
+    `SELECT * FROM "apt_transactions"
+     WHERE "change_rate" IS NOT NULL AND "change_rate" < 0
+     ORDER BY "change_rate" ASC LIMIT 10`
+  );
+  const drops = dropsResult.rows;
 
-  const { data: highs } = await supabase
-    .from("apt_transactions")
-    .select("*")
-    .eq("is_new_high", true)
-    .order("trade_date", { ascending: false })
-    .limit(10);
+  const highsResult = await pool.query(
+    `SELECT * FROM "apt_transactions"
+     WHERE "is_new_high" = TRUE
+     ORDER BY "trade_date" DESC LIMIT 10`
+  );
+  const highs = highsResult.rows;
 
   // 거래량 상위 지역
-  const { data: allTxns } = await supabase
-    .from("apt_transactions")
-    .select("region_code,region_name")
-    .gte("trade_date", new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0]);
+  const cutoffDate = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+  const volumeResult = await pool.query(
+    `SELECT "region_code", "region_name", COUNT(*) as count
+     FROM "apt_transactions"
+     WHERE "trade_date" >= $1
+     GROUP BY "region_code", "region_name"
+     ORDER BY count DESC LIMIT 10`,
+    [cutoffDate]
+  );
+  const volumeSummary = volumeResult.rows.map((r) => ({
+    region: (r.region_name as string)?.split(" ")[0] || r.region_code,
+    count: parseInt(r.count as string, 10),
+  }));
 
-  const volumeMap: Record<string, { region: string; count: number }> = {};
-  for (const t of allTxns ?? []) {
-    const region = t.region_name?.split(" ")[0] || t.region_code;
-    if (!volumeMap[region]) volumeMap[region] = { region, count: 0 };
-    volumeMap[region].count++;
-  }
-  const volumeSummary = Object.values(volumeMap)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-
-  const topDrop = drops?.[0];
+  const topDrop = drops[0];
   const title = topDrop
     ? `${topDrop.apt_name} ${Math.abs(topDrop.change_rate)}% 하락 외 | ${today} 데일리`
     : `${today} 서울 아파트 실거래 데일리`;
 
-  const { error } = await supabase.from("daily_reports").upsert(
-    {
-      report_date: today,
+  await pool.query(
+    `INSERT INTO "daily_reports"
+     ("report_date", "title", "summary", "top_drops", "top_highs", "rate_summary", "volume_summary")
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT ("report_date") DO UPDATE SET
+       "title" = EXCLUDED."title",
+       "summary" = EXCLUDED."summary",
+       "top_drops" = EXCLUDED."top_drops",
+       "top_highs" = EXCLUDED."top_highs",
+       "rate_summary" = EXCLUDED."rate_summary",
+       "volume_summary" = EXCLUDED."volume_summary"`,
+    [
+      today,
       title,
-      summary: `서울 아파트 실거래가 폭락/신고가 랭킹 및 거래량 분석`,
-      top_drops: drops ?? [],
-      top_highs: highs ?? [],
-      rate_summary: [],
-      volume_summary: volumeSummary,
-    },
-    { onConflict: "report_date" }
+      `서울 아파트 실거래가 폭락/신고가 랭킹 및 거래량 분석`,
+      JSON.stringify(drops),
+      JSON.stringify(highs),
+      JSON.stringify([]),
+      JSON.stringify(volumeSummary),
+    ]
   );
 
-  if (error) {
-    console.error(`리포트 생성 실패: ${error.message}`);
-  } else {
-    console.log(`✅ ${today} 데일리 리포트 생성 완료`);
-    console.log(`  폭락 TOP: ${drops?.length ?? 0}건, 신고가: ${highs?.length ?? 0}건`);
-  }
+  console.log(`${today} 데일리 리포트 생성 완료`);
+  console.log(`  폭락 TOP: ${drops.length}건, 신고가: ${highs.length}건`);
 }
 
 main().catch(console.error);

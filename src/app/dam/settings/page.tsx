@@ -9,8 +9,7 @@ const SETTINGS: SettingSection[] = [
   {
     title: "API 키 상태",
     items: [
-      { label: "Supabase URL", value: process.env.NEXT_PUBLIC_SUPABASE_URL ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_SUPABASE_URL ? "ok" : "missing" },
-      { label: "Supabase Anon Key", value: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "ok" : "missing" },
+      { label: "CockroachDB (DATABASE_URL)", value: process.env.DATABASE_URL ? "설정됨" : "미설정", status: process.env.DATABASE_URL ? "ok" : "missing" },
       { label: "Firebase API Key", value: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "ok" : "missing" },
       { label: "Firebase Project ID", value: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? "ok" : "missing" },
       { label: "Kakao JS Key", value: process.env.NEXT_PUBLIC_KAKAO_JS_KEY ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_KAKAO_JS_KEY ? "ok" : "missing" },
@@ -56,7 +55,7 @@ const SETTINGS: SettingSection[] = [
     items: [
       { label: "공공데이터 API", value: "1000건/일 (OpenAPI 기준)" },
       { label: "크론 요청", value: "CRON_SECRET 헤더 필수" },
-      { label: "Supabase", value: "무제한 (서비스 키)" },
+      { label: "CockroachDB", value: "커넥션 풀 5개" },
     ],
   },
 ];

@@ -7,31 +7,31 @@
  * 실행: npx tsx scripts/recalculate-prices.ts
  *
  * 특징:
- * - 지역별 처리 (서울 25개 구 → 전국)
- * - Window 함수 미사용 (Supabase 무료 티어 타임아웃 방지)
+ * - 지역별 처리 (서울 25개 구 -> 전국)
  * - JavaScript에서 누적 MAX 계산
  * - 500건 단위 배치 업데이트
  * - 진행률 실시간 표시
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { Pool } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const DATABASE_URL = process.env.DATABASE_URL!;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error(
-    "환경변수 누락: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 필요"
-  );
+if (!DATABASE_URL) {
+  console.error("환경변수 누락: DATABASE_URL 필요");
   console.error(".env.local 파일을 확인하세요.");
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: true },
+  max: 5,
+});
 
 // 전국 지역 코드 (서울 25개 구 우선)
 const REGION_CODES: Record<string, string> = {
@@ -321,7 +321,7 @@ interface UpdateRecord {
 
 /**
  * 특정 지역의 모든 거래를 조회한다.
- * Supabase는 기본 1000행 제한이 있으므로 페이지네이션으로 전체를 가져온다.
+ * 페이지네이션으로 전체를 가져온다.
  */
 async function fetchAllTransactions(
   regionCode: string
@@ -331,25 +331,19 @@ async function fetchAllTransactions(
   let offset = 0;
 
   while (true) {
-    const { data, error } = await supabase
-      .from("apt_transactions")
-      .select("id,apt_name,size_sqm,trade_price,trade_date")
-      .eq("region_code", regionCode)
-      .order("apt_name", { ascending: true })
-      .order("size_sqm", { ascending: true })
-      .order("trade_date", { ascending: true })
-      .order("id", { ascending: true })
-      .range(offset, offset + PAGE_SIZE - 1);
+    const result = await pool.query(
+      `SELECT "id", "apt_name", "size_sqm", "trade_price", "trade_date"
+       FROM "apt_transactions"
+       WHERE "region_code" = $1
+       ORDER BY "apt_name" ASC, "size_sqm" ASC, "trade_date" ASC, "id" ASC
+       LIMIT $2 OFFSET $3`,
+      [regionCode, PAGE_SIZE, offset]
+    );
 
-    if (error) {
-      throw new Error(`조회 실패 (${regionCode}): ${error.message}`);
-    }
+    if (!result.rows || result.rows.length === 0) break;
 
-    if (!data || data.length === 0) break;
-
-    // data에는 apt_name, size_sqm도 포함되어 있지만 타입은 TransactionRow로 캐스팅
     allRows.push(
-      ...data.map((row: Record<string, unknown>) => ({
+      ...result.rows.map((row: Record<string, unknown>) => ({
         id: row.id as string,
         apt_name: row.apt_name as string,
         size_sqm: row.size_sqm as number,
@@ -358,7 +352,7 @@ async function fetchAllTransactions(
       }))
     );
 
-    if (data.length < PAGE_SIZE) break;
+    if (result.rows.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
 
@@ -431,29 +425,28 @@ async function applyUpdates(updates: UpdateRecord[]): Promise<number> {
   for (let i = 0; i < updates.length; i += BATCH_SIZE) {
     const batch = updates.slice(i, i + BATCH_SIZE);
 
-    // Supabase JS 클라이언트는 배치 UPDATE를 직접 지원하지 않으므로
-    // 각 건을 개별 업데이트하되, Promise.all로 병렬 처리한다.
-    // 단, 너무 많은 병렬 요청은 rate limit에 걸리므로 50건씩 청크로 처리
+    // 50건씩 병렬 처리
     const PARALLEL_SIZE = 50;
     for (let j = 0; j < batch.length; j += PARALLEL_SIZE) {
       const parallelBatch = batch.slice(j, j + PARALLEL_SIZE);
       const promises = parallelBatch.map((u) =>
-        supabase
-          .from("apt_transactions")
-          .update({
-            highest_price: u.highest_price,
-            change_rate: u.change_rate,
-            is_new_high: u.is_new_high,
-            is_significant_drop: u.is_significant_drop,
-          })
-          .eq("id", u.id)
+        pool.query(
+          `UPDATE "apt_transactions" SET
+             "highest_price" = $1,
+             "change_rate" = $2,
+             "is_new_high" = $3,
+             "is_significant_drop" = $4
+           WHERE "id" = $5`,
+          [u.highest_price, u.change_rate, u.is_new_high, u.is_significant_drop, u.id]
+        )
       );
 
-      const results = await Promise.all(promises);
-      const errors = results.filter((r) => r.error);
+      const results = await Promise.allSettled(promises);
+      const errors = results.filter((r) => r.status === "rejected");
       if (errors.length > 0) {
+        const firstErr = errors[0] as PromiseRejectedResult;
         console.error(
-          `    배치 업데이트 에러 ${errors.length}건: ${errors[0].error?.message}`
+          `    배치 업데이트 에러 ${errors.length}건: ${firstErr.reason?.message ?? firstErr.reason}`
         );
       }
       applied += parallelBatch.length - errors.length;
@@ -565,23 +558,21 @@ async function main() {
 
   // 검증: NULL highest_price 잔존 건수 확인
   console.log("--- 검증: NULL highest_price 잔존 확인 ---");
-  const { count: nullCount, error: countError } = await supabase
-    .from("apt_transactions")
-    .select("id", { count: "exact", head: true })
-    .is("highest_price", null);
+  const countResult = await pool.query(
+    `SELECT COUNT(*) as count FROM "apt_transactions" WHERE "highest_price" IS NULL`
+  );
+  const nullCount = parseInt(countResult.rows[0]?.count ?? "0", 10);
 
-  if (countError) {
-    console.error(`검증 쿼리 실패: ${countError.message}`);
+  console.log(`NULL highest_price 잔존: ${nullCount.toLocaleString()}건`);
+  if (nullCount === 0) {
+    console.log("모든 거래의 최고가/변동률이 정상 계산되었습니다.");
   } else {
-    console.log(`NULL highest_price 잔존: ${(nullCount ?? 0).toLocaleString()}건`);
-    if ((nullCount ?? 0) === 0) {
-      console.log("모든 거래의 최고가/변동률이 정상 계산되었습니다.");
-    } else {
-      console.log(
-        "아직 NULL이 남아있습니다. 누락된 지역이 있는지 확인하세요."
-      );
-    }
+    console.log(
+      "아직 NULL이 남아있습니다. 누락된 지역이 있는지 확인하세요."
+    );
   }
+
+  await pool.end();
 }
 
 main().catch((e) => {
