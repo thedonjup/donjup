@@ -6,10 +6,18 @@
  */
 
 export interface BuildingLedgerInfo {
-  totalUnits: number | null;       // 세대수 (hhldCnt)
-  parkingCount: number | null;     // 총 주차대수
-  heatingMethod: string | null;    // 난방방식 (heatMethNm)
-  floorCount: number | null;       // 지상층수 (grndFlrCnt)
+  totalUnits: number | null;           // 세대수 (hhldCnt)
+  parkingCount: number | null;         // 총 주차대수
+  heatingMethod: string | null;        // 난방방식 (heatMethNm)
+  floorCount: number | null;           // 지상층수 (grndFlrCnt)
+  floorAreaRatio: number | null;       // 용적률 (vlRatEstmTotArea)
+  buildingCoverage: number | null;     // 건폐율 (bcRat)
+  energyGrade: string | null;          // 에너지효율등급 (enrgEfcl)
+  elevatorCount: number | null;        // 승강기 수 (elvCnt)
+  emergencyElevatorCount: number | null; // 비상용 승강기 수 (emgenUseElvtCnt)
+  landArea: number | null;             // 대지면적 (totArea)
+  buildingArea: number | null;         // 건축면적 (archArea)
+  totalFloorArea: number | null;       // 연면적 (totDongTotArea)
 }
 
 const API_BASE =
@@ -76,11 +84,29 @@ function parseBuildingLedgerResponse(xml: string): BuildingLedgerInfo | null {
   const indrMechUtcnt = parseInt(extractTag(itemXml, "indrMechUtcnt")?.trim() || "0", 10) || 0;
   const totalParking = prkngLoLotCnt + indrAutoUtcnt + indrMechUtcnt;
 
+  // 추가 필드 추출
+  const vlRatEstmTotArea = extractTag(itemXml, "vlRatEstmTotArea")?.trim();
+  const bcRat = extractTag(itemXml, "bcRat")?.trim();
+  const enrgEfcl = extractTag(itemXml, "enrgEfcl")?.trim();
+  const elvCnt = extractTag(itemXml, "elvCnt")?.trim();
+  const emgenUseElvtCnt = extractTag(itemXml, "emgenUseElvtCnt")?.trim();
+  const totArea = extractTag(itemXml, "totArea")?.trim();
+  const archArea = extractTag(itemXml, "archArea")?.trim();
+  const totDongTotArea = extractTag(itemXml, "totDongTotArea")?.trim();
+
   return {
     totalUnits: hhldCnt ? parseInt(hhldCnt, 10) || null : null,
     parkingCount: totalParking > 0 ? totalParking : null,
     heatingMethod: heatMethNm || null,
     floorCount: grndFlrCnt ? parseInt(grndFlrCnt, 10) || null : null,
+    floorAreaRatio: vlRatEstmTotArea ? parseFloat(vlRatEstmTotArea) || null : null,
+    buildingCoverage: bcRat ? parseFloat(bcRat) || null : null,
+    energyGrade: enrgEfcl || null,
+    elevatorCount: elvCnt ? parseInt(elvCnt, 10) || null : null,
+    emergencyElevatorCount: emgenUseElvtCnt ? parseInt(emgenUseElvtCnt, 10) || null : null,
+    landArea: totArea ? parseFloat(totArea) || null : null,
+    buildingArea: archArea ? parseFloat(archArea) || null : null,
+    totalFloorArea: totDongTotArea ? parseFloat(totDongTotArea) || null : null,
   };
 }
 

@@ -26,47 +26,76 @@ if (!DATABASE_URL || !MOLIT_API_KEY) {
 const pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: true }, max: 3 });
 
 // Supabase 호환 간이 래퍼
+type DbResult = { data: any; error: any };
+
 const supabase = {
   from: (table: string) => ({
-    upsert: async (rows: any[], opts?: { onConflict?: string; ignoreDuplicates?: boolean }) => {
-      if (rows.length === 0) return { data: [], error: null };
-      const cols = Object.keys(rows[0]);
-      const values: any[] = [];
-      const rowPlaceholders = rows.map((row, ri) => {
-        const ps = cols.map((col, ci) => { values.push(row[col]); return `$${ri * cols.length + ci + 1}`; });
-        return `(${ps.join(",")})`;
-      });
-      const conflict = opts?.onConflict ? `ON CONFLICT (${opts.onConflict}) DO NOTHING` : "";
-      const sql = `INSERT INTO ${table} (${cols.join(",")}) VALUES ${rowPlaceholders.join(",")} ${conflict}`;
-      try {
-        const r = await pool.query(sql, values);
-        return { data: rows.map((_, i) => ({ id: i })), error: null };
-      } catch (e: any) {
-        return { data: null, error: { message: e.message } };
-      }
+    upsert: (rows: any[], opts?: { onConflict?: string; ignoreDuplicates?: boolean }): Promise<DbResult> & { select: (c?: string) => Promise<DbResult> } => {
+      const doUpsert = async (): Promise<DbResult> => {
+        if (rows.length === 0) return { data: [], error: null };
+        const cols = Object.keys(rows[0]);
+        const values: any[] = [];
+        const rowPlaceholders = rows.map((row, ri) => {
+          const ps = cols.map((col, ci) => { values.push(row[col]); return `$${ri * cols.length + ci + 1}`; });
+          return `(${ps.join(",")})`;
+        });
+        const conflict = opts?.onConflict ? `ON CONFLICT (${opts.onConflict}) DO NOTHING` : "";
+        const sql = `INSERT INTO ${table} (${cols.join(",")}) VALUES ${rowPlaceholders.join(",")} ${conflict}`;
+        try {
+          await pool.query(sql, values);
+          return { data: rows.map((_, i) => ({ id: i })), error: null };
+        } catch (e: any) {
+          return { data: null, error: { message: e.message } };
+        }
+      };
+      const promise = doUpsert();
+      return Object.assign(promise, { select: (_cols?: string) => promise });
     },
+    update: (data: Record<string, any>) => ({
+      eq: (col: string, val: any): Promise<DbResult> => {
+        const setClauses = Object.keys(data).map((k, i) => `${k}=$${i + 1}`);
+        const values = [...Object.values(data), val];
+        const sql = `UPDATE ${table} SET ${setClauses.join(",")} WHERE ${col}=$${values.length}`;
+        return pool.query(sql, values).then(
+          () => ({ data: null, error: null }),
+          (e: any) => ({ data: null, error: { message: e.message } })
+        );
+      },
+    }),
     select: (cols: string) => ({
       eq: (col: string, val: any) => ({
         eq: (col2: string, val2: any) => ({
-          order: (orderCol: string, opts?: { ascending?: boolean }) => ({
-            limit: (n: number) => ({
-              single: async () => {
-                const dir = opts?.ascending === false ? "DESC" : "ASC";
-                const r = await pool.query(`SELECT ${cols} FROM ${table} WHERE ${col}=$1 AND ${col2}=$2 ORDER BY ${orderCol} ${dir} LIMIT ${n}`, [val, val2]);
-                return { data: r.rows[0] || null, error: null };
-              }
-            })
-          })
+          order: (orderCol: string, opts?: { ascending?: boolean }): Promise<DbResult> & { limit: (n: number) => { single: () => Promise<DbResult> } } => {
+            const dir = opts?.ascending === false ? "DESC" : "ASC";
+            const promise: Promise<DbResult> = pool.query(
+              `SELECT ${cols} FROM ${table} WHERE ${col}=$1 AND ${col2}=$2 ORDER BY ${orderCol} ${dir}`, [val, val2]
+            ).then((r) => ({ data: r.rows, error: null }));
+            return Object.assign(promise, {
+              limit: (n: number) => ({
+                single: async (): Promise<DbResult> => {
+                  const r = await pool.query(`SELECT ${cols} FROM ${table} WHERE ${col}=$1 AND ${col2}=$2 ORDER BY ${orderCol} ${dir} LIMIT ${n}`, [val, val2]);
+                  return { data: r.rows[0] || null, error: null };
+                }
+              })
+            });
+          }
         }),
         order: (orderCol: string, opts?: { ascending?: boolean }) => ({
           limit: (n: number) => ({
-            single: async () => {
+            single: async (): Promise<DbResult> => {
               const dir = opts?.ascending === false ? "DESC" : "ASC";
               const r = await pool.query(`SELECT ${cols} FROM ${table} WHERE ${col}=$1 ORDER BY ${orderCol} ${dir} LIMIT ${n}`, [val]);
               return { data: r.rows[0] || null, error: null };
             }
           })
         })
+      }),
+      order: (orderCol: string, opts?: { ascending?: boolean }) => ({
+        limit: (n: number): Promise<DbResult> => {
+          const dir = opts?.ascending === false ? "DESC" : "ASC";
+          return pool.query(`SELECT ${cols} FROM ${table} ORDER BY ${orderCol} ${dir} LIMIT ${n}`)
+            .then((r) => ({ data: r.rows, error: null }));
+        }
       })
     })
   })

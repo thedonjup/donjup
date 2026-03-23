@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const { data: complexes, error: fetchError } = await supabase
     .from("apt_complexes")
     .select("id, region_code, apt_name")
-    .or("total_units.is.null,parking_count.is.null")
+    .or("total_units.is.null,parking_count.is.null,floor_area_ratio.is.null,elevator_count.is.null")
     .limit(100);
 
   if (fetchError) {
@@ -49,6 +49,13 @@ export async function GET(request: Request) {
       if (info.parkingCount) updateData.parking_count = info.parkingCount;
       if (info.heatingMethod) updateData.heating_method = info.heatingMethod;
       if (info.floorCount) updateData.floor_count = info.floorCount;
+      if (info.floorAreaRatio) updateData.floor_area_ratio = info.floorAreaRatio;
+      if (info.buildingCoverage) updateData.building_coverage = info.buildingCoverage;
+      if (info.energyGrade) updateData.energy_grade = info.energyGrade;
+      if (info.elevatorCount) updateData.elevator_count = info.elevatorCount;
+      if (info.landArea) updateData.land_area = info.landArea;
+      if (info.buildingArea) updateData.building_area = info.buildingArea;
+      if (info.totalFloorArea) updateData.total_floor_area = info.totalFloorArea;
 
       if (Object.keys(updateData).length === 0) {
         await delay(300);
