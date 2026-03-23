@@ -78,6 +78,7 @@ export default async function RateDashboardPage() {
   }>();
   for (const r of bankRatesRaw ?? []) {
     if (!bankRates.has(r.rate_type)) {
+      r.base_date = r.base_date instanceof Date ? r.base_date.toISOString().split("T")[0] : String(r.base_date ?? "");
       bankRates.set(r.rate_type, r);
     }
   }
@@ -96,6 +97,7 @@ export default async function RateDashboardPage() {
   const historyByType = new Map<string, Array<{ date: string; value: number }>>();
 
   for (const r of allRates ?? []) {
+    r.base_date = r.base_date instanceof Date ? r.base_date.toISOString().split("T")[0] : String(r.base_date ?? "");
     if (!latestByType.has(r.rate_type)) {
       latestByType.set(r.rate_type, r);
     }

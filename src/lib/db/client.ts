@@ -705,7 +705,15 @@ class QueryBuilder {
     const p = getPool();
     try {
       const result = await p.query(sql, values);
-      return { rows: result.rows };
+      // Date 객체를 문자열로 변환 (React 렌더링 호환)
+      const rows = result.rows.map((row: any) => {
+        const out: any = {};
+        for (const [k, v] of Object.entries(row)) {
+          out[k] = v instanceof Date ? v.toISOString().split("T")[0] : v;
+        }
+        return out;
+      });
+      return { rows };
     } catch (err: any) {
       // Add SQL to error for debugging in dev
       const enriched = new Error(`${err.message}\nSQL: ${sql}\nParams: ${JSON.stringify(values)}`);
