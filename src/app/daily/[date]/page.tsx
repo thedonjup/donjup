@@ -52,11 +52,22 @@ export default async function DailyReportPage({
   const { date } = await params;
   const supabase = await createClient();
 
-  const { data: report } = await supabase
-    .from("daily_reports")
-    .select("*")
-    .eq("report_date", date)
-    .single();
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 5000);
+
+  let report: any = null;
+  try {
+    const { data } = await supabase
+      .from("daily_reports")
+      .select("*")
+      .eq("report_date", date)
+      .abortSignal(ac.signal)
+      .single();
+    report = data;
+    clearTimeout(timer);
+  } catch {
+    clearTimeout(timer);
+  }
 
   if (!report) {
     notFound();

@@ -80,52 +80,69 @@ export default async function AptDetailPage({
   const { slug, region } = await params;
   const supabase = await createClient();
 
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 5000);
+
   const { data: complex } = await supabase
     .from("apt_complexes")
     .select("*")
     .eq("slug", slug)
+    .abortSignal(ac.signal)
     .single();
 
   if (!complex) {
+    clearTimeout(timer);
     notFound();
   }
 
-  const { data: transactions } = await supabase
-    .from("apt_transactions")
-    .select("*")
-    .eq("apt_name", complex.apt_name)
-    .eq("region_code", complex.region_code)
-    .order("trade_date", { ascending: false })
-    .limit(200);
-
-  const txns = (transactions ?? []) as Transaction[];
-
-  // 전월세 이력 조회 (보조 DB)
+  let txns: Transaction[] = [];
   let rentTxns: RentTransaction[] = [];
+  let nearbyComplexes: { slug: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; total_units: number | null }[] = [];
+
   try {
-    const rentDb = createRentServiceClient();
-    const { data: rentData } = await rentDb
-      .from("apt_rent_transactions")
-      .select("id,size_sqm,floor,deposit,monthly_rent,rent_type,contract_type,trade_date")
+    const { data: transactions } = await supabase
+      .from("apt_transactions")
+      .select("*")
       .eq("apt_name", complex.apt_name)
       .eq("region_code", complex.region_code)
       .order("trade_date", { ascending: false })
-      .limit(200);
-    rentTxns = (rentData ?? []) as RentTransaction[];
-  } catch {
-    // rent DB 미설정 시 무시
-  }
+      .limit(200)
+      .abortSignal(ac.signal);
 
-  // 같은 동네 다른 단지 조회
-  let nearbyComplexes: { slug: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; total_units: number | null }[] = [];
-  if (complex.dong_name) {
-    const { data: nearby } = await supabase
-      .from("apt_complexes")
-      .select("slug,apt_name,region_code,region_name,dong_name,built_year,total_units")
-      .eq("dong_name", complex.dong_name)
-      .neq("slug", slug)
-      .limit(5);
-    nearbyComplexes = nearby ?? [];
+    txns = (transactions ?? []) as Transaction[];
+
+    // 전월세 이력 조회 (보조 DB)
+    try {
+      const rentDb = createRentServiceClient();
+      const { data: rentData } = await rentDb
+        .from("apt_rent_transactions")
+        .select("id,size_sqm,floor,deposit,monthly_rent,rent_type,contract_type,trade_date")
+        .eq("apt_name", complex.apt_name)
+        .eq("region_code", complex.region_code)
+        .order("trade_date", { ascending: false })
+        .limit(200)
+        .abortSignal(ac.signal);
+      rentTxns = (rentData ?? []) as RentTransaction[];
+    } catch {
+      // rent DB 미설정 시 무시
+    }
+
+    // 같은 동네 다른 단지 조회
+    if (complex.dong_name) {
+      const { data: nearby } = await supabase
+        .from("apt_complexes")
+        .select("slug,apt_name,region_code,region_name,dong_name,built_year,total_units")
+        .eq("dong_name", complex.dong_name)
+        .neq("slug", slug)
+        .limit(5)
+        .abortSignal(ac.signal);
+      nearbyComplexes = nearby ?? [];
+    }
+
+    clearTimeout(timer);
+  } catch {
+    clearTimeout(timer);
+    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
   }
 
   // 전세가율 계산

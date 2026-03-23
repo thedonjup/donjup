@@ -30,10 +30,13 @@ export default async function TrendPage() {
   let volumeRaw: Record<string, unknown>[] | null = null;
 
   try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 5000);
+
     // RPC 시도 → 실패 시 직접 쿼리 fallback
     const rpcResult = await supabase.rpc("get_monthly_volume", {
       month_count: 6,
-    });
+    }).abortSignal(ac.signal);
 
     if (rpcResult.error || !rpcResult.data) {
       // RPC가 없으면 직접 쿼리
@@ -41,11 +44,14 @@ export default async function TrendPage() {
         .from("apt_transactions")
         .select("trade_date")
         .order("trade_date", { ascending: false })
-        .limit(50000);
+        .limit(50000)
+        .abortSignal(ac.signal);
       volumeRaw = data as Record<string, unknown>[] | null;
     } else {
       volumeRaw = rpcResult.data as Record<string, unknown>[];
     }
+
+    clearTimeout(timer);
   } catch (error) {
     console.error("월별 거래량 데이터 조회 실패:", error);
   }
@@ -80,6 +86,9 @@ export default async function TrendPage() {
   let sidoAvgPrices: { name: string; slug: string; avgPrice: number; count: number }[] = [];
 
   try {
+    const ac2 = new AbortController();
+    const timer2 = setTimeout(() => ac2.abort(), 5000);
+
     sidoAvgPrices = await Promise.all(
       sidoEntries.map(async ([, sido]) => {
         const sigunguCodes = Object.keys(sido.sigungu);
@@ -89,7 +98,8 @@ export default async function TrendPage() {
           .select("trade_price", { count: "exact" })
           .in("region_code", sigunguCodes)
           .order("trade_date", { ascending: false })
-          .limit(1000);
+          .limit(1000)
+          .abortSignal(ac2.signal);
 
         const prices = (data ?? []).map((d: Record<string, unknown>) =>
           Number(d.trade_price ?? 0)
@@ -107,6 +117,8 @@ export default async function TrendPage() {
         };
       })
     );
+
+    clearTimeout(timer2);
   } catch (error) {
     console.error("시도별 평균 거래가 조회 실패:", error);
   }

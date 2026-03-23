@@ -101,7 +101,13 @@ CREATE TABLE finance_rates (
 CREATE INDEX idx_rates_type_date ON finance_rates(rate_type, base_date DESC);
 CREATE UNIQUE INDEX idx_rates_unique ON finance_rates(rate_type, base_date);
 
--- 4. 데일리 리포트
+-- finance_rates.rate_type 값 목록:
+--   ECOS 금리: BASE_RATE, COFIX_NEW, COFIX_BAL, CD_91, TREASURY_3Y (source='ECOS')
+--   은행별 주담대 최저금리: BANK_KB, BANK_SHINHAN, BANK_WOORI, BANK_HANA,
+--     BANK_NH, BANK_IBK, BANK_KAKAO, BANK_KBANK, BANK_TOSS 등 (source='FINLIFE')
+--   메타: BANK_PRODUCTS_ALL (상품 수 기록용)
+
+-- 4-1. 데일리 리포트
 CREATE TABLE daily_reports (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     report_date     DATE NOT NULL UNIQUE,

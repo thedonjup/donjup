@@ -63,15 +63,24 @@ export default async function SearchPage({
   }> = [];
 
   if (query.length > 0) {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("apt_complexes")
-      .select("id,apt_name,region_code,region_name,dong_name,sido_name,sigungu_name,built_year,slug,latest_trade_price")
-      .ilike("apt_name", `%${query}%`)
-      .order("apt_name")
-      .limit(30);
+    try {
+      const supabase = await createClient();
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 5000);
 
-    results = data ?? [];
+      const { data } = await supabase
+        .from("apt_complexes")
+        .select("id,apt_name,region_code,region_name,dong_name,sido_name,sigungu_name,built_year,slug,latest_trade_price")
+        .ilike("apt_name", `%${query}%`)
+        .order("apt_name")
+        .limit(30)
+        .abortSignal(ac.signal);
+
+      clearTimeout(timer);
+      results = data ?? [];
+    } catch {
+      // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+    }
   }
 
   return (

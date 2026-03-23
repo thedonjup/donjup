@@ -57,39 +57,53 @@ export default async function MarketSidoPage({
   const supabase = await createClient();
   const sigunguEntries = Object.entries(sido.sigungu);
 
-  const sigunguStats = await Promise.all(
-    sigunguEntries.map(async ([code, name]) => {
-      const [countResult, dropResult, highResult] = await Promise.all([
-        supabase
-          .from("apt_transactions")
-          .select("id", { count: "exact", head: true })
-          .eq("region_code", code),
-        supabase
-          .from("apt_transactions")
-          .select("apt_name,change_rate,trade_price")
-          .eq("region_code", code)
-          .not("change_rate", "is", null)
-          .lt("change_rate", 0)
-          .order("change_rate", { ascending: true })
-          .limit(1),
-        supabase
-          .from("apt_transactions")
-          .select("apt_name,trade_price")
-          .eq("region_code", code)
-          .eq("is_new_high", true)
-          .order("trade_date", { ascending: false })
-          .limit(1),
-      ]);
+  let sigunguStats: { code: string; name: string; count: number; topDrop: any; topHigh: any }[] = [];
 
-      return {
-        code,
-        name,
-        count: countResult.count ?? 0,
-        topDrop: dropResult.data?.[0] ?? null,
-        topHigh: highResult.data?.[0] ?? null,
-      };
-    })
-  );
+  try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 5000);
+
+    sigunguStats = await Promise.all(
+      sigunguEntries.map(async ([code, name]) => {
+        const [countResult, dropResult, highResult] = await Promise.all([
+          supabase
+            .from("apt_transactions")
+            .select("id", { count: "exact", head: true })
+            .eq("region_code", code)
+            .abortSignal(ac.signal),
+          supabase
+            .from("apt_transactions")
+            .select("apt_name,change_rate,trade_price")
+            .eq("region_code", code)
+            .not("change_rate", "is", null)
+            .lt("change_rate", 0)
+            .order("change_rate", { ascending: true })
+            .limit(1)
+            .abortSignal(ac.signal),
+          supabase
+            .from("apt_transactions")
+            .select("apt_name,trade_price")
+            .eq("region_code", code)
+            .eq("is_new_high", true)
+            .order("trade_date", { ascending: false })
+            .limit(1)
+            .abortSignal(ac.signal),
+        ]);
+
+        return {
+          code,
+          name,
+          count: countResult.count ?? 0,
+          topDrop: dropResult.data?.[0] ?? null,
+          topHigh: highResult.data?.[0] ?? null,
+        };
+      })
+    );
+
+    clearTimeout(timer);
+  } catch {
+    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+  }
 
   const sorted = [...sigunguStats].sort((a, b) => b.count - a.count);
   const totalCount = sigunguStats.reduce((a, b) => a + b.count, 0);

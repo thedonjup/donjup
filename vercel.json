@@ -49,6 +49,10 @@
       "schedule": "0 10 * * 1"
     },
     {
+      "path": "/api/cron/fetch-bank-rates",
+      "schedule": "0 10 * * 1"
+    },
+    {
       "path": "/api/cron/fetch-rates",
       "schedule": "0 22 * * *"
     },

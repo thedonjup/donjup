@@ -88,10 +88,15 @@ export default async function RentPage({
   let wolseItems: Record<string, unknown>[] = [];
 
   try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 5000);
+
     const [jeonseResult, wolseResult] = await Promise.all([
-      jeonseQuery,
-      wolseQuery,
+      jeonseQuery.abortSignal(ac.signal),
+      wolseQuery.abortSignal(ac.signal),
     ]);
+
+    clearTimeout(timer);
 
     jeonseItems = jeonseResult.data ?? [];
     wolseItems = wolseResult.data ?? [];

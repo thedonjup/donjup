@@ -12,14 +12,78 @@ export const metadata: Metadata = {
 
 export const revalidate = 0;
 
+/** 은행 코드 → 한글명 매핑 */
+const BANK_LABELS: Record<string, string> = {
+  BANK_KB: "KB국민은행",
+  BANK_SHINHAN: "신한은행",
+  BANK_WOORI: "우리은행",
+  BANK_HANA: "하나은행",
+  BANK_NH: "NH농협은행",
+  BANK_IBK: "IBK기업은행",
+  BANK_KAKAO: "카카오뱅크",
+  BANK_KBANK: "케이뱅크",
+  BANK_TOSS: "토스뱅크",
+  BANK_SC: "SC제일은행",
+  BANK_CITI: "한국씨티은행",
+  BANK_BUSAN: "부산은행",
+  BANK_DAEGU: "대구은행",
+  BANK_GWANGJU: "광주은행",
+  BANK_JEONBUK: "전북은행",
+  BANK_GYEONGNAM: "경남은행",
+  BANK_JEJU: "제주은행",
+  BANK_SUHYUP: "수협은행",
+};
+
 export default async function RateDashboardPage() {
   const supabase = await createClient();
 
-  const { data: allRates } = await supabase
-    .from("finance_rates")
-    .select("*")
-    .order("base_date", { ascending: false })
-    .limit(100);
+  let allRates: any[] | null = null;
+  let bankRatesRaw: any[] | null = null;
+
+  try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 5000);
+
+    const [ratesRes, bankRes] = await Promise.all([
+      supabase
+        .from("finance_rates")
+        .select("*")
+        .order("base_date", { ascending: false })
+        .limit(100)
+        .abortSignal(ac.signal),
+      supabase
+        .from("finance_rates")
+        .select("rate_type, rate_value, prev_value, change_bp, base_date")
+        .like("rate_type", "BANK_%")
+        .neq("rate_type", "BANK_PRODUCTS_ALL")
+        .order("base_date", { ascending: false })
+        .limit(100)
+        .abortSignal(ac.signal),
+    ]);
+
+    clearTimeout(timer);
+    allRates = ratesRes.data;
+    bankRatesRaw = bankRes.data;
+  } catch {
+    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+  }
+
+  // 은행별 최신 금리만 추출
+  const bankRates = new Map<string, {
+    rate_type: string;
+    rate_value: number;
+    prev_value: number | null;
+    change_bp: number | null;
+    base_date: string;
+  }>();
+  for (const r of bankRatesRaw ?? []) {
+    if (!bankRates.has(r.rate_type)) {
+      bankRates.set(r.rate_type, r);
+    }
+  }
+  const sortedBankRates = Array.from(bankRates.values()).sort(
+    (a, b) => a.rate_value - b.rate_value
+  );
 
   const latestByType = new Map<string, {
     rate_type: string;
@@ -75,6 +139,58 @@ export default async function RateDashboardPage() {
           </div>
 
           <AdSlot slotId="rate-mid-banner" format="banner" />
+
+          {/* 은행별 주담대 금리 */}
+          {sortedBankRates.length > 0 && (
+            <section className="mt-10">
+              <h2 className="mb-4 text-lg font-bold text-dark-900">은행별 주담대 금리</h2>
+              <p className="mb-3 text-xs text-gray-400">
+                금융감독원 금융상품한눈에 기준 | {sortedBankRates[0]?.base_date}
+              </p>
+              <div className="rounded-2xl border border-surface-200 bg-white overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-surface-50 text-left text-xs text-gray-500">
+                      <th className="px-4 py-3">은행명</th>
+                      <th className="px-4 py-3 text-right">최저금리</th>
+                      <th className="px-4 py-3 text-right">변동</th>
+                      <th className="px-4 py-3 text-right">기준일</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedBankRates.map((bank) => (
+                      <tr key={bank.rate_type} className="border-b border-surface-100 last:border-0">
+                        <td className="px-4 py-3 font-medium text-dark-900">
+                          {BANK_LABELS[bank.rate_type] ?? bank.rate_type.replace("BANK_", "")}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold tabular-nums">
+                          {bank.rate_value}%
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {bank.change_bp !== null && bank.change_bp !== 0 ? (
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
+                                bank.change_bp > 0
+                                  ? "bg-drop-bg text-drop"
+                                  : "bg-rise-bg text-rise"
+                              }`}
+                            >
+                              {bank.change_bp > 0 ? "+" : ""}{bank.change_bp}bp
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-400">
+                          {bank.base_date}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           <section className="mt-10">
             <h2 className="mb-4 text-lg font-bold text-dark-900">최근 금리 변동 이력</h2>

@@ -35,6 +35,9 @@ export default async function MarketIndexPage() {
   }[] = [];
 
   try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 5000);
+
     sidoStats = await Promise.all(
       sidoEntries.map(async ([sidoCode, sido]) => {
         const sigunguCodes = Object.keys(sido.sigungu);
@@ -43,7 +46,8 @@ export default async function MarketIndexPage() {
           supabase
             .from("apt_transactions")
             .select("id", { count: "exact", head: true })
-            .in("region_code", sigunguCodes),
+            .in("region_code", sigunguCodes)
+            .abortSignal(ac.signal),
           supabase
             .from("apt_transactions")
             .select("apt_name,change_rate,trade_price")
@@ -51,14 +55,16 @@ export default async function MarketIndexPage() {
             .not("change_rate", "is", null)
             .lt("change_rate", 0)
             .order("change_rate", { ascending: true })
-            .limit(1),
+            .limit(1)
+            .abortSignal(ac.signal),
           supabase
             .from("apt_transactions")
             .select("apt_name,trade_price")
             .in("region_code", sigunguCodes)
             .eq("is_new_high", true)
             .order("trade_date", { ascending: false })
-            .limit(1),
+            .limit(1)
+            .abortSignal(ac.signal),
         ]);
 
         return {
@@ -73,6 +79,8 @@ export default async function MarketIndexPage() {
         };
       })
     );
+
+    clearTimeout(timer);
   } catch (error) {
     console.error("시도별 통계 조회 실패:", error);
   }

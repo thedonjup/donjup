@@ -80,22 +80,36 @@ export default async function MarketSigunguPage({
 
   const supabase = await createClient();
 
-  const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([
-    supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
-      .not("change_rate", "is", null).lt("change_rate", 0)
-      .order("change_rate", { ascending: true }).limit(10),
-    supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
-      .eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10),
-    supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
-      .order("trade_date", { ascending: false }).limit(20),
-    supabase.from("apt_transactions").select("id", { count: "exact", head: true })
-      .eq("region_code", sigungu),
-  ]);
+  let drops: Transaction[] = [];
+  let highs: Transaction[] = [];
+  let recent: Transaction[] = [];
+  let totalCount = 0;
 
-  const drops = (dropsResult.data ?? []) as Transaction[];
-  const highs = (highsResult.data ?? []) as Transaction[];
-  const recent = (recentResult.data ?? []) as Transaction[];
-  const totalCount = countResult.count ?? 0;
+  try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 5000);
+
+    const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([
+      supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
+        .not("change_rate", "is", null).lt("change_rate", 0)
+        .order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
+        .eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
+        .order("trade_date", { ascending: false }).limit(20).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("id", { count: "exact", head: true })
+        .eq("region_code", sigungu).abortSignal(ac.signal),
+    ]);
+
+    clearTimeout(timer);
+
+    drops = (dropsResult.data ?? []) as Transaction[];
+    highs = (highsResult.data ?? []) as Transaction[];
+    recent = (recentResult.data ?? []) as Transaction[];
+    totalCount = countResult.count ?? 0;
+  } catch {
+    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+  }
 
   // Sibling sigungu for quick nav
   const siblingEntries = Object.entries(sido.sigungu);

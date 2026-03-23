@@ -140,6 +140,16 @@ function LoanCalculatorTab() {
   const [result, setResult] = useState<CalcResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [rateOffset, setRateOffset] = useState(0);
+  const [bankMinRate, setBankMinRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/bank-rates")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.minRate) setBankMinRate(data.minRate);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleCalculate = async () => {
     const principalNum = parseManwon(principal);
@@ -224,6 +234,11 @@ function LoanCalculatorTab() {
               onChange={(e) => setRate(e.target.value)}
               className={inputClass}
             />
+            {bankMinRate !== null && (
+              <p className="mt-1 text-xs text-brand-600">
+                현재 은행 최저금리: {bankMinRate.toFixed(2)}%
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-dark-900">
