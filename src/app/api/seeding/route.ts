@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
+  // Cron 인증
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date") ?? new Date().toISOString().split("T")[0];
   const platform = searchParams.get("platform");
@@ -10,7 +16,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("seeding_queue")
-    .select("*")
+    .select("id,platform,title,status,report_date")
     .eq("report_date", date)
     .eq("status", "pending")
     .order("created_at", { ascending: true });

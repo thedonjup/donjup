@@ -102,11 +102,11 @@ export default async function AptDetailPage({
   try {
     const { data: transactions } = await supabase
       .from("apt_transactions")
-      .select("*")
+      .select("id,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level")
       .eq("apt_name", complex.apt_name)
       .eq("region_code", complex.region_code)
       .order("trade_date", { ascending: false })
-      .limit(200)
+      .limit(50)
       .abortSignal(ac.signal);
 
     txns = (transactions ?? []) as Transaction[];

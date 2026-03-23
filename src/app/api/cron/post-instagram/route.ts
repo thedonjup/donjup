@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     // content_queue에서 ready 상태의 카드뉴스 조회 (최신 1건)
     const { data: queueItem, error: fetchError } = await supabase
       .from("content_queue")
-      .select("*")
+      .select("id,storage_urls,caption,hashtags,report_date")
       .eq("status", "ready")
       .like("content_type", "cardnews_%")
       .order("created_at", { ascending: false })

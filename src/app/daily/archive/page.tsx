@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "돈줍 데일리 부동산 리포트 전체 목록. 매일 업데이트되는 폭락/신고가 분석.",
 };
 
-export const revalidate = 0;
+export const revalidate = 3600;
 
 const PAGE_SIZE = 20;
 

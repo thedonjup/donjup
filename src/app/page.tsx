@@ -6,7 +6,7 @@ import { formatPrice, RATE_LABELS, RATE_ORDER } from "@/lib/format";
 import RankingTabs from "@/components/home/RankingTabs";
 import type { Transaction } from "@/components/home/RankingTabs";
 
-export const revalidate = 0;
+export const revalidate = 300;
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -42,11 +42,11 @@ export default async function HomePage() {
     const timer = setTimeout(() => ac.abort(), 5000);
 
     const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount] = await Promise.allSettled([
-      supabase.from("apt_transactions").select("*").not("change_rate", "is", null).lt("change_rate", 0).order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("*").eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("*").order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("*").order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-      supabase.from("finance_rates").select("*").order("base_date", { ascending: false }).limit(5).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").not("change_rate", "is", null).lt("change_rate", 0).order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10).abortSignal(ac.signal),
+      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
+      supabase.from("finance_rates").select("rate_type,rate_value,prev_value,change_bp,base_date,source").order("base_date", { ascending: false }).limit(5).abortSignal(ac.signal),
       supabase.from("apt_transactions").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
       supabase.from("apt_complexes").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
     ]);

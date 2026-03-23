@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "한국은행 기준금리, COFIX, CD금리, 국고채 금리 실시간 추이. 매일 자동 업데이트.",
 };
 
-export const revalidate = 0;
+export const revalidate = 1800;
 
 /** 은행 코드 → 한글명 매핑 */
 const BANK_LABELS: Record<string, string> = {
@@ -47,7 +47,7 @@ export default async function RateDashboardPage() {
     const [ratesRes, bankRes] = await Promise.all([
       supabase
         .from("finance_rates")
-        .select("*")
+        .select("rate_type,rate_value,prev_value,change_bp,base_date,source")
         .order("base_date", { ascending: false })
         .limit(100)
         .abortSignal(ac.signal),

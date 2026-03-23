@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     // 신고가 갱신 거래
     const { data, error } = await supabase
       .from("apt_transactions")
-      .select("*")
+      .select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level")
       .eq("is_new_high", true)
       .order("trade_date", { ascending: false })
       .limit(limit);
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   // 폭락 거래 (하락률 순)
   const { data, error } = await supabase
     .from("apt_transactions")
-    .select("*")
+    .select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level")
     .eq("is_significant_drop", true)
     .order("change_rate", { ascending: true })
     .limit(limit);

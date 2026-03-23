@@ -90,12 +90,12 @@ export default async function MarketSigunguPage({
     const timer = setTimeout(() => ac.abort(), 5000);
 
     const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([
-      supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
+      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").eq("region_code", sigungu)
         .not("change_rate", "is", null).lt("change_rate", 0)
         .order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
+      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").eq("region_code", sigungu)
         .eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("*").eq("region_code", sigungu)
+      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").eq("region_code", sigungu)
         .order("trade_date", { ascending: false }).limit(20).abortSignal(ac.signal),
       supabase.from("apt_transactions").select("id", { count: "exact", head: true })
         .eq("region_code", sigungu).abortSignal(ac.signal),
