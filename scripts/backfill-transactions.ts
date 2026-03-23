@@ -9,22 +9,68 @@
  * 기본값: 2006년 ~ 현재, 전국 249개 시군구
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { Pool } from "pg";
 import dotenv from "dotenv";
 import path from "path";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const DATABASE_URL = process.env.DATABASE_URL!;
 const MOLIT_API_KEY = process.env.MOLIT_API_KEY!;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !MOLIT_API_KEY) {
-  console.error("환경변수 누락: SUPABASE_URL, SERVICE_ROLE_KEY, MOLIT_API_KEY 필요");
+if (!DATABASE_URL || !MOLIT_API_KEY) {
+  console.error("환경변수 누락: DATABASE_URL, MOLIT_API_KEY 필요");
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: true }, max: 3 });
+
+// Supabase 호환 간이 래퍼
+const supabase = {
+  from: (table: string) => ({
+    upsert: async (rows: any[], opts?: { onConflict?: string; ignoreDuplicates?: boolean }) => {
+      if (rows.length === 0) return { data: [], error: null };
+      const cols = Object.keys(rows[0]);
+      const values: any[] = [];
+      const rowPlaceholders = rows.map((row, ri) => {
+        const ps = cols.map((col, ci) => { values.push(row[col]); return `$${ri * cols.length + ci + 1}`; });
+        return `(${ps.join(",")})`;
+      });
+      const conflict = opts?.onConflict ? `ON CONFLICT (${opts.onConflict}) DO NOTHING` : "";
+      const sql = `INSERT INTO ${table} (${cols.join(",")}) VALUES ${rowPlaceholders.join(",")} ${conflict}`;
+      try {
+        const r = await pool.query(sql, values);
+        return { data: rows.map((_, i) => ({ id: i })), error: null };
+      } catch (e: any) {
+        return { data: null, error: { message: e.message } };
+      }
+    },
+    select: (cols: string) => ({
+      eq: (col: string, val: any) => ({
+        eq: (col2: string, val2: any) => ({
+          order: (orderCol: string, opts?: { ascending?: boolean }) => ({
+            limit: (n: number) => ({
+              single: async () => {
+                const dir = opts?.ascending === false ? "DESC" : "ASC";
+                const r = await pool.query(`SELECT ${cols} FROM ${table} WHERE ${col}=$1 AND ${col2}=$2 ORDER BY ${orderCol} ${dir} LIMIT ${n}`, [val, val2]);
+                return { data: r.rows[0] || null, error: null };
+              }
+            })
+          })
+        }),
+        order: (orderCol: string, opts?: { ascending?: boolean }) => ({
+          limit: (n: number) => ({
+            single: async () => {
+              const dir = opts?.ascending === false ? "DESC" : "ASC";
+              const r = await pool.query(`SELECT ${cols} FROM ${table} WHERE ${col}=$1 ORDER BY ${orderCol} ${dir} LIMIT ${n}`, [val]);
+              return { data: r.rows[0] || null, error: null };
+            }
+          })
+        })
+      })
+    })
+  })
+};
 
 // 전국 시군구 코드 (17개 시/도, 249개 시/군/구)
 const NATIONWIDE_CODES: Record<string, Record<string, string>> = {
