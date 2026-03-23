@@ -167,38 +167,51 @@ async function enrichTransactions(
   regionName: string
 ): Promise<EnrichedTransaction[]> {
   const enriched: EnrichedTransaction[] = [];
+  if (transactions.length === 0) return enriched;
 
   // 최근 3년 기준일
   const threeYearsAgo = new Date();
   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
   const threeYearsAgoStr = threeYearsAgo.toISOString().split("T")[0];
 
-  for (const t of transactions) {
-    // 최근 3년 내 최고가 조회
-    const { data: recentMaxRow } = await supabase
-      .from("apt_transactions")
-      .select("trade_price")
-      .eq("apt_name", t.aptName)
-      .eq("size_sqm", t.sizeSqm)
-      .gte("trade_date", threeYearsAgoStr)
-      .order("trade_price", { ascending: false })
-      .limit(1)
-      .single();
+  // 해당 지역의 고유 단지명 목록
+  const aptNames = [...new Set(transactions.map((t) => t.aptName))];
 
-    let previousHighest = recentMaxRow?.trade_price ?? 0;
+  // 1회 쿼리로 해당 지역의 모든 거래 이력 가져오기 (최근 3년)
+  const { data: recentRows } = await supabase
+    .from("apt_transactions")
+    .select("apt_name,size_sqm,trade_price")
+    .in("apt_name", aptNames)
+    .gte("trade_date", threeYearsAgoStr)
+    .order("trade_price", { ascending: false });
+
+  // 1회 쿼리로 역대 최고가 가져오기 (fallback용)
+  const { data: allTimeRows } = await supabase
+    .from("apt_transactions")
+    .select("apt_name,size_sqm,trade_price")
+    .in("apt_name", aptNames)
+    .order("trade_price", { ascending: false });
+
+  // 메모리에서 단지+면적별 최고가 맵 구성
+  const recentMaxMap = new Map<string, number>();
+  for (const r of recentRows ?? []) {
+    const key = `${r.apt_name}|${r.size_sqm}`;
+    if (!recentMaxMap.has(key)) recentMaxMap.set(key, r.trade_price);
+  }
+
+  const allTimeMaxMap = new Map<string, number>();
+  for (const r of allTimeRows ?? []) {
+    const key = `${r.apt_name}|${r.size_sqm}`;
+    if (!allTimeMaxMap.has(key)) allTimeMaxMap.set(key, r.trade_price);
+  }
+
+  for (const t of transactions) {
+    const key = `${t.aptName}|${t.sizeSqm}`;
+    let previousHighest = recentMaxMap.get(key) ?? 0;
 
     // 3년 내 거래 없으면 역대 최고가 fallback
     if (previousHighest === 0) {
-      const { data: allTimeMaxRow } = await supabase
-        .from("apt_transactions")
-        .select("trade_price")
-        .eq("apt_name", t.aptName)
-        .eq("size_sqm", t.sizeSqm)
-        .order("trade_price", { ascending: false })
-        .limit(1)
-        .single();
-
-      previousHighest = allTimeMaxRow?.trade_price ?? 0;
+      previousHighest = allTimeMaxMap.get(key) ?? 0;
     }
 
     const highestPrice = Math.max(previousHighest, t.tradePrice);
