@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { REGION_HIERARCHY, getSidoBySlug, getSidoForCode } from "@/lib/constants/region-codes";
 import AdSlot from "@/components/ads/AdSlot";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
+import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 
 export const revalidate = 3600;
 
@@ -68,10 +69,15 @@ interface Transaction {
 
 export default async function MarketSigunguPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sido: string; sigungu: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { sido: sidoSlug, sigungu } = await params;
+  const { type: typeParam } = await searchParams;
+  const propertyType = typeof typeParam === "string" ? parseInt(typeParam, 10) : 1;
+  const validType = [0, 1, 2, 3].includes(propertyType) ? propertyType : 1;
   const sido = getSidoBySlug(sidoSlug);
   if (!sido) notFound();
 
@@ -89,16 +95,19 @@ export default async function MarketSigunguPage({
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 5000);
 
+    const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
+    const txFields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level";
+
     const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([
-      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").eq("region_code", sigungu)
-        .not("change_rate", "is", null).lt("change_rate", 0)
+      applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("region_code", sigungu)
+        .not("change_rate", "is", null).lt("change_rate", 0))
         .order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").eq("region_code", sigungu)
-        .eq("is_new_high", true).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level").eq("region_code", sigungu)
+      applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("region_code", sigungu)
+        .eq("is_new_high", true)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
+      applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("region_code", sigungu))
         .order("trade_date", { ascending: false }).limit(20).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("id", { count: "exact", head: true })
-        .eq("region_code", sigungu).abortSignal(ac.signal),
+      applyTypeFilter(supabase.from("apt_transactions").select("id", { count: "exact", head: true })
+        .eq("region_code", sigungu)).abortSignal(ac.signal),
     ]);
 
     clearTimeout(timer);
@@ -115,7 +124,9 @@ export default async function MarketSigunguPage({
   const siblingEntries = Object.entries(sido.sigungu);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div>
+      <PropertyTypeFilter currentType={validType} />
+      <div className="mx-auto max-w-6xl px-4 py-8">
       {/* Breadcrumb */}
       <div className="mb-2 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
         <Link href="/" className="hover:opacity-80">홈</Link>
@@ -304,6 +315,7 @@ export default async function MarketSigunguPage({
           </p>
         </Link>
       </section>
+    </div>
     </div>
   );
 }

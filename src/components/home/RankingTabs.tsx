@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
+import { PROPERTY_TYPE_LABELS } from "@/components/PropertyTypeFilter";
 
 export interface Transaction {
   id: string;
@@ -16,6 +17,7 @@ export interface Transaction {
   trade_date: string;
   is_new_high?: boolean;
   drop_level?: "normal" | "decline" | "crash" | "severe";
+  property_type?: number;
 }
 
 const DROP_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -77,11 +79,13 @@ export default function RankingTabs({
   highs,
   volume,
   recent,
+  showTypeBadge = false,
 }: {
   drops: Transaction[];
   highs: Transaction[];
   volume: Transaction[];
   recent: Transaction[];
+  showTypeBadge?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("drops");
 
@@ -140,6 +144,11 @@ export default function RankingTabs({
                       <p className="truncate font-semibold t-text">
                         {t.apt_name}
                       </p>
+                      {showTypeBadge && t.property_type != null && PROPERTY_TYPE_LABELS[t.property_type] && (
+                        <span className="flex-shrink-0 rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-600">
+                          {PROPERTY_TYPE_LABELS[t.property_type]}
+                        </span>
+                      )}
                       <span className="flex-shrink-0 rounded bg-surface-100 px-1.5 py-0.5 text-[11px] font-medium t-text-tertiary">
                         {formatSizeWithPyeong(t.size_sqm)}
                       </span>

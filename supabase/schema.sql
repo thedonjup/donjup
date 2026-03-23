@@ -57,6 +57,10 @@ CREATE INDEX idx_txn_change_rate ON apt_transactions(change_rate ASC)
 -- 하락 단계 컬럼 (normal | decline | crash | severe)
 ALTER TABLE apt_transactions ADD COLUMN IF NOT EXISTS drop_level VARCHAR(10) DEFAULT 'normal';
 
+-- 부동산 유형 컬럼 (1=아파트, 2=연립다세대, 3=오피스텔, 4=토지, 5=상업업무용)
+ALTER TABLE apt_transactions ADD COLUMN IF NOT EXISTS property_type SMALLINT DEFAULT 1;
+CREATE INDEX IF NOT EXISTS idx_txn_property_type ON apt_transactions(property_type);
+
 -- 중복 거래 방지용 유니크 인덱스
 CREATE UNIQUE INDEX idx_txn_unique ON apt_transactions(
     apt_name, size_sqm, floor, trade_date, trade_price

@@ -21,6 +21,14 @@
       "schedule": "40 20 * * *"
     },
     {
+      "path": "/api/cron/fetch-transactions?type=2&batch=0",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-transactions?type=3&batch=0",
+      "schedule": "0 16 * * *"
+    },
+    {
       "path": "/api/cron/fetch-rents?batch=0",
       "schedule": "5 20 * * *"
     },

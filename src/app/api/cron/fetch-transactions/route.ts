@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { fetchTransactions, delay } from "@/lib/api/molit";
+import {
+  fetchMultiTransactions,
+  delay as multiDelay,
+  type ParsedMultiTransaction,
+} from "@/lib/api/molit-multi";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
+import {
+  PROPERTY_TYPES,
+  PROPERTY_TYPE_LABELS,
+  type PropertyType,
+} from "@/lib/constants/property-types";
 import type { ParsedTransaction } from "@/lib/api/molit";
 
 export const maxDuration = 300; // 5분 (Vercel Pro)
@@ -44,11 +54,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // batch 쿼리 파라미터 파싱
+  // 쿼리 파라미터 파싱
   const { searchParams } = new URL(request.url);
   const batchParam = searchParams.get("batch");
   const batch = batchParam !== null ? parseInt(batchParam, 10) : null;
   const isCronBatch = batch !== null && !isNaN(batch);
+
+  // property type 파라미터 (1=아파트(기본), 2=연립다세대, 3=오피스텔)
+  const typeParam = searchParams.get("type");
+  const propertyType: PropertyType = typeParam
+    ? (parseInt(typeParam, 10) as PropertyType)
+    : PROPERTY_TYPES.APT;
+
+  // 비아파트 유형은 별도 핸들러로 분기
+  if (propertyType !== PROPERTY_TYPES.APT) {
+    return handleMultiPropertyType(request, propertyType, batch, isCronBatch);
+  }
 
   const supabase = createServiceClient();
   const now = new Date();
@@ -281,4 +302,133 @@ function toSlug(name: string): string {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .toLowerCase();
+}
+
+// ---------------------------------------------------------------------------
+// 멀티 부동산 유형 (연립다세대, 오피스텔 등) 핸들러
+// ---------------------------------------------------------------------------
+
+/** 비아파트 유형은 서울(11)만 처리 (batch 0 고정) */
+const MULTI_TYPE_SIDO_CODES = ["11"];
+
+async function handleMultiPropertyType(
+  request: Request,
+  propertyType: PropertyType,
+  batch: number | null,
+  isCronBatch: boolean
+) {
+  const supabase = createServiceClient();
+  const now = new Date();
+  const typeLabel = PROPERTY_TYPE_LABELS[propertyType] ?? `type-${propertyType}`;
+
+  // 3개월치
+  const monthCount = 3;
+  const dealYearMonths: string[] = [];
+  for (let i = 0; i < monthCount; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    dealYearMonths.push(
+      `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`
+    );
+  }
+
+  const regionEntries = getRegionEntries(MULTI_TYPE_SIDO_CODES);
+
+  let totalInserted = 0;
+  let totalNewHigh = 0;
+  let totalSignificantDrop = 0;
+  const errors: string[] = [];
+
+  for (const dealYearMonth of dealYearMonths) {
+    for (const [code, name] of regionEntries) {
+      try {
+        const transactions = await fetchMultiTransactions(
+          propertyType,
+          code,
+          dealYearMonth
+        );
+
+        if (transactions.length === 0) {
+          await multiDelay(300);
+          continue;
+        }
+
+        // 기존 enrichTransactions 와 호환되는 ParsedTransaction 으로 변환
+        const asParsed: ParsedTransaction[] = transactions.map((t) => ({
+          regionCode: t.regionCode,
+          dongName: t.dongName,
+          aptName: t.aptName,
+          sizeSqm: t.sizeSqm,
+          floor: t.floor,
+          tradePrice: t.tradePrice,
+          tradeDate: t.tradeDate,
+          builtYear: t.builtYear,
+          dealType: t.dealType,
+          rawData: t.rawData as unknown as ParsedTransaction["rawData"],
+        }));
+
+        const enriched = await enrichTransactions(supabase, asParsed, name);
+
+        const { data, error } = await supabase
+          .from("apt_transactions")
+          .upsert(
+            enriched.map((t) => ({
+              region_code: t.regionCode,
+              region_name: `${name} ${t.dongName}`,
+              apt_name: t.aptName,
+              size_sqm: t.sizeSqm,
+              floor: t.floor,
+              trade_price: t.tradePrice,
+              trade_date: t.tradeDate,
+              highest_price: t.highestPrice,
+              change_rate: t.changeRate,
+              is_new_high: t.isNewHigh,
+              is_significant_drop: t.isSignificantDrop,
+              drop_level: t.dropLevel,
+              deal_type: t.dealType,
+              raw_data: t.rawData,
+              property_type: propertyType,
+            })),
+            {
+              onConflict: "apt_name,size_sqm,floor,trade_date,trade_price",
+              ignoreDuplicates: true,
+            }
+          )
+          .select("id");
+
+        if (error) {
+          errors.push(`${name}(${dealYearMonth}): ${error.message}`);
+        } else {
+          const insertCount = data?.length ?? 0;
+          totalInserted += insertCount;
+          totalNewHigh += enriched.filter((t) => t.isNewHigh).length;
+          totalSignificantDrop += enriched.filter(
+            (t) => t.isSignificantDrop
+          ).length;
+        }
+
+        // 단지 마스터 UPSERT
+        await upsertComplexes(supabase, asParsed, name);
+
+        await multiDelay(300);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`${name}(${dealYearMonth}): ${msg}`);
+      }
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    propertyType,
+    propertyTypeLabel: typeLabel,
+    batch: isCronBatch ? batch : "all",
+    sidoCodes: MULTI_TYPE_SIDO_CODES,
+    dealYearMonths,
+    totalInserted,
+    totalNewHigh,
+    totalSignificantDrop,
+    regionsProcessed: regionEntries.length,
+    monthsProcessed: dealYearMonths.length,
+    errors: errors.length > 0 ? errors : undefined,
+  });
 }

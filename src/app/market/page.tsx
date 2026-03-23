@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
+import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 
 export const revalidate = 3600;
 
@@ -18,7 +19,15 @@ export const metadata: Metadata = {
   ],
 };
 
-export default async function MarketIndexPage() {
+export default async function MarketIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { type: typeParam } = await searchParams;
+  const propertyType = typeof typeParam === "string" ? parseInt(typeParam, 10) : 1;
+  const validType = [0, 1, 2, 3].includes(propertyType) ? propertyType : 1;
+
   const supabase = await createClient();
 
   const sidoEntries = Object.entries(REGION_HIERARCHY);
@@ -38,31 +47,36 @@ export default async function MarketIndexPage() {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 5000);
 
+    const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
+
     sidoStats = await Promise.all(
       sidoEntries.map(async ([sidoCode, sido]) => {
         const sigunguCodes = Object.keys(sido.sigungu);
 
         const [countResult, dropResult, highResult] = await Promise.all([
-          supabase
-            .from("apt_transactions")
-            .select("id", { count: "exact", head: true })
-            .in("region_code", sigunguCodes)
-            .abortSignal(ac.signal),
-          supabase
-            .from("apt_transactions")
-            .select("apt_name,change_rate,trade_price")
-            .in("region_code", sigunguCodes)
-            .not("change_rate", "is", null)
-            .lt("change_rate", 0)
-            .order("change_rate", { ascending: true })
+          applyTypeFilter(
+            supabase
+              .from("apt_transactions")
+              .select("id", { count: "exact", head: true })
+              .in("region_code", sigunguCodes)
+          ).abortSignal(ac.signal),
+          applyTypeFilter(
+            supabase
+              .from("apt_transactions")
+              .select("apt_name,change_rate,trade_price")
+              .in("region_code", sigunguCodes)
+              .not("change_rate", "is", null)
+              .lt("change_rate", 0)
+          ).order("change_rate", { ascending: true })
             .limit(1)
             .abortSignal(ac.signal),
-          supabase
-            .from("apt_transactions")
-            .select("apt_name,trade_price")
-            .in("region_code", sigunguCodes)
-            .eq("is_new_high", true)
-            .order("trade_date", { ascending: false })
+          applyTypeFilter(
+            supabase
+              .from("apt_transactions")
+              .select("apt_name,trade_price")
+              .in("region_code", sigunguCodes)
+              .eq("is_new_high", true)
+          ).order("trade_date", { ascending: false })
             .limit(1)
             .abortSignal(ac.signal),
         ]);
@@ -89,7 +103,9 @@ export default async function MarketIndexPage() {
   const totalCount = sidoStats.reduce((a, b) => a + b.count, 0);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div>
+      <PropertyTypeFilter currentType={validType} />
+      <div className="mx-auto max-w-6xl px-4 py-8">
       <section className="mb-8">
         <div className="flex items-center gap-2">
           <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
@@ -162,6 +178,7 @@ export default async function MarketIndexPage() {
           </Link>
         ))}
       </div>
+    </div>
     </div>
   );
 }

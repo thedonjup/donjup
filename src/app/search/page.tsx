@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
+import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 
 type SearchPageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -46,8 +47,10 @@ export async function generateMetadata({
 export default async function SearchPage({
   searchParams,
 }: SearchPageProps) {
-  const { q } = await searchParams;
+  const { q, type: typeParam } = await searchParams;
   const query = typeof q === "string" ? q.trim() : "";
+  const propertyType = typeof typeParam === "string" ? parseInt(typeParam, 10) : 1;
+  const validType = [0, 1, 2, 3].includes(propertyType) ? propertyType : 1;
 
   let results: Array<{
     id: string;
@@ -89,6 +92,10 @@ export default async function SearchPage({
           .or(`apt_name.ilike.%${query}%,region_name.ilike.%${query}%,dong_name.ilike.%${query}%`);
       }
 
+      if (validType !== 0) {
+        supabaseQuery = supabaseQuery.eq("property_type", validType);
+      }
+
       const { data } = await supabaseQuery
         .order("apt_name")
         .limit(50)
@@ -102,7 +109,9 @@ export default async function SearchPage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div>
+      <PropertyTypeFilter currentType={validType} />
+      <div className="mx-auto max-w-6xl px-4 py-8">
       {/* Search Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
@@ -116,6 +125,7 @@ export default async function SearchPage({
 
       {/* Search Form */}
       <form action="/search" method="GET" className="mb-8">
+        {validType !== 1 && <input type="hidden" name="type" value={validType} />}
         <div className="flex gap-2">
           <input
             type="text"
@@ -210,6 +220,7 @@ export default async function SearchPage({
           <AdSlot slotId="search-infeed" format="infeed" className="mt-6" />
         </>
       )}
+    </div>
     </div>
   );
 }
