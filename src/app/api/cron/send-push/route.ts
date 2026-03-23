@@ -75,7 +75,7 @@ export async function GET(request: Request) {
 
     // 5. 모든 구독자에게 푸시 발송
     const results = await Promise.allSettled(
-      subs.map((sub) =>
+      subs.map((sub: any) =>
         webpush
           .sendNotification(
             {

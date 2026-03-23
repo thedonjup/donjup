@@ -106,7 +106,7 @@ export default async function TrendPage() {
         );
         const avgPrice =
           prices.length > 0
-            ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length)
+            ? Math.round(prices.reduce((a: number, b: number) => a + b, 0) / prices.length)
             : 0;
 
         return {

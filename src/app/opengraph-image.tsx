@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const alt = "돈줍 - 부동산 실거래가 폭락/신고가 랭킹";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

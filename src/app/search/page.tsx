@@ -102,7 +102,7 @@ export default async function SearchPage({
         .abortSignal(ac.signal);
 
       clearTimeout(timer);
-      results = (data ?? []).map((d) => ({ ...d, sido_name: null, sigungu_name: null, latest_trade_price: null }));
+      results = (data ?? []).map((d: any) => ({ ...d, sido_name: null, sigungu_name: null, latest_trade_price: null }));
     } catch {
       // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
     }

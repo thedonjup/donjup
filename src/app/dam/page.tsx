@@ -1,19 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 interface KPIs {
   totalTransactions: number;
   totalComplexes: number;
   pushSubscribers: number;
   todayPageViews: number;
-}
-
-interface CronStatus {
-  name: string;
-  lastRun: string | null;
-  status: "success" | "failed" | "unknown";
 }
 
 interface RecentTransaction {
@@ -35,34 +28,21 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const supabase = createClient();
-
-        const [txCount, complexCount, pushCount, recentData, nullData] = await Promise.all([
-          supabase.from("transactions").select("*", { count: "exact", head: true }),
-          supabase.from("complexes").select("*", { count: "exact", head: true }),
-          supabase.from("push_subscriptions").select("*", { count: "exact", head: true }),
-          supabase
-            .from("transactions")
-            .select("id, apt_name, deal_amount, deal_date, area, sido_name")
-            .order("created_at", { ascending: false })
-            .limit(10),
-          supabase
-            .from("complexes")
-            .select("*", { count: "exact", head: true })
-            .is("highest_price", null),
-        ]);
+        const res = await fetch("/api/dam/stats");
+        if (!res.ok) throw new Error("API 요청 실패");
+        const data = await res.json();
 
         setKpis({
-          totalTransactions: txCount.count ?? 0,
-          totalComplexes: complexCount.count ?? 0,
-          pushSubscribers: pushCount.count ?? 0,
-          todayPageViews: 0, // GA4 API integration needed
+          totalTransactions: data.transactions ?? 0,
+          totalComplexes: data.complexes ?? 0,
+          pushSubscribers: data.pushSubscribers ?? 0,
+          todayPageViews: data.pageViews ?? 0,
         });
 
-        setNullCount(nullData.count ?? 0);
+        setNullCount(data.nullHighestCount ?? 0);
 
         setRecentTx(
-          (recentData.data ?? []).map((row: Record<string, unknown>) => ({
+          (data.recentTransactions ?? []).map((row: Record<string, unknown>) => ({
             id: row.id as number,
             apt_name: (row.apt_name as string) || "-",
             deal_amount: (row.deal_amount as number) || 0,

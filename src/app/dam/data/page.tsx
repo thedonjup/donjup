@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 interface DataQualityCheck {
   label: string;
@@ -17,45 +16,10 @@ export default function DataQualityPage() {
   useEffect(() => {
     async function runChecks() {
       try {
-        const supabase = createClient();
-
-        const [nullHighest, nullGeo, totalComplexes, totalTx] = await Promise.all([
-          supabase.from("complexes").select("*", { count: "exact", head: true }).is("highest_price", null),
-          supabase.from("complexes").select("*", { count: "exact", head: true }).is("lat", null),
-          supabase.from("complexes").select("*", { count: "exact", head: true }),
-          supabase.from("transactions").select("*", { count: "exact", head: true }),
-        ]);
-
-        const nullHighestCount = nullHighest.count ?? 0;
-        const nullGeoCount = nullGeo.count ?? 0;
-        const totalCx = totalComplexes.count ?? 0;
-
-        setChecks([
-          {
-            label: "highest_price NULL",
-            description: "최고가 정보가 없는 단지 수",
-            count: nullHighestCount,
-            severity: nullHighestCount > 100 ? "error" : nullHighestCount > 0 ? "warn" : "ok",
-          },
-          {
-            label: "좌표 정보 누락",
-            description: "위도/경도가 없는 단지 수",
-            count: nullGeoCount,
-            severity: nullGeoCount > 100 ? "error" : nullGeoCount > 0 ? "warn" : "ok",
-          },
-          {
-            label: "총 등록 단지",
-            description: "complexes 테이블 전체 행 수",
-            count: totalCx,
-            severity: "ok",
-          },
-          {
-            label: "총 거래 건수",
-            description: "transactions 테이블 전체 행 수",
-            count: totalTx.count ?? 0,
-            severity: "ok",
-          },
-        ]);
+        const res = await fetch("/api/dam/data");
+        if (!res.ok) throw new Error("API 요청 실패");
+        const data = await res.json();
+        setChecks(data.checks ?? []);
       } catch {
         // ignore
       } finally {

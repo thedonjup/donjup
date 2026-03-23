@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 type Tab = "cardnews" | "seeding" | "insta";
 
@@ -23,24 +22,10 @@ export default function ContentManagement() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const supabase = createClient();
-      let query = supabase
-        .from("content_queue")
-        .select("id, title, status, platform, created_at, content_type")
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (tab === "cardnews") {
-        query = query.eq("content_type", "cardnews");
-      } else if (tab === "seeding") {
-        query = query.eq("content_type", "seeding");
-      } else {
-        query = query.eq("content_type", "cardnews").eq("status", "posted");
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      setItems((data as ContentItem[]) ?? []);
+      const res = await fetch(`/api/dam/content?tab=${tab}`);
+      if (!res.ok) throw new Error("API 요청 실패");
+      const data = await res.json();
+      setItems((data.items as ContentItem[]) ?? []);
     } catch {
       setItems([]);
     } finally {
@@ -55,8 +40,11 @@ export default function ContentManagement() {
   const handleAction = async (id: number, action: "posted" | "hold" | "deleted") => {
     setActionLoading(id);
     try {
-      const supabase = createClient();
-      await supabase.from("content_queue").update({ status: action }).eq("id", id);
+      await fetch("/api/dam/content", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: action }),
+      });
       await fetchItems();
     } catch {
       // ignore

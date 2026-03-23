@@ -49,7 +49,7 @@ export default async function DailyArchivePage({
       <div className="mt-8">
         {reports && reports.length > 0 ? (
           <div className="space-y-2">
-            {reports.map((r) => (
+            {reports.map((r: any) => (
               <Link
                 key={r.id}
                 href={`/daily/${r.report_date}`}
