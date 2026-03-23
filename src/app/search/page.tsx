@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
@@ -67,42 +66,21 @@ export default async function SearchPage({
 
   if (query.length > 0) {
     try {
-      const supabase = await createClient();
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), 5000);
-
-      // "동대문 두산", "강남 원베일리" 등 공백으로 분리
-      const parts = query.split(/\s+/).filter(Boolean);
-
-      let supabaseQuery = supabase
-        .from("apt_complexes")
-        .select("id,apt_name,region_code,region_name,dong_name,built_year,slug");
-
-      if (parts.length >= 2) {
-        // 지역 + 아파트명 검색
-        const regionPart = parts[0];
-        const aptPart = parts.slice(1).join(" ");
-        // region_name 또는 dong_name에 지역 포함 AND apt_name에 아파트명 포함
-        supabaseQuery = supabaseQuery
-          .ilike("apt_name", `%${aptPart}%`)
-          .or(`region_name.ilike.%${regionPart}%,dong_name.ilike.%${regionPart}%`);
-      } else {
-        // 단일 키워드: 아파트명 또는 지역명 검색
-        supabaseQuery = supabaseQuery
-          .or(`apt_name.ilike.%${query}%,region_name.ilike.%${query}%,dong_name.ilike.%${query}%`);
-      }
-
-      if (validType !== 0) {
-        supabaseQuery = supabaseQuery.eq("property_type", validType);
-      }
-
-      const { data } = await supabaseQuery
-        .order("apt_name")
-        .limit(50)
-        .abortSignal(ac.signal);
-
-      clearTimeout(timer);
-      results = (data ?? []).map((d: any) => ({ ...d, sido_name: null, sigungu_name: null, latest_trade_price: null }));
+      // 서버사이드 검색 API 호출 (시/도명 매핑 + 부분 매칭 지원)
+      const origin = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000";
+      const res = await fetch(
+        `${origin}/api/search?q=${encodeURIComponent(query)}&type=${validType}`,
+        { next: { revalidate: 300 } }
+      );
+      const json = await res.json();
+      results = (json.results ?? []).map((d: any) => ({
+        ...d,
+        sido_name: null,
+        sigungu_name: null,
+        latest_trade_price: null,
+      }));
     } catch {
       // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
     }
