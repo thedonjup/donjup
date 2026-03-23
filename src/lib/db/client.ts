@@ -1,27 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Pool } from "pg";
+import postgres from "postgres";
 
 // ---------------------------------------------------------------------------
-// Connection pool (singleton)
+// Connection (singleton) — uses postgres.js (Vercel serverless compatible)
 // ---------------------------------------------------------------------------
-let pool: Pool | null = null;
+let sql: ReturnType<typeof postgres> | null = null;
 
-function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: true },
+function getSQL() {
+  if (!sql) {
+    sql = postgres(process.env.DATABASE_URL!, {
+      ssl: "require",
       max: 5,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 10_000,
-    });
-
-    // Prevent unhandled errors from crashing the process
-    pool.on("error", (err) => {
-      console.error("[db] Unexpected pool error:", err.message);
+      idle_timeout: 30,
+      connect_timeout: 10,
     });
   }
-  return pool;
+  return sql;
+}
+
+// pg-compatible query wrapper
+function getPool() {
+  const s = getSQL();
+  return {
+    query: async (text: string, values?: any[]) => {
+      // Convert $1, $2 style params to postgres.js unsafe style
+      if (values && values.length > 0) {
+        const result = await s.unsafe(text, values);
+        return { rows: result as any[], rowCount: result.count };
+      }
+      const result = await s.unsafe(text);
+      return { rows: result as any[], rowCount: result.count };
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -825,8 +835,8 @@ export function createDbClient(): DbClient {
 
 // Allow graceful shutdown
 export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.end();
-    pool = null;
+  if (sql) {
+    await sql.end();
+    sql = null;
   }
 }
