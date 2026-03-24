@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "데일리 리포트 아카이브",
   description: "돈줍 데일리 부동산 리포트 전체 목록. 매일 업데이트되는 폭락/신고가 분석.",
+  alternates: { canonical: "/daily/archive" },
 };
 
 export const revalidate = 3600;

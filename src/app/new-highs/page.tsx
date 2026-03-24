@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   description:
     "전국 아파트 신고가 거래 목록. 역대 최고가를 경신한 실거래 내역을 확인하세요.",
   keywords: ["아파트 신고가", "부동산 신고가", "실거래가 최고가", "아파트 시세"],
+  alternates: { canonical: "/new-highs" },
 };
 
 interface NewHighTransaction {

@@ -32,6 +32,7 @@ export async function generateMetadata({
   return {
     title: `${sido.name} 시군구별 아파트 시세 - ${getCurrentMonth()}`,
     description: `${sido.name} 시군구별 아파트 실거래가 현황. 폭락 순위, 신고가, 거래량을 한눈에 비교하세요.`,
+    alternates: { canonical: `/market/${sidoSlug}` },
     keywords: [
       `${sido.name} 아파트 시세`,
       `${sido.shortName} 부동산`,

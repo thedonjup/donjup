@@ -125,6 +125,7 @@ export async function generateMetadata({
   return {
     title: seoTitle,
     description: `${complex.apt_name} 아파트 실거래가 시세, 최고가 대비 변동률, 거래 이력을 확인하세요. ${complex.region_name} ${complex.dong_name ?? ""} 매매·전월세 시세 비교.`,
+    alternates: { canonical: `/apt/${region}/${slug}` },
     keywords: [
       `${complex.apt_name} 실거래가`,
       `${complex.apt_name} 시세`,

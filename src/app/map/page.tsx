@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "지도로 보는 실거래가",
   description:
     "전국 아파트 실거래가를 지도에서 확인하세요. 폭락, 하락, 신고가 단지를 한눈에 파악할 수 있습니다.",
+  alternates: { canonical: "/map" },
   openGraph: {
     title: "돈줍 - 지도로 보는 실거래가",
     description: "전국 아파트 실거래가를 지도에서 확인하세요.",

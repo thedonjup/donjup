@@ -29,9 +29,7 @@ export const metadata: Metadata = {
   description:
     "매일 자동 업데이트되는 전국 아파트 실거래가 폭락/신고가 랭킹과 대출 금리 정보. 오늘 가장 많이 떨어진 아파트를 확인하세요.",
   keywords: ["전국 아파트 실거래가", "부동산", "대출 금리", "주담대", "아파트 시세", "돈줍", "부동산 폭락", "서울 아파트", "부산 아파트", "대구 아파트", "경기 아파트", "인천 아파트"],
-  alternates: {
-    canonical: "/",
-  },
+  alternates: {},
   openGraph: {
     type: "website",
     locale: "ko_KR",

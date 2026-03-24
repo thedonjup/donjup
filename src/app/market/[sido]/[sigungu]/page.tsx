@@ -39,6 +39,7 @@ export async function generateMetadata({
   return {
     title: `${sido.shortName} ${sigunguName} 아파트 폭락 순위 - ${getCurrentMonth()}`,
     description: `${sido.name} ${sigunguName} 아파트 실거래가 폭락 순위, 신고가 갱신, 최근 거래 내역. 매일 자동 업데이트.`,
+    alternates: { canonical: `/market/${sidoSlug}/${sigungu}` },
     keywords: [
       `${sigunguName} 아파트 시세`,
       `${sido.shortName} ${sigunguName} 부동산`,

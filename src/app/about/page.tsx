@@ -4,6 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "서비스 소개",
   description: "돈줍(DonJup) - 매일 자동 업데이트되는 부동산 실거래가 폭락/신고가 랭킹과 금리 정보 서비스",
+  alternates: { canonical: "/about" },
 };
 
 const FEATURES = [

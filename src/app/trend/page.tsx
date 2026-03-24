@@ -20,6 +20,7 @@ export const metadata: Metadata = {
     "전국 부동산 시세",
     "부동산 통계",
   ],
+  alternates: { canonical: "/trend" },
 };
 
 export default async function TrendPage() {

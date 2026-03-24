@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   description:
     "오늘 체결된 전국 아파트 실거래 내역. 최신 거래가와 변동률을 확인하세요.",
   keywords: ["오늘 아파트 거래", "실거래가", "아파트 매매", "부동산 거래"],
+  alternates: { canonical: "/today" },
 };
 
 const DROP_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string }> = {

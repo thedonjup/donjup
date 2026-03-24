@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     "아파트 투자",
     "테마 컬렉션",
   ],
+  alternates: { canonical: "/themes" },
 };
 
 interface ThemeDef {

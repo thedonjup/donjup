@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "개인정보처리방침",
   description: "돈줍(DonJup) 개인정보처리방침",
+  alternates: { canonical: "/privacy" },
 };
 
 const SECTIONS = [

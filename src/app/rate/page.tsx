@@ -9,6 +9,7 @@ import { FaqJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 export const metadata: Metadata = {
   title: "금리 현황",
   description: "한국은행 기준금리, COFIX, CD금리, 국고채 금리 실시간 추이. 매일 자동 업데이트.",
+  alternates: { canonical: "/rate" },
 };
 
 export const revalidate = 1800;

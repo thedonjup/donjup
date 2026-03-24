@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     "아파트 폭락",
     "전국 부동산",
   ],
+  alternates: { canonical: "/market" },
 };
 
 export default async function MarketIndexPage({

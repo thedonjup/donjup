@@ -41,6 +41,7 @@ export async function generateMetadata({
   return {
     title: `${date} 데일리 리포트`,
     description: `${date} 아파트 폭락/신고가 랭킹 및 금리 변동 리포트`,
+    alternates: { canonical: `/daily/${date}` },
   };
 }
 

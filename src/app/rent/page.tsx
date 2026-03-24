@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     "서울 전세",
     "경기 전세",
   ],
+  alternates: { canonical: "/rent" },
 };
 
 /** 시도코드 → slug 매핑 (필터용) */

@@ -19,6 +19,7 @@ export async function generateMetadata({
     return {
       title: `"${query}" 아파트 검색 결과`,
       description: `"${query}" 관련 전국 아파트 실거래가, 시세 변동, 매매 이력을 확인하세요. 돈줍에서 아파트 시세를 한눈에 비교.`,
+      alternates: { canonical: `/search?q=${encodeURIComponent(query)}` },
       keywords: [
         `${query} 아파트`,
         `${query} 실거래가`,

@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     "월 상환액",
     "대출 상환 스케줄",
   ],
+  alternates: { canonical: "/rate/calculator" },
 };
 
 export default function CalculatorLayout({
