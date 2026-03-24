@@ -66,11 +66,11 @@ export async function GET(request: Request) {
 
     // 4. 알림 페이로드 생성
     const payload = JSON.stringify({
-      title: topDrop?.apt_name
-        ? `오늘의 폭락 아파트: ${topDrop.apt_name}`
-        : "돈줍 데일리 리포트가 도착했어요",
-      body: report.summary || "오늘의 부동산 시장 분석을 확인해보세요",
-      url: `/daily/${today}`,
+      title: "오늘의 부동산 리포트가 도착했습니다",
+      body: topDrop?.apt_name
+        ? `${topDrop.apt_name} 폭락 외 - ${report.summary || "오늘의 시장 분석을 확인하세요"}`
+        : report.summary || "오늘의 부동산 시장 분석을 확인해보세요",
+      url: "/daily/archive",
     });
 
     // 5. 모든 구독자에게 푸시 발송

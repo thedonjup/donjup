@@ -97,6 +97,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
+    // 7. 웹푸시 발송 트리거
+    let pushResult: { pushSent?: number; pushFailed?: number } = {};
+    try {
+      const pushUrl = new URL("/api/cron/send-push", request.url);
+      const pushRes = await fetch(pushUrl.toString(), {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${process.env.CRON_SECRET}`,
+        },
+      });
+      if (pushRes.ok) {
+        pushResult = await pushRes.json();
+      }
+    } catch (pushErr) {
+      console.error("[generate-report] Push trigger failed:", pushErr instanceof Error ? pushErr.message : pushErr);
+    }
+
     return NextResponse.json({
       success: true,
       reportDate: today,
@@ -107,6 +124,7 @@ export async function GET(request: Request) {
         rates: rateSummary.length,
         volumeRegions: volumeSummary.length,
       },
+      push: pushResult,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
