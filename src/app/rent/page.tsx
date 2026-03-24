@@ -116,11 +116,11 @@ export default async function RentPage({
       <section className="mb-8">
         <div className="flex items-center gap-2">
           <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-          <h1 className="text-2xl font-extrabold text-dark-900 sm:text-3xl">
+          <h1 className="text-2xl font-extrabold t-text sm:text-3xl">
             전국 아파트 전월세 실거래가
           </h1>
         </div>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm t-text-secondary">
           고가 전세 TOP과 최근 월세 거래를 한눈에 확인하세요.
         </p>
       </section>
@@ -133,7 +133,7 @@ export default async function RentPage({
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
               !sidoFilter
                 ? "bg-brand-600 text-white"
-                : "bg-surface-100 text-gray-600 hover:bg-surface-200"
+                : "t-elevated t-text-secondary hover:t-elevated"
             }`}
           >
             전체
@@ -145,7 +145,7 @@ export default async function RentPage({
               className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
                 sidoFilter === s.slug
                   ? "bg-brand-600 text-white"
-                  : "bg-surface-100 text-gray-600 hover:bg-surface-200"
+                  : "t-elevated t-text-secondary hover:t-elevated"
               }`}
             >
               {s.shortName}
@@ -158,19 +158,19 @@ export default async function RentPage({
       <section className="mb-10">
         <div className="mb-4 flex items-center gap-2">
           <span className="rank-badge rank-badge-rise text-[11px]">전세</span>
-          <h2 className="text-lg font-bold text-dark-900">전세 TOP</h2>
-          <span className="text-xs text-gray-400">보증금 높은순 (고가 전세)</span>
+          <h2 className="text-lg font-bold t-text">전세 TOP</h2>
+          <span className="text-xs t-text-tertiary">보증금 높은순 (고가 전세)</span>
         </div>
 
         {jeonseItems.length === 0 ? (
-          <p className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center text-sm text-gray-400">
+          <p className="rounded-xl border t-border t-card px-4 py-8 text-center text-sm t-text-tertiary">
             해당 지역의 전세 거래 데이터가 없습니다.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-200 text-left text-xs text-gray-400">
+                <tr className="border-b t-border text-left text-xs t-text-tertiary">
                   <th className="pb-2 pr-3 font-medium">#</th>
                   <th className="pb-2 pr-3 font-medium">단지명</th>
                   <th className="pb-2 pr-3 font-medium">지역</th>
@@ -191,34 +191,34 @@ export default async function RentPage({
                   return (
                     <tr
                       key={`jeonse-${i}`}
-                      className="border-b border-surface-100 transition hover:bg-surface-50"
+                      className="border-b t-border transition hover:t-elevated"
                     >
-                      <td className="py-3 pr-3 tabular-nums text-gray-400">
+                      <td className="py-3 pr-3 tabular-nums t-text-tertiary">
                         {i + 1}
                       </td>
                       <td className="py-3 pr-3">
                         <Link
                           href={`/apt/${regionCode}/${slug}`}
-                          className="font-semibold text-dark-900 hover:text-brand-600"
+                          className="font-semibold t-text hover:text-brand-600"
                         >
                           {aptName}
                         </Link>
                       </td>
-                      <td className="py-3 pr-3 text-gray-500">
+                      <td className="py-3 pr-3 t-text-secondary">
                         {String(item.region_name ?? "")}
                       </td>
-                      <td className="py-3 pr-3 text-right tabular-nums text-gray-600">
+                      <td className="py-3 pr-3 text-right tabular-nums t-text-secondary">
                         {sizeSqm}㎡({sqmToPyeong(sizeSqm)}평)
                       </td>
-                      <td className="py-3 pr-3 text-right font-bold tabular-nums text-rise">
+                      <td className="py-3 pr-3 text-right font-bold tabular-nums t-rise">
                         {formatPrice(deposit)}
                       </td>
                       <td className="py-3 pr-3">
-                        <span className="rounded-full bg-rise-bg px-2 py-0.5 text-xs font-medium text-rise">
+                        <span className="rounded-full t-rise-bg px-2 py-0.5 text-xs font-medium t-rise">
                           전세
                         </span>
                       </td>
-                      <td className="py-3 text-xs tabular-nums text-gray-400">
+                      <td className="py-3 text-xs tabular-nums t-text-tertiary">
                         {String(item.trade_date ?? "")}
                       </td>
                     </tr>
@@ -236,19 +236,19 @@ export default async function RentPage({
       <section>
         <div className="mb-4 flex items-center gap-2">
           <span className="rank-badge rank-badge-gold text-[11px]">월세</span>
-          <h2 className="text-lg font-bold text-dark-900">월세 TOP</h2>
-          <span className="text-xs text-gray-400">최근 월세 거래</span>
+          <h2 className="text-lg font-bold t-text">월세 TOP</h2>
+          <span className="text-xs t-text-tertiary">최근 월세 거래</span>
         </div>
 
         {wolseItems.length === 0 ? (
-          <p className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center text-sm text-gray-400">
+          <p className="rounded-xl border t-border t-card px-4 py-8 text-center text-sm t-text-tertiary">
             해당 지역의 월세 거래 데이터가 없습니다.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-200 text-left text-xs text-gray-400">
+                <tr className="border-b t-border text-left text-xs t-text-tertiary">
                   <th className="pb-2 pr-3 font-medium">#</th>
                   <th className="pb-2 pr-3 font-medium">단지명</th>
                   <th className="pb-2 pr-3 font-medium">지역</th>
@@ -271,26 +271,26 @@ export default async function RentPage({
                   return (
                     <tr
                       key={`wolse-${i}`}
-                      className="border-b border-surface-100 transition hover:bg-surface-50"
+                      className="border-b t-border transition hover:t-elevated"
                     >
-                      <td className="py-3 pr-3 tabular-nums text-gray-400">
+                      <td className="py-3 pr-3 tabular-nums t-text-tertiary">
                         {i + 1}
                       </td>
                       <td className="py-3 pr-3">
                         <Link
                           href={`/apt/${regionCode}/${slug}`}
-                          className="font-semibold text-dark-900 hover:text-brand-600"
+                          className="font-semibold t-text hover:text-brand-600"
                         >
                           {aptName}
                         </Link>
                       </td>
-                      <td className="py-3 pr-3 text-gray-500">
+                      <td className="py-3 pr-3 t-text-secondary">
                         {String(item.region_name ?? "")}
                       </td>
-                      <td className="py-3 pr-3 text-right tabular-nums text-gray-600">
+                      <td className="py-3 pr-3 text-right tabular-nums t-text-secondary">
                         {sizeSqm}㎡({sqmToPyeong(sizeSqm)}평)
                       </td>
-                      <td className="py-3 pr-3 text-right tabular-nums font-semibold text-dark-900">
+                      <td className="py-3 pr-3 text-right tabular-nums font-semibold t-text">
                         {formatPrice(deposit)}
                       </td>
                       <td className="py-3 pr-3 text-right font-bold tabular-nums text-gold-600">
@@ -301,7 +301,7 @@ export default async function RentPage({
                           월세
                         </span>
                       </td>
-                      <td className="py-3 text-xs tabular-nums text-gray-400">
+                      <td className="py-3 text-xs tabular-nums t-text-tertiary">
                         {String(item.trade_date ?? "")}
                       </td>
                     </tr>

@@ -137,23 +137,23 @@ export default async function TrendPage() {
       <section className="mb-8">
         <div className="flex items-center gap-2">
           <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-          <h1 className="text-2xl font-extrabold text-dark-900 sm:text-3xl">
+          <h1 className="text-2xl font-extrabold t-text sm:text-3xl">
             부동산 시장 트렌드
           </h1>
         </div>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm t-text-secondary">
           전국 아파트 거래량 추이와 시도별 평균 거래가를 한눈에 비교하세요.
         </p>
       </section>
 
       {/* 월별 거래량 추이 */}
       <section className="mb-10">
-        <h2 className="mb-4 text-lg font-bold text-dark-900">
+        <h2 className="mb-4 text-lg font-bold t-text">
           전국 거래량 추이 (최근 6개월)
         </h2>
 
         {monthlyVolume.length === 0 ? (
-          <p className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center text-sm text-gray-400">
+          <p className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center text-sm t-text-tertiary">
             거래량 데이터를 불러올 수 없습니다.
           </p>
         ) : (
@@ -161,26 +161,26 @@ export default async function TrendPage() {
             {/* Summary stat cards */}
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-surface-200 bg-white p-4">
-                <p className="text-[10px] font-medium text-gray-500">
+                <p className="text-[10px] font-medium t-text-secondary">
                   6개월 총 거래량
                 </p>
-                <p className="mt-1 text-xl font-bold tabular-nums text-dark-900">
+                <p className="mt-1 text-xl font-bold tabular-nums t-text">
                   {totalVolume.toLocaleString()}건
                 </p>
               </div>
               {monthlyVolume.length > 0 && (
                 <div className="rounded-xl border border-surface-200 bg-white p-4">
-                  <p className="text-[10px] font-medium text-gray-500">
+                  <p className="text-[10px] font-medium t-text-secondary">
                     최근 월 ({monthlyVolume[monthlyVolume.length - 1].month})
                   </p>
-                  <p className="mt-1 text-xl font-bold tabular-nums text-dark-900">
+                  <p className="mt-1 text-xl font-bold tabular-nums t-text">
                     {monthlyVolume[monthlyVolume.length - 1].count.toLocaleString()}건
                   </p>
                 </div>
               )}
               {monthlyVolume.length >= 2 && (
                 <div className="rounded-xl border border-surface-200 bg-white p-4">
-                  <p className="text-[10px] font-medium text-gray-500">
+                  <p className="text-[10px] font-medium t-text-secondary">
                     전월 대비
                   </p>
                   {(() => {
@@ -211,7 +211,7 @@ export default async function TrendPage() {
                       key={m.month}
                       className="flex flex-1 flex-col items-center gap-1"
                     >
-                      <span className="text-[10px] font-semibold tabular-nums text-gray-500">
+                      <span className="text-[10px] font-semibold tabular-nums t-text-secondary">
                         {m.count.toLocaleString()}
                       </span>
                       <div
@@ -221,7 +221,7 @@ export default async function TrendPage() {
                           minHeight: 4,
                         }}
                       />
-                      <span className="text-[10px] tabular-nums text-gray-400">
+                      <span className="text-[10px] tabular-nums t-text-tertiary">
                         {m.month.substring(5)}월
                       </span>
                     </div>
@@ -237,19 +237,19 @@ export default async function TrendPage() {
 
       {/* 시도별 평균 거래가 비교 */}
       <section>
-        <h2 className="mb-4 text-lg font-bold text-dark-900">
+        <h2 className="mb-4 text-lg font-bold t-text">
           시도별 평균 거래가 비교
         </h2>
 
         {sortedSido.length === 0 ? (
-          <p className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center text-sm text-gray-400">
+          <p className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center text-sm t-text-tertiary">
             시도별 데이터를 불러올 수 없습니다.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-200 text-left text-xs text-gray-400">
+                <tr className="border-b border-surface-200 text-left text-xs t-text-tertiary">
                   <th className="pb-2 pr-3 font-medium">#</th>
                   <th className="pb-2 pr-3 font-medium">시도</th>
                   <th className="pb-2 pr-3 font-medium text-right">
@@ -268,10 +268,10 @@ export default async function TrendPage() {
                       key={sido.slug}
                       className="border-b border-surface-100 transition hover:bg-surface-50"
                     >
-                      <td className="py-3 pr-3 tabular-nums text-gray-400">
+                      <td className="py-3 pr-3 tabular-nums t-text-tertiary">
                         {i + 1}
                       </td>
-                      <td className="py-3 pr-3 font-semibold text-dark-900">
+                      <td className="py-3 pr-3 font-semibold t-text">
                         {sido.name}
                       </td>
                       <td className="py-3 pr-3 text-right">
@@ -282,12 +282,12 @@ export default async function TrendPage() {
                               style={{ width: `${barPct}%` }}
                             />
                           </div>
-                          <span className="font-bold tabular-nums text-dark-900">
+                          <span className="font-bold tabular-nums t-text">
                             {formatPrice(sido.avgPrice)}
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 text-right tabular-nums text-gray-500">
+                      <td className="py-3 text-right tabular-nums t-text-secondary">
                         {sido.count.toLocaleString()}건
                       </td>
                     </tr>

@@ -89,12 +89,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // property_type 필터
-    if (type !== 0) {
-      conditions.push(`property_type = $${paramIdx}`);
-      values.push(type);
-      paramIdx++;
-    }
+    // property_type 필터 (apt_complexes에는 property_type 컬럼이 없으므로 비활성)
+    // TODO: apt_complexes에 property_type 추가 후 활성화
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const sql = `SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(request: Request) {
+  // 관리자 API 인증
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const db = createServiceClient();
     const [txnCount, complexCount, pushCount, viewCount, nullHighest, recentTx] =

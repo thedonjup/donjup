@@ -230,20 +230,29 @@ function Footer() {
 
           {/* Links */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+            <Link href="/market" className="transition hover:opacity-80">
+              지역별 시세
+            </Link>
             <Link href="/rent" className="transition hover:opacity-80">
               전월세 시세
             </Link>
             <Link href="/trend" className="transition hover:opacity-80">
               트렌드
             </Link>
+            <Link href="/rate" className="transition hover:opacity-80">
+              금리 현황
+            </Link>
+            <Link href="/rate/calculator" className="transition hover:opacity-80">
+              대출 계산기
+            </Link>
+            <Link href="/daily/archive" className="transition hover:opacity-80">
+              데일리 리포트
+            </Link>
             <Link href="/map" className="transition hover:opacity-80">
               지도
             </Link>
             <Link href="/search" className="transition hover:opacity-80">
               검색
-            </Link>
-            <Link href="/rate/calculator?tab=dsr" className="transition hover:opacity-80">
-              DSR 계산기
             </Link>
             <Link href="/about" className="transition hover:opacity-80">
               서비스 소개
