@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { pagePath, pageType, regionCode, complexId } = await request.json();
+    const { pagePath, pageType, regionCode, complexId, utmSource, utmMedium, utmCampaign } = await request.json();
 
     if (!pagePath) {
       return NextResponse.json(
@@ -19,6 +19,9 @@ export async function POST(request: NextRequest) {
       p_page_type: pageType || null,
       p_region_code: regionCode || null,
       p_complex_id: complexId || null,
+      p_utm_source: utmSource || null,
+      p_utm_medium: utmMedium || null,
+      p_utm_campaign: utmCampaign || null,
     });
 
     if (error) {

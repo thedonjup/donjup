@@ -14,6 +14,7 @@ import FavoriteButton from "@/components/apt/FavoriteButton";
 import MiniLoanCalculator from "@/components/apt/MiniLoanCalculator";
 import AptNews from "@/components/apt/AptNews";
 import Comments from "@/components/apt/Comments";
+import ViewDetailTracker from "@/components/analytics/ViewDetailTracker";
 
 export const revalidate = 3600;
 
@@ -315,6 +316,7 @@ export default async function AptDetailPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+      <ViewDetailTracker contentType="apt" contentId={slug} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(aptJsonLd) }}

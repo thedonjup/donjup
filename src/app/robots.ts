@@ -6,9 +6,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/"],
+        disallow: ["/api/", "/dam/"],
       },
     ],
-    sitemap: "https://donjup.com/sitemap.xml",
+    sitemap: [
+      "https://donjup.com/sitemap.xml",
+      "https://donjup.com/apt/sitemap.xml",
+    ],
   };
 }

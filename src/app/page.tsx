@@ -6,7 +6,7 @@ import { formatPrice, RATE_LABELS, RATE_ORDER } from "@/lib/format";
 import RankingTabs from "@/components/home/RankingTabs";
 import type { Transaction } from "@/components/home/RankingTabs";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
-import RegionSelector from "@/components/onboarding/RegionSelector";
+import { FaqJsonLd } from "@/components/seo/JsonLd";
 
 export const revalidate = 300;
 
@@ -151,6 +151,25 @@ export default async function HomePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <FaqJsonLd
+        items={[
+          {
+            question: "돈줍은 어떤 서비스인가요?",
+            answer:
+              "돈줍은 국토교통부 실거래가 공개시스템과 한국은행 ECOS 데이터를 기반으로, 전국 아파트 폭락/신고가 랭킹과 대출 금리 변동 정보를 매일 자동 업데이트하여 제공하는 부동산 데이터 대시보드입니다.",
+          },
+          {
+            question: "데이터는 얼마나 자주 업데이트되나요?",
+            answer:
+              "실거래가 데이터는 국토교통부 공개 후 매일 자동으로 수집되며, 금리 데이터는 한국은행 기준으로 업데이트됩니다.",
+          },
+          {
+            question: "돈줍의 데이터는 무료인가요?",
+            answer:
+              "네, 돈줍의 모든 실거래가 조회와 금리 정보 서비스는 무료로 제공됩니다.",
+          },
+        ]}
+      />
 
       {/* ============================================ */}
       {/* 1. Hero Section - 감정 자극형                  */}
@@ -227,94 +246,6 @@ export default async function HomePage({
                 ? `${heroHigh.region_name} · 국토교통부 실거래가 기반`
                 : "매일 자동 업데이트되는 전국 아파트 폭락/신고가 랭킹과 금리 변동 정보"}
           </p>
-
-          {/* Hero Search CTA */}
-          <div style={{ marginTop: 32 }}>
-            <p style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 12 }}>
-              우리 아파트는 얼마나 떨어졌을까?
-            </p>
-            <form
-              action="/search"
-              method="GET"
-              style={{ display: "flex", gap: 8, maxWidth: 480 }}
-            >
-              <div style={{ position: "relative", flex: 1 }}>
-                <svg
-                  style={{
-                    position: "absolute",
-                    left: 14,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: 18,
-                    height: 18,
-                    color: "#9ca3af",
-                  }}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  type="text"
-                  name="q"
-                  placeholder="아파트명, 지역명으로 검색"
-                  aria-label="아파트 검색"
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px 14px 42px",
-                    borderRadius: 12,
-                    border: "2px solid rgba(255,255,255,0.15)",
-                    background: "rgba(255,255,255,0.1)",
-                    color: "#fff",
-                    fontSize: 15,
-                    outline: "none",
-                    backdropFilter: "blur(8px)",
-                  }}
-                />
-              </div>
-              <button
-                type="submit"
-                style={{
-                  padding: "14px 24px",
-                  borderRadius: 12,
-                  border: "none",
-                  backgroundColor: "var(--color-brand-600, #2563eb)",
-                  color: "#fff",
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-              >
-                검색
-              </button>
-            </form>
-            {/* Popular search tags */}
-            <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-              {["래미안", "자이", "힐스테이트", "푸르지오", "더샵"].map((tag) => (
-                <a
-                  key={tag}
-                  href={`/search?q=${encodeURIComponent(tag)}`}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 20,
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    background: "rgba(255,255,255,0.08)",
-                    color: "rgba(255,255,255,0.8)",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    textDecoration: "none",
-                    transition: "background 0.15s",
-                  }}
-                >
-                  {tag}
-                </a>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -395,6 +326,32 @@ export default async function HomePage({
           </div>
         </section>
       )}
+
+      {/* ============================================ */}
+      {/* Viral CTA - 내 아파트 시세 확인               */}
+      {/* ============================================ */}
+      <section className="border-b t-border">
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <Link
+            href="/search"
+            className="group flex items-center justify-between rounded-2xl border-2 brand-tint-border brand-tint-bg px-6 py-5 transition-all hover:shadow-lg"
+          >
+            <div>
+              <p className="text-lg font-extrabold brand-tint-text sm:text-xl">
+                내 아파트는 얼마나 떨어졌을까?
+              </p>
+              <p className="mt-1 text-sm brand-tint-text-subtle">
+                아파트명을 검색하면 최고가 대비 변동률을 바로 확인할 수 있어요
+              </p>
+            </div>
+            <div className="ml-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-brand-600 text-white transition-transform group-hover:scale-110">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </Link>
+        </div>
+      </section>
 
       {/* ============================================ */}
       {/* Main Content Area                            */}
@@ -552,9 +509,6 @@ export default async function HomePage({
           </aside>
         </div>
       </div>
-
-      {/* Onboarding Region Selector */}
-      <RegionSelector />
     </div>
   );
 }

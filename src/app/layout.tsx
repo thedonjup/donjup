@@ -8,6 +8,7 @@ import MobileNav, { ThemeToggle } from "@/components/layout/MobileNav";
 import UserMenu from "@/components/auth/UserMenu";
 import PushPrompt from "@/components/PushPrompt";
 import BackToTop from "@/components/layout/BackToTop";
+import UTMTracker from "@/components/analytics/UTMTracker";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -28,6 +29,9 @@ export const metadata: Metadata = {
   description:
     "매일 자동 업데이트되는 전국 아파트 실거래가 폭락/신고가 랭킹과 대출 금리 정보. 오늘 가장 많이 떨어진 아파트를 확인하세요.",
   keywords: ["전국 아파트 실거래가", "부동산", "대출 금리", "주담대", "아파트 시세", "돈줍", "부동산 폭락", "서울 아파트", "부산 아파트", "대구 아파트", "경기 아파트", "인천 아파트"],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     locale: "ko_KR",
@@ -50,6 +54,11 @@ export const metadata: Metadata = {
       { url: "/logo.svg", sizes: "512x512", type: "image/svg+xml" },
     ],
   },
+  verification: {
+    ...(process.env.NEXT_PUBLIC_NAVER_VERIFY
+      ? { other: { "naver-site-verification": process.env.NEXT_PUBLIC_NAVER_VERIFY } }
+      : {}),
+  },
   other: {
     "google-adsense-account": "ca-pub-7637714403564102",
   },
@@ -68,6 +77,22 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full" suppressHydrationWarning>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "돈줍",
+              alternateName: "DonJup",
+              url: "https://donjup.com",
+              logo: "https://donjup.com/logo.svg",
+              description:
+                "매일 자동 업데이트되는 전국 아파트 실거래가 폭락/신고가 랭킹과 대출 금리 정보",
+              sameAs: ["https://instagram.com/donjup.official"],
+            }),
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('donjup-theme');if(t)document.documentElement.setAttribute('data-theme',t);else if(matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.setAttribute('data-theme','dark')}catch(e){}})()`,
@@ -120,6 +145,7 @@ export default function RootLayout({
           <Footer />
           <BackToTop />
           <PushPrompt />
+          <UTMTracker />
           </AuthProvider>
         </ThemeProvider>
       </body>

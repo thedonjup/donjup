@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";
 import { RATE_LABELS, RATE_DESCRIPTIONS, RATE_ORDER } from "@/lib/format";
 import MiniAreaChart from "@/components/charts/MiniAreaChartWrapper";
+import { FaqJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 
 export const metadata: Metadata = {
   title: "금리 현황",
@@ -110,6 +111,26 @@ export default async function RateDashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+      <BreadcrumbJsonLd items={[{ name: "홈", href: "/" }, { name: "금리 현황", href: "/rate" }]} />
+      <FaqJsonLd
+        items={[
+          {
+            question: "현재 한국은행 기준금리는 얼마인가요?",
+            answer:
+              "한국은행 기준금리는 금통위 회의 결과에 따라 변동됩니다. 돈줍 금리 현황 페이지에서 최신 기준금리와 변동 추이를 실시간으로 확인하실 수 있습니다.",
+          },
+          {
+            question: "COFIX 금리란 무엇인가요?",
+            answer:
+              "COFIX(Cost of Funds Index)는 은행의 자금 조달 비용을 반영한 기준금리로, 주택담보대출 변동금리의 기준이 됩니다. 신규취급액 기준과 잔액 기준이 있습니다.",
+          },
+          {
+            question: "주담대 금리를 가장 낮게 받으려면 어떻게 해야 하나요?",
+            answer:
+              "은행별로 금리 우대 조건이 다르므로, 돈줍의 은행별 금리 비교 기능을 활용하여 최저금리 은행을 확인하고, 급여이체, 카드 사용 등 우대 조건을 충족하는 것이 좋습니다.",
+          },
+        ]}
+      />
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-1">
           <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />

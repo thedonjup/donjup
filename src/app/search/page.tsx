@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
+import SearchTracker from "@/components/analytics/SearchTracker";
 
 type SearchPageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -109,6 +110,7 @@ export default async function SearchPage({
   return (
     <div>
       <PropertyTypeFilter currentType={validType} />
+      {hasSearch && <SearchTracker query={query} resultCount={results.length} />}
       <div className="mx-auto max-w-6xl px-4 py-8">
       {/* Search Header */}
       <div className="mb-8">

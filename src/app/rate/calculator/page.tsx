@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatKrw, formatPrice } from "@/lib/format";
 import CoupangBanner from "@/components/CoupangBanner";
+import { trackCalculate } from "@/lib/analytics/events";
 
 /* ─── Types ─── */
 
@@ -170,6 +171,7 @@ function LoanCalculatorTab() {
       });
       const data = await res.json();
       setResult(data);
+      trackCalculate("loan", { principal: principalNum, rate: parseFloat(rate), years: parseInt(years) });
     } catch (e) {
       console.error(e);
     } finally {
@@ -323,6 +325,9 @@ function LoanCalculatorTab() {
             </p>
           </div>
 
+          {/* CPA 대출 비교 배너 */}
+          <CpaBanner />
+
           {/* Coupang Partners */}
           <CoupangBanner
             category="book"
@@ -432,6 +437,7 @@ function DsrCalculatorTab() {
       maxLoanAmount: maxLoan,
       regulationType,
     });
+    trackCalculate("dsr", { dsr: Math.round(dsr * 100) / 100, income: parseManwon(annualIncome) });
   };
 
   return (
@@ -701,6 +707,9 @@ function DsrCalculatorTab() {
             )}
           </div>
 
+          {/* CPA 대출 비교 배너 */}
+          <CpaBanner />
+
           <CoupangBanner
             category="book"
             title="부동산 대출 가이드"
@@ -747,6 +756,7 @@ function JeonseConversionTab() {
       newDeposit: partialDeposit,
       adjustedMonthly,
     });
+    trackCalculate("jeonse_conversion", { deposit, rate });
   };
 
   return (
@@ -1023,6 +1033,35 @@ function RateScenarioSlider({
             : `금리 ${rateOffset.toFixed(2)}%p 오르면 월 ${diff.toLocaleString()}원 추가 부담`}
         </p>
       )}
+    </div>
+  );
+}
+
+function CpaBanner() {
+  const cpaUrl = process.env.NEXT_PUBLIC_CPA_URL;
+
+  return (
+    <div className="mt-4 rounded-2xl border-2 border-brand-300 bg-gradient-to-r from-brand-50 to-brand-100/50 p-6 text-center">
+      <p className="text-lg font-extrabold text-brand-900">
+        더 낮은 금리, 지금 비교해 보세요
+      </p>
+      <p className="mt-1 text-sm text-brand-700">
+        금융사 20곳 이상의 금리를 한 번에 비교하고, 나에게 유리한 대출을 찾아보세요
+      </p>
+      <a
+        href={cpaUrl || "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 inline-block rounded-xl bg-brand-600 px-8 py-3.5 text-base font-bold text-white transition hover:bg-brand-700 active:scale-[0.98]"
+        onClick={() => {
+          trackCalculate("cpa_click", {});
+        }}
+      >
+        지금 바로 최저 금리 대출 비교하기
+      </a>
+      <p className="mt-2 text-[11px] text-brand-500">
+        제휴 링크를 통해 돈줍 서비스 운영을 지원할 수 있습니다
+      </p>
     </div>
   );
 }

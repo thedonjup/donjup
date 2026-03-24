@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { shareViaKakao } from "@/lib/kakao-share";
+import { trackShare } from "@/lib/analytics/events";
 
 interface ShareButtonsProps {
   url: string;
@@ -24,11 +25,13 @@ export default function ShareButtons({ url, title, description, imageUrl }: Shar
       imageUrl,
       url,
     });
+    trackShare("kakao", url);
   }, [url, title, description, imageUrl]);
 
   async function handleNativeShare() {
     try {
       await navigator.share({ title, text: description, url: fullUrl("native") });
+      trackShare("native", url);
     } catch {
       // 사용자가 취소한 경우 무시
     }
@@ -38,12 +41,14 @@ export default function ShareButtons({ url, title, description, imageUrl }: Shar
     const text = encodeURIComponent(`${title}\n${description ?? ""}`);
     const link = encodeURIComponent(fullUrl("twitter"));
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${link}`, "_blank");
+    trackShare("twitter", url);
   }
 
   function handleNaverBlog() {
     const text = encodeURIComponent(title);
     const link = encodeURIComponent(fullUrl("naver_blog"));
     window.open(`https://blog.naver.com/openapi/share?url=${link}&title=${text}`, "_blank");
+    trackShare("naver_blog", url);
   }
 
   async function handleCopy() {
@@ -51,6 +56,7 @@ export default function ShareButtons({ url, title, description, imageUrl }: Shar
       await navigator.clipboard.writeText(fullUrl("copy"));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      trackShare("copy_link", url);
     } catch {
       // 클립보드 API 미지원
     }

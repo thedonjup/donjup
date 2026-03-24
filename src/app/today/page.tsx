@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, sqmToPyeong } from "@/lib/format";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
+import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
 
 export const revalidate = 300;
 
@@ -80,6 +81,17 @@ export default async function TodayPage({
 
   return (
     <div>
+      <BreadcrumbJsonLd items={[{ name: "홈", href: "/" }, { name: "오늘의 거래", href: "/today" }]} />
+      {transactions.length > 0 && (
+        <ItemListJsonLd
+          name="오늘의 아파트 거래 랭킹"
+          items={transactions.slice(0, 10).map((tx, i) => ({
+            name: `${tx.apt_name} (${tx.region_name})`,
+            url: `https://donjup.com/apt/${tx.region_code}/${makeSlug(tx.region_code, tx.apt_name)}`,
+            position: i + 1,
+          }))}
+        />
+      )}
       <PropertyTypeFilter currentType={validType} />
       <div className="mx-auto max-w-6xl px-4 py-8">
         <section className="mb-8">
