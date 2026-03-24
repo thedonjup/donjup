@@ -6,7 +6,7 @@ import { Pool } from "pg";
 // ---------------------------------------------------------------------------
 let pool: Pool | null = null;
 
-function getPool(): Pool {
+export function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,

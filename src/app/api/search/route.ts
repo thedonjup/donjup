@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
+import { getPool } from "@/lib/db/client";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: true },
-  max: 3,
-});
 
 // 시/도 약칭 → region_code prefix 매핑
 const SIDO_SEARCH_MAP: Record<string, string> = {};
@@ -97,7 +91,7 @@ export async function GET(request: Request) {
                  FROM apt_complexes ${where}
                  ORDER BY apt_name LIMIT 50`;
 
-    const result = await pool.query(sql, values);
+    const result = await getPool().query(sql, values);
 
     return NextResponse.json({ results: result.rows });
   } catch (e: any) {

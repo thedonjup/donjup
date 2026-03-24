@@ -133,7 +133,7 @@ export default async function RentPage({
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
               !sidoFilter
                 ? "bg-brand-600 text-white"
-                : "t-elevated t-text-secondary hover:t-elevated"
+                : "t-elevated t-text-secondary hover:bg-[var(--color-surface-elevated)]"
             }`}
           >
             전체
@@ -145,7 +145,7 @@ export default async function RentPage({
               className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
                 sidoFilter === s.slug
                   ? "bg-brand-600 text-white"
-                  : "t-elevated t-text-secondary hover:t-elevated"
+                  : "t-elevated t-text-secondary hover:bg-[var(--color-surface-elevated)]"
               }`}
             >
               {s.shortName}
@@ -191,7 +191,7 @@ export default async function RentPage({
                   return (
                     <tr
                       key={`jeonse-${i}`}
-                      className="border-b t-border transition hover:t-elevated"
+                      className="border-b t-border transition hover:bg-[var(--color-surface-elevated)]"
                     >
                       <td className="py-3 pr-3 tabular-nums t-text-tertiary">
                         {i + 1}
@@ -271,7 +271,7 @@ export default async function RentPage({
                   return (
                     <tr
                       key={`wolse-${i}`}
-                      className="border-b t-border transition hover:t-elevated"
+                      className="border-b t-border transition hover:bg-[var(--color-surface-elevated)]"
                     >
                       <td className="py-3 pr-3 tabular-nums t-text-tertiary">
                         {i + 1}

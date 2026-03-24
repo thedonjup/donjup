@@ -153,14 +153,14 @@ export default async function TrendPage() {
         </h2>
 
         {monthlyVolume.length === 0 ? (
-          <p className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center text-sm t-text-tertiary">
+          <p className="rounded-xl border t-border t-card px-4 py-8 text-center text-sm t-text-tertiary">
             거래량 데이터를 불러올 수 없습니다.
           </p>
         ) : (
           <>
             {/* Summary stat cards */}
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-surface-200 bg-white p-4">
+              <div className="rounded-xl border t-border t-card p-4">
                 <p className="text-[10px] font-medium t-text-secondary">
                   6개월 총 거래량
                 </p>
@@ -169,7 +169,7 @@ export default async function TrendPage() {
                 </p>
               </div>
               {monthlyVolume.length > 0 && (
-                <div className="rounded-xl border border-surface-200 bg-white p-4">
+                <div className="rounded-xl border t-border t-card p-4">
                   <p className="text-[10px] font-medium t-text-secondary">
                     최근 월 ({monthlyVolume[monthlyVolume.length - 1].month})
                   </p>
@@ -179,7 +179,7 @@ export default async function TrendPage() {
                 </div>
               )}
               {monthlyVolume.length >= 2 && (
-                <div className="rounded-xl border border-surface-200 bg-white p-4">
+                <div className="rounded-xl border t-border t-card p-4">
                   <p className="text-[10px] font-medium t-text-secondary">
                     전월 대비
                   </p>
@@ -190,7 +190,7 @@ export default async function TrendPage() {
                     const isUp = diff >= 0;
                     return (
                       <p
-                        className={`mt-1 text-xl font-bold tabular-nums ${isUp ? "text-rise" : "text-drop"}`}
+                        className={`mt-1 text-xl font-bold tabular-nums ${isUp ? "t-rise" : "t-drop"}`}
                       >
                         {isUp ? "+" : ""}
                         {diff.toFixed(1)}%
@@ -202,7 +202,7 @@ export default async function TrendPage() {
             </div>
 
             {/* Simple bar chart (CSS-based) */}
-            <div className="rounded-xl border border-surface-200 bg-white p-5">
+            <div className="rounded-xl border t-border t-card p-5">
               <div className="flex items-end gap-2" style={{ height: 160 }}>
                 {monthlyVolume.map((m) => {
                   const heightPct = (m.count / maxMonthly) * 100;
@@ -242,14 +242,14 @@ export default async function TrendPage() {
         </h2>
 
         {sortedSido.length === 0 ? (
-          <p className="rounded-xl border border-surface-200 bg-white px-4 py-8 text-center text-sm t-text-tertiary">
+          <p className="rounded-xl border t-border t-card px-4 py-8 text-center text-sm t-text-tertiary">
             시도별 데이터를 불러올 수 없습니다.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-200 text-left text-xs t-text-tertiary">
+                <tr className="border-b t-border text-left text-xs t-text-tertiary">
                   <th className="pb-2 pr-3 font-medium">#</th>
                   <th className="pb-2 pr-3 font-medium">시도</th>
                   <th className="pb-2 pr-3 font-medium text-right">
@@ -266,7 +266,7 @@ export default async function TrendPage() {
                   return (
                     <tr
                       key={sido.slug}
-                      className="border-b border-surface-100 transition hover:bg-surface-50"
+                      className="border-b t-border transition hover:bg-[var(--color-surface-elevated)]"
                     >
                       <td className="py-3 pr-3 tabular-nums t-text-tertiary">
                         {i + 1}
@@ -276,7 +276,7 @@ export default async function TrendPage() {
                       </td>
                       <td className="py-3 pr-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="hidden h-2 w-24 overflow-hidden rounded-full bg-surface-100 sm:block">
+                          <div className="hidden h-2 w-24 overflow-hidden rounded-full t-elevated sm:block">
                             <div
                               className="h-full rounded-full bg-brand-400"
                               style={{ width: `${barPct}%` }}
