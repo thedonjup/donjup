@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 interface LoginModalProps {
@@ -10,6 +11,11 @@ interface LoginModalProps {
 
 export default function LoginModal({ open, onClose }: LoginModalProps) {
   const { signInWithGoogle } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -19,7 +25,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const handleGoogle = async () => {
     try {
@@ -30,21 +36,28 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     }
   };
 
-  return (
+  const modalContent = (
     <div
       style={{
         position: "fixed",
         top: 0,
         left: 0,
-        right: 0,
-        bottom: 0,
+        width: "100%",
+        height: "100%",
         zIndex: 9999,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: "16px",
+        WebkitOverflowScrolling: "touch",
       }}
       onClick={onClose}
+      onTouchEnd={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+          onClose();
+        }
+      }}
       role="dialog"
       aria-modal="true"
     >
@@ -92,6 +105,8 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
             background: "transparent",
             cursor: "pointer",
             color: "var(--color-text-tertiary)",
+            touchAction: "manipulation",
+            WebkitTapHighlightColor: "transparent",
           }}
         >
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -129,6 +144,8 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
               fontSize: "14px",
               fontWeight: 500,
               cursor: "pointer",
+              touchAction: "manipulation",
+              WebkitTapHighlightColor: "transparent",
             }}
           >
             <svg width="18" height="18" viewBox="0 0 48 48">
@@ -187,4 +204,6 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

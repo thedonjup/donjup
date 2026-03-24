@@ -47,6 +47,10 @@ export default function UserMenu() {
       <>
         <button
           onClick={(e) => {
+            e.stopPropagation();
+            setLoginOpen(true);
+          }}
+          onTouchEnd={(e) => {
             e.preventDefault();
             e.stopPropagation();
             setLoginOpen(true);
@@ -63,6 +67,7 @@ export default function UserMenu() {
             color: "white",
             cursor: "pointer",
             WebkitTapHighlightColor: "transparent",
+            touchAction: "manipulation",
           }}
           aria-label="로그인"
         >
