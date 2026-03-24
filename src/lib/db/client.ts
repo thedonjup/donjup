@@ -8,8 +8,9 @@ let pool: Pool | null = null;
 
 export function getPool(): Pool {
   if (!pool) {
+    const dbUrl = process.env.DATABASE_URL || "postgresql://donjup:VjVtPl360yO4oXJwGtgQ_Q@donjup-23714.j77.aws-ap-southeast-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full";
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: dbUrl,
       ssl: { rejectUnauthorized: true },
       max: 5,
       idleTimeoutMillis: 30_000,
