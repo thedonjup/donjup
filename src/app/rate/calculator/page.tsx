@@ -64,16 +64,18 @@ function parseManwon(s: string): number {
 }
 
 const inputClass =
-  "mt-1.5 block w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 text-lg font-bold tabular-nums text-dark-900 placeholder:text-gray-300 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-lg font-bold tabular-nums t-text placeholder:opacity-40 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" +
+  " " + "border-[var(--color-border)] bg-[var(--color-surface-elevated)] focus:bg-[var(--color-surface-card)]";
 
 const selectClass =
-  "mt-1.5 block w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 text-lg font-bold text-dark-900 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1.5 block w-full rounded-xl border px-4 py-3 text-lg font-bold t-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" +
+  " " + "border-[var(--color-border)] bg-[var(--color-surface-elevated)] focus:bg-[var(--color-surface-card)]";
 
 /* ─── Main Page ─── */
 
 export default function CalculatorPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-3xl px-4 py-8"><p className="text-gray-400">로딩 중...</p></div>}>
+    <Suspense fallback={<div className="mx-auto max-w-3xl px-4 py-8"><p className="t-text-tertiary">로딩 중...</p></div>}>
       <CalculatorContent />
     </Suspense>
   );
@@ -97,9 +99,9 @@ function CalculatorContent() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="flex items-center gap-2 mb-1">
         <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-        <h1 className="text-2xl font-extrabold text-dark-900">대출/부동산 계산기</h1>
+        <h1 className="text-2xl font-extrabold t-text">대출/부동산 계산기</h1>
       </div>
-      <p className="text-sm text-gray-500">
+      <p className="text-sm t-text-secondary">
         대출 이자, DSR, 전세-월세 전환을 한곳에서 계산하세요.
       </p>
 
@@ -111,8 +113,8 @@ function CalculatorContent() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
               activeTab === tab.id
-                ? "bg-white text-brand-700 shadow-sm"
-                : "text-gray-500 hover:text-dark-900"
+                ? "bg-[var(--color-surface-card)] text-brand-700 shadow-sm"
+                : "t-text-secondary hover:t-text"
             }`}
           >
             <span className="block">{tab.label}</span>
@@ -178,10 +180,10 @@ function LoanCalculatorTab() {
   return (
     <>
       {/* Input Form */}
-      <div className="mt-6 rounded-2xl border border-surface-200 bg-white p-6">
+      <div className="mt-6 rounded-2xl border t-border bg-[var(--color-surface-card)] p-6">
         {/* Quick Amount Buttons */}
         <div className="mb-5">
-          <p className="text-sm font-medium text-dark-900 mb-2">빠른 금액 선택</p>
+          <p className="text-sm font-medium t-text mb-2">빠른 금액 선택</p>
           <div className="flex flex-wrap gap-2">
             {[
               { label: "1억", value: 10000 },
@@ -198,7 +200,7 @@ function LoanCalculatorTab() {
                 className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
                   principal === preset.value.toLocaleString()
                     ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-surface-200 text-gray-600 hover:border-brand-300 hover:text-brand-700"
+                    : "border-surface-200 t-text-secondary hover:border-brand-300 hover:text-brand-700"
                 }`}
               >
                 {preset.label}
@@ -209,7 +211,7 @@ function LoanCalculatorTab() {
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               대출 원금 (만원)
             </label>
             <input
@@ -218,13 +220,13 @@ function LoanCalculatorTab() {
               className={inputClass}
             />
             {principal && (
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs t-text-tertiary">
                 {formatKrw(parseManwon(principal) * 10000)}
               </p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               연 금리 (%)
             </label>
             <input
@@ -241,7 +243,7 @@ function LoanCalculatorTab() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               상환 기간
             </label>
             <select
@@ -260,7 +262,7 @@ function LoanCalculatorTab() {
         <button
           onClick={handleCalculate}
           disabled={loading || !principal}
-          className="mt-5 w-full rounded-xl bg-brand-600 py-3.5 text-lg font-bold text-white transition hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400"
+          className="mt-5 w-full rounded-xl bg-brand-600 py-3.5 text-lg font-bold text-white transition hover:bg-brand-700 disabled:opacity-40"
         >
           {loading ? "계산 중..." : "계산하기"}
         </button>
@@ -303,7 +305,7 @@ function LoanCalculatorTab() {
 
           {/* CPA Funnel - savings info */}
           <div className="mt-6 space-y-3">
-            <div className="rounded-2xl border-2 border-brand-200 bg-gradient-to-r from-brand-50 to-white p-6 text-center">
+            <div className="rounded-2xl border-2 border-brand-200 bg-brand-50/30 p-6 text-center">
               <p className="text-xl font-extrabold text-brand-900">
                 월 {result.comparison.equal_payment.monthlyPayment.toLocaleString()}원, 더 줄일 수 있어요
               </p>
@@ -316,7 +318,7 @@ function LoanCalculatorTab() {
                 원 절약
               </p>
             </div>
-            <p className="text-center text-xs text-gray-400">
+            <p className="text-center text-xs t-text-tertiary">
               금융사별 금리를 비교해 보세요. 주거래 은행 외에도 더 낮은 금리를 제공하는 곳이 있을 수 있습니다.
             </p>
           </div>
@@ -332,13 +334,13 @@ function LoanCalculatorTab() {
           {/* Schedule Preview */}
           {result.schedule_preview && result.schedule_preview.length > 0 && (
             <div className="mt-8">
-              <h2 className="mb-3 text-lg font-bold text-dark-900">
+              <h2 className="mb-3 text-lg font-bold t-text">
                 월별 상환 스케줄 (원리금균등, 12개월)
               </h2>
-              <div className="overflow-x-auto rounded-2xl border border-surface-200 bg-white">
+              <div className="overflow-x-auto rounded-2xl border t-border bg-[var(--color-surface-card)]">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-surface-50 text-left text-xs text-gray-500">
+                    <tr className="border-b bg-surface-50 text-left text-xs t-text-secondary">
                       <th className="px-4 py-3">회차</th>
                       <th className="px-4 py-3 text-right">원금</th>
                       <th className="px-4 py-3 text-right">이자</th>
@@ -348,14 +350,14 @@ function LoanCalculatorTab() {
                   <tbody>
                     {result.schedule_preview.map((row) => (
                       <tr key={row.month} className="border-b border-surface-100 last:border-0">
-                        <td className="px-4 py-2.5 text-dark-900">{row.month}개월</td>
+                        <td className="px-4 py-2.5 t-text">{row.month}개월</td>
                         <td className="px-4 py-2.5 text-right tabular-nums font-medium">
                           {row.principal.toLocaleString()}원
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums font-medium text-drop">
                           {row.interest.toLocaleString()}원
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-gray-500">
+                        <td className="px-4 py-2.5 text-right tabular-nums t-text-secondary">
                           {row.balance.toLocaleString()}원
                         </td>
                       </tr>
@@ -434,17 +436,17 @@ function DsrCalculatorTab() {
 
   return (
     <>
-      <div className="mt-6 rounded-2xl border border-surface-200 bg-white p-6">
+      <div className="mt-6 rounded-2xl border t-border bg-[var(--color-surface-card)] p-6">
         <div className="mb-5">
-          <p className="text-sm font-medium text-dark-900 mb-1">DSR (총부채원리금상환비율)</p>
-          <p className="text-xs text-gray-400">
+          <p className="text-sm font-medium t-text mb-1">DSR (총부채원리금상환비율)</p>
+          <p className="text-xs t-text-tertiary">
             연소득 대비 모든 대출의 연간 원리금 상환 비율을 계산합니다.
           </p>
         </div>
 
         {/* Regulation Type Toggle */}
         <div className="mb-5">
-          <p className="text-sm font-medium text-dark-900 mb-2">규제 기준</p>
+          <p className="text-sm font-medium t-text mb-2">규제 기준</p>
           <div className="flex gap-2">
             {([
               { id: "bank" as const, label: "은행권 (40%)" },
@@ -456,7 +458,7 @@ function DsrCalculatorTab() {
                 className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
                   regulationType === opt.id
                     ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-surface-200 text-gray-600 hover:border-brand-300 hover:text-brand-700"
+                    : "border-surface-200 t-text-secondary hover:border-brand-300 hover:text-brand-700"
                 }`}
               >
                 {opt.label}
@@ -467,7 +469,7 @@ function DsrCalculatorTab() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               연소득 (만원)
             </label>
             <input
@@ -476,13 +478,13 @@ function DsrCalculatorTab() {
               className={inputClass}
             />
             {annualIncome && (
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs t-text-tertiary">
                 {formatKrw(parseManwon(annualIncome) * 10000)}
               </p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               기존 대출 연간 원리금 상환액 (만원)
             </label>
             <input
@@ -491,7 +493,7 @@ function DsrCalculatorTab() {
               className={inputClass}
             />
             {existingRepayment && (
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs t-text-tertiary">
                 {formatKrw(parseManwon(existingRepayment) * 10000)}
               </p>
             )}
@@ -499,7 +501,7 @@ function DsrCalculatorTab() {
         </div>
 
         <div className="mt-4">
-          <p className="text-sm font-medium text-dark-900 mb-2">빠른 금액 선택 (신규 대출)</p>
+          <p className="text-sm font-medium t-text mb-2">빠른 금액 선택 (신규 대출)</p>
           <div className="flex flex-wrap gap-2">
             {[
               { label: "1억", value: 10000 },
@@ -513,7 +515,7 @@ function DsrCalculatorTab() {
                 className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
                   newLoanAmount === preset.value.toLocaleString()
                     ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-surface-200 text-gray-600 hover:border-brand-300 hover:text-brand-700"
+                    : "border-surface-200 t-text-secondary hover:border-brand-300 hover:text-brand-700"
                 }`}
               >
                 {preset.label}
@@ -524,7 +526,7 @@ function DsrCalculatorTab() {
 
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               신규 대출 희망 금액 (만원)
             </label>
             <input
@@ -533,13 +535,13 @@ function DsrCalculatorTab() {
               className={inputClass}
             />
             {newLoanAmount && (
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs t-text-tertiary">
                 {formatKrw(parseManwon(newLoanAmount) * 10000)}
               </p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               대출 금리 (%)
             </label>
             <input
@@ -551,7 +553,7 @@ function DsrCalculatorTab() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               대출 기간
             </label>
             <select
@@ -571,7 +573,7 @@ function DsrCalculatorTab() {
         <button
           onClick={handleCalculate}
           disabled={!annualIncome || !newLoanAmount}
-          className="mt-5 w-full rounded-xl bg-brand-600 py-3.5 text-lg font-bold text-white transition hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400"
+          className="mt-5 w-full rounded-xl bg-brand-600 py-3.5 text-lg font-bold text-white transition hover:bg-brand-700 disabled:opacity-40"
         >
           DSR 계산하기
         </button>
@@ -581,9 +583,9 @@ function DsrCalculatorTab() {
       {dsrResult && (
         <div className="mt-6 space-y-4">
           {/* Main DSR Display */}
-          <div className="rounded-2xl border border-surface-200 bg-white p-6">
+          <div className="rounded-2xl border t-border bg-[var(--color-surface-card)] p-6">
             <div className="text-center">
-              <p className="text-sm text-gray-500">나의 DSR</p>
+              <p className="text-sm t-text-secondary">나의 DSR</p>
               <p
                 className={`mt-1 text-4xl font-extrabold tabular-nums ${
                   dsrResult.isWithinLimit ? "text-brand-700" : "text-drop"
@@ -611,10 +613,10 @@ function DsrCalculatorTab() {
                   style={{ left: `${dsrLimit}%` }}
                 />
               </div>
-              <div className="mt-1.5 flex justify-between text-xs text-gray-400">
+              <div className="mt-1.5 flex justify-between text-xs t-text-tertiary">
                 <span>0%</span>
                 <span
-                  className="font-semibold text-dark-900"
+                  className="font-semibold t-text"
                   style={{ marginLeft: `${dsrLimit - 10}%` }}
                 >
                   {dsrLimit}% 규제선
@@ -638,7 +640,7 @@ function DsrCalculatorTab() {
                   </span>
                 </div>
               )}
-              <p className="mt-2 text-xs text-gray-400">
+              <p className="mt-2 text-xs t-text-tertiary">
                 {dsrResult.regulationType === "bank" ? "은행권" : "비은행권"} DSR {dsrLimit}% 규제 기준
               </p>
             </div>
@@ -646,38 +648,38 @@ function DsrCalculatorTab() {
 
           {/* Detail Cards */}
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-surface-200 bg-white p-5">
-              <p className="text-sm text-gray-500">신규 대출 연간 상환액</p>
-              <p className="mt-2 text-xl font-extrabold tabular-nums text-dark-900">
+            <div className="rounded-2xl border t-border bg-[var(--color-surface-card)] p-5">
+              <p className="text-sm t-text-secondary">신규 대출 연간 상환액</p>
+              <p className="mt-2 text-xl font-extrabold tabular-nums t-text">
                 {Math.round(dsrResult.newAnnualRepayment).toLocaleString()}
-                <span className="ml-0.5 text-sm font-normal text-gray-400">원/년</span>
+                <span className="ml-0.5 text-sm font-normal t-text-tertiary">원/년</span>
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs t-text-tertiary">
                 월 {Math.round(dsrResult.newAnnualRepayment / 12).toLocaleString()}원
               </p>
             </div>
-            <div className="rounded-2xl border border-surface-200 bg-white p-5">
-              <p className="text-sm text-gray-500">총 연간 원리금 상환액</p>
-              <p className="mt-2 text-xl font-extrabold tabular-nums text-dark-900">
+            <div className="rounded-2xl border t-border bg-[var(--color-surface-card)] p-5">
+              <p className="text-sm t-text-secondary">총 연간 원리금 상환액</p>
+              <p className="mt-2 text-xl font-extrabold tabular-nums t-text">
                 {Math.round(dsrResult.totalAnnualRepayment).toLocaleString()}
-                <span className="ml-0.5 text-sm font-normal text-gray-400">원/년</span>
+                <span className="ml-0.5 text-sm font-normal t-text-tertiary">원/년</span>
               </p>
             </div>
-            <div className="rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5">
+            <div className="rounded-2xl border border-brand-200 bg-brand-50/30 p-5">
               <p className="text-sm font-semibold text-brand-700">최대 대출 가능액 (추정)</p>
-              <p className="mt-2 text-xl font-extrabold tabular-nums text-dark-900">
+              <p className="mt-2 text-xl font-extrabold tabular-nums t-text">
                 {dsrResult.maxLoanAmount > 0
                   ? formatPrice(dsrResult.maxLoanAmount)
                   : "불가"}
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs t-text-tertiary">
                 DSR {dsrLimit}% 기준, 원리금균등 상환
               </p>
             </div>
           </div>
 
           {/* CPA Banner */}
-          <div className="rounded-2xl border-2 border-brand-200 bg-gradient-to-r from-brand-50 to-white p-6 text-center">
+          <div className="rounded-2xl border-2 border-brand-200 bg-brand-50/30 p-6 text-center">
             {dsrResult.isWithinLimit ? (
               <>
                 <p className="text-lg font-extrabold text-brand-900">
@@ -689,10 +691,10 @@ function DsrCalculatorTab() {
               </>
             ) : (
               <>
-                <p className="text-lg font-extrabold text-dark-900">
+                <p className="text-lg font-extrabold t-text">
                   DSR 초과 시에도 방법이 있을 수 있어요
                 </p>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm t-text-secondary">
                   상환 기간 조정, 기존 대출 상환 등으로 DSR을 낮출 수 있습니다
                 </p>
               </>
@@ -749,17 +751,17 @@ function JeonseConversionTab() {
 
   return (
     <>
-      <div className="mt-6 rounded-2xl border border-surface-200 bg-white p-6">
+      <div className="mt-6 rounded-2xl border t-border bg-[var(--color-surface-card)] p-6">
         <div className="mb-5">
-          <p className="text-sm font-medium text-dark-900 mb-1">전세-월세 전환 계산기</p>
-          <p className="text-xs text-gray-400">
+          <p className="text-sm font-medium t-text mb-1">전세-월세 전환 계산기</p>
+          <p className="text-xs t-text-tertiary">
             전세 보증금을 월세로 전환했을 때의 월 임대료를 계산합니다.
           </p>
         </div>
 
         {/* Quick Amount Buttons */}
         <div className="mb-5">
-          <p className="text-sm font-medium text-dark-900 mb-2">빠른 전세금 선택</p>
+          <p className="text-sm font-medium t-text mb-2">빠른 전세금 선택</p>
           <div className="flex flex-wrap gap-2">
             {[
               { label: "1억", value: 10000 },
@@ -774,7 +776,7 @@ function JeonseConversionTab() {
                 className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
                   jeonseDeposit === preset.value.toLocaleString()
                     ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-surface-200 text-gray-600 hover:border-brand-300 hover:text-brand-700"
+                    : "border-surface-200 t-text-secondary hover:border-brand-300 hover:text-brand-700"
                 }`}
               >
                 {preset.label}
@@ -785,7 +787,7 @@ function JeonseConversionTab() {
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               전세 보증금 (만원)
             </label>
             <input
@@ -794,13 +796,13 @@ function JeonseConversionTab() {
               className={inputClass}
             />
             {jeonseDeposit && (
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs t-text-tertiary">
                 {formatKrw(parseManwon(jeonseDeposit) * 10000)}
               </p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               전환율 (%)
             </label>
             <input
@@ -810,12 +812,12 @@ function JeonseConversionTab() {
               onChange={(e) => setConversionRate(e.target.value)}
               className={inputClass}
             />
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs t-text-tertiary">
               한국은행 기준금리 기반 (통상 2.5~5.5%)
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-dark-900">
+            <label className="block text-sm font-medium t-text">
               월세 전환 시 보증금 (만원)
             </label>
             <input
@@ -824,7 +826,7 @@ function JeonseConversionTab() {
               className={inputClass}
             />
             {newDeposit && (
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs t-text-tertiary">
                 {formatKrw(parseManwon(newDeposit) * 10000)}
               </p>
             )}
@@ -834,7 +836,7 @@ function JeonseConversionTab() {
         <button
           onClick={handleCalculate}
           disabled={!jeonseDeposit}
-          className="mt-5 w-full rounded-xl bg-brand-600 py-3.5 text-lg font-bold text-white transition hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400"
+          className="mt-5 w-full rounded-xl bg-brand-600 py-3.5 text-lg font-bold text-white transition hover:bg-brand-700 disabled:opacity-40"
         >
           전환 계산하기
         </button>
@@ -844,17 +846,17 @@ function JeonseConversionTab() {
       {result && (
         <div className="mt-6 space-y-4">
           {/* Full Conversion */}
-          <div className="rounded-2xl border border-surface-200 bg-white p-6">
-            <p className="text-sm font-semibold text-gray-500">순수 월세 전환 시</p>
-            <p className="mt-1 text-xs text-gray-400">보증금 없이 전액 월세로 전환한 경우</p>
+          <div className="rounded-2xl border t-border bg-[var(--color-surface-card)] p-6">
+            <p className="text-sm font-semibold t-text-secondary">순수 월세 전환 시</p>
+            <p className="mt-1 text-xs t-text-tertiary">보증금 없이 전액 월세로 전환한 경우</p>
             <div className="mt-4 flex items-center gap-3">
               <div className="rounded-xl bg-surface-50 px-4 py-3 text-center">
-                <p className="text-[11px] text-gray-500">전세 보증금</p>
-                <p className="mt-1 text-lg font-bold tabular-nums text-dark-900">
+                <p className="text-[11px] t-text-secondary">전세 보증금</p>
+                <p className="mt-1 text-lg font-bold tabular-nums t-text">
                   {formatPrice(parseManwon(jeonseDeposit))}
                 </p>
               </div>
-              <span className="text-xl text-gray-300">&rarr;</span>
+              <span className="text-xl t-text-tertiary">&rarr;</span>
               <div className="rounded-xl bg-brand-50 px-4 py-3 text-center">
                 <p className="text-[11px] text-brand-600">환산 월세</p>
                 <p className="mt-1 text-lg font-bold tabular-nums text-brand-700">
@@ -866,23 +868,23 @@ function JeonseConversionTab() {
 
           {/* Partial Conversion */}
           {result.newDeposit > 0 && (
-            <div className="rounded-2xl border-2 border-brand-200 bg-gradient-to-br from-brand-50 to-white p-6">
+            <div className="rounded-2xl border-2 border-brand-200 bg-brand-50/30 p-6">
               <p className="text-sm font-semibold text-brand-700">보증금 일부 유지 시</p>
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <div className="rounded-xl bg-white px-4 py-3 text-center shadow-sm">
-                  <p className="text-[11px] text-gray-500">전세</p>
-                  <p className="mt-1 text-lg font-bold tabular-nums text-dark-900">
+                <div className="rounded-xl bg-[var(--color-surface-card)] px-4 py-3 text-center shadow-sm">
+                  <p className="text-[11px] t-text-secondary">전세</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums t-text">
                     {formatPrice(parseManwon(jeonseDeposit))}
                   </p>
                 </div>
-                <span className="text-xl text-gray-300">&rarr;</span>
-                <div className="rounded-xl bg-white px-4 py-3 text-center shadow-sm">
-                  <p className="text-[11px] text-gray-500">보증금</p>
-                  <p className="mt-1 text-lg font-bold tabular-nums text-dark-900">
+                <span className="text-xl t-text-tertiary">&rarr;</span>
+                <div className="rounded-xl bg-[var(--color-surface-card)] px-4 py-3 text-center shadow-sm">
+                  <p className="text-[11px] t-text-secondary">보증금</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums t-text">
                     {formatPrice(result.newDeposit)}
                   </p>
                 </div>
-                <span className="text-xl text-gray-300">+</span>
+                <span className="text-xl t-text-tertiary">+</span>
                 <div className="rounded-xl bg-brand-100 px-4 py-3 text-center">
                   <p className="text-[11px] text-brand-600">월세</p>
                   <p className="mt-1 text-lg font-bold tabular-nums text-brand-700">
@@ -894,14 +896,14 @@ function JeonseConversionTab() {
           )}
 
           {/* Reference Table */}
-          <div className="rounded-2xl border border-surface-200 bg-white p-6">
-            <h3 className="text-sm font-bold text-dark-900 mb-3">
+          <div className="rounded-2xl border t-border bg-[var(--color-surface-card)] p-6">
+            <h3 className="text-sm font-bold t-text mb-3">
               보증금별 월세 환산 참고표
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-surface-50 text-left text-xs text-gray-500">
+                  <tr className="border-b bg-surface-50 text-left text-xs t-text-secondary">
                     <th className="px-4 py-2.5">보증금</th>
                     <th className="px-4 py-2.5 text-right">환산 월세</th>
                   </tr>
@@ -918,7 +920,7 @@ function JeonseConversionTab() {
                       const monthly = Math.round((diff * 10000 * rate) / 100 / 12);
                       return (
                         <tr key={dep} className="border-b border-surface-100 last:border-0">
-                          <td className="px-4 py-2.5 text-dark-900">
+                          <td className="px-4 py-2.5 t-text">
                             {dep === 0 ? "보증금 없음" : formatPrice(dep)}
                           </td>
                           <td className="px-4 py-2.5 text-right tabular-nums font-medium text-brand-700">
@@ -931,7 +933,7 @@ function JeonseConversionTab() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-xs text-gray-400">
+            <p className="mt-2 text-xs t-text-tertiary">
               전환율 {conversionRate}% 기준. 실제 임대료는 시장 상황에 따라 다를 수 있습니다.
             </p>
           </div>
@@ -965,9 +967,9 @@ function RateScenarioSlider({
   const diff = newMonthly - currentMonthly;
 
   return (
-    <div className="mt-6 rounded-2xl border border-surface-200 bg-white p-6">
-      <h2 className="text-lg font-bold text-dark-900">금리가 바뀌면?</h2>
-      <p className="mt-1 text-sm text-gray-500">
+    <div className="mt-6 rounded-2xl border t-border bg-[var(--color-surface-card)] p-6">
+      <h2 className="text-lg font-bold t-text">금리가 바뀌면?</h2>
+      <p className="mt-1 text-sm t-text-secondary">
         슬라이더를 움직여 금리 변동에 따른 월 상환액 변화를 확인하세요
       </p>
 
@@ -981,7 +983,7 @@ function RateScenarioSlider({
           onChange={(e) => onOffsetChange(parseFloat(e.target.value))}
           className="w-full accent-brand-600"
         />
-        <div className="mt-1 flex justify-between text-xs text-gray-400">
+        <div className="mt-1 flex justify-between text-xs t-text-tertiary">
           <span>-2.0%p</span>
           <span>현재</span>
           <span>+2.0%p</span>
@@ -990,18 +992,18 @@ function RateScenarioSlider({
 
       <div className="mt-4 grid grid-cols-3 gap-3 text-center">
         <div className="rounded-xl bg-surface-50 p-3">
-          <p className="text-[11px] text-gray-500">현재 금리</p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-dark-900">{rate.toFixed(2)}%</p>
+          <p className="text-[11px] t-text-secondary">현재 금리</p>
+          <p className="mt-1 text-lg font-bold tabular-nums t-text">{rate.toFixed(2)}%</p>
         </div>
         <div className="rounded-xl bg-surface-50 p-3">
-          <p className="text-[11px] text-gray-500">변경 후</p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-dark-900">{newRate.toFixed(2)}%</p>
+          <p className="text-[11px] t-text-secondary">변경 후</p>
+          <p className="mt-1 text-lg font-bold tabular-nums t-text">{newRate.toFixed(2)}%</p>
         </div>
         <div className="rounded-xl bg-surface-50 p-3">
-          <p className="text-[11px] text-gray-500">월 상환액 차이</p>
+          <p className="text-[11px] t-text-secondary">월 상환액 차이</p>
           <p
             className={`mt-1 text-lg font-bold tabular-nums ${
-              diff > 0 ? "text-drop" : diff < 0 ? "text-brand-600" : "text-dark-900"
+              diff > 0 ? "text-drop" : diff < 0 ? "text-brand-600" : "t-text"
             }`}
           >
             {diff > 0 ? "+" : ""}
@@ -1042,17 +1044,17 @@ function ResultCard({
     <div
       className={`rounded-2xl border p-5 ${
         highlight
-          ? "border-brand-200 bg-gradient-to-br from-brand-50 to-white"
-          : "border-surface-200 bg-white"
+          ? "border-brand-200 bg-brand-50/30"
+          : "t-border bg-[var(--color-surface-card)]"
       }`}
     >
-      <p className={`text-sm font-semibold ${highlight ? "text-brand-700" : "text-gray-500"}`}>{title}</p>
-      <p className="text-xs text-gray-400">{description}</p>
-      <p className="mt-3 text-2xl font-extrabold tabular-nums text-dark-900">
+      <p className={`text-sm font-semibold ${highlight ? "text-brand-700" : "t-text-secondary"}`}>{title}</p>
+      <p className="text-xs t-text-tertiary">{description}</p>
+      <p className="mt-3 text-2xl font-extrabold tabular-nums t-text">
         {monthlyPayment.toLocaleString()}
-        <span className="ml-0.5 text-sm font-normal text-gray-400">원/월</span>
+        <span className="ml-0.5 text-sm font-normal t-text-tertiary">원/월</span>
       </p>
-      <p className="mt-1 text-xs text-gray-400">
+      <p className="mt-1 text-xs t-text-tertiary">
         총 이자: {totalInterest.toLocaleString()}원
       </p>
     </div>

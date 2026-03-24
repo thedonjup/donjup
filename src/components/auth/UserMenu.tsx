@@ -42,9 +42,13 @@ export default function UserMenu() {
       <>
         <button
           onClick={() => setLoginOpen(true)}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-white bg-brand-600 transition hover:bg-brand-700"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white transition hover:bg-brand-700 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5 sm:text-sm sm:font-medium"
+          aria-label="로그인"
         >
-          로그인
+          <svg className="h-4 w-4 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span className="hidden sm:inline">로그인</span>
         </button>
         <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       </>

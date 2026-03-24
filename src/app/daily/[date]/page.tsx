@@ -92,13 +92,13 @@ export default async function DailyReportPage({
         <div className="flex items-center gap-3 text-sm">
           <Link
             href={`/daily/${getPrevDate(date)}`}
-            className="rounded-lg border border-surface-200 px-3 py-1.5 text-gray-500 transition hover:bg-surface-50 hover:text-dark-900"
+            className="rounded-lg border border-surface-200 px-3 py-1.5 t-text-secondary transition hover:bg-surface-50 hover:t-text"
           >
             &larr; 이전
           </Link>
           <Link
             href={`/daily/${getNextDate(date)}`}
-            className="rounded-lg border border-surface-200 px-3 py-1.5 text-gray-500 transition hover:bg-surface-50 hover:text-dark-900"
+            className="rounded-lg border border-surface-200 px-3 py-1.5 t-text-secondary transition hover:bg-surface-50 hover:t-text"
           >
             다음 &rarr;
           </Link>
@@ -108,14 +108,14 @@ export default async function DailyReportPage({
       <div className="mb-8">
         <p className="text-xs font-medium text-brand-600">{report.report_date}</p>
         <div className="mt-1 flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-extrabold text-dark-900">{report.title}</h1>
+          <h1 className="text-2xl font-extrabold t-text">{report.title}</h1>
           <ShareButtons
             url={`https://donjup.com/daily/${date}`}
             title={report.title}
             description={report.summary}
           />
         </div>
-        <p className="mt-2 text-sm text-gray-500">{report.summary}</p>
+        <p className="mt-2 text-sm t-text-secondary">{report.summary}</p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -125,7 +125,7 @@ export default async function DailyReportPage({
           <section>
             <div className="flex items-center gap-2 mb-4">
               <span className="inline-block h-5 w-1.5 rounded-full bg-drop" />
-              <h2 className="text-lg font-bold text-dark-900">최고가 대비 하락 TOP</h2>
+              <h2 className="text-lg font-bold t-text">최고가 대비 하락 TOP</h2>
             </div>
             {topDrops.length > 0 ? (
               <div className="space-y-2">
@@ -134,7 +134,7 @@ export default async function DailyReportPage({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400">폭락 거래 데이터 없음</p>
+              <p className="text-sm t-text-tertiary">폭락 거래 데이터 없음</p>
             )}
           </section>
 
@@ -144,7 +144,7 @@ export default async function DailyReportPage({
           <section>
             <div className="flex items-center gap-2 mb-4">
               <span className="inline-block h-5 w-1.5 rounded-full bg-rise" />
-              <h2 className="text-lg font-bold text-dark-900">신고가 갱신 TOP</h2>
+              <h2 className="text-lg font-bold t-text">신고가 갱신 TOP</h2>
             </div>
             {topHighs.length > 0 ? (
               <div className="space-y-2">
@@ -153,7 +153,7 @@ export default async function DailyReportPage({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400">신고가 데이터 없음</p>
+              <p className="text-sm t-text-tertiary">신고가 데이터 없음</p>
             )}
           </section>
         </div>
@@ -161,17 +161,17 @@ export default async function DailyReportPage({
         {/* Right Sidebar */}
         <aside className="space-y-6">
           {/* 금리 요약 */}
-          <div className="rounded-2xl border border-surface-200 bg-white p-5">
-            <h2 className="font-bold text-dark-900">금리 현황</h2>
+          <div className="rounded-2xl border t-border bg-[var(--color-surface-card)] p-5">
+            <h2 className="font-bold t-text">금리 현황</h2>
             {rateSummary.length > 0 ? (
               <div className="mt-4 space-y-3">
                 {rateSummary.map((r) => (
                   <div key={r.rate_type} className="flex items-center justify-between py-1">
                     <div>
-                      <p className="text-sm font-medium text-dark-900">
+                      <p className="text-sm font-medium t-text">
                         {RATE_LABELS[r.rate_type] ?? r.rate_type}
                       </p>
-                      <p className="text-[11px] text-gray-400">{r.base_date}</p>
+                      <p className="text-[11px] t-text-tertiary">{r.base_date}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-base font-bold tabular-nums">{r.rate_value}%</p>
@@ -189,14 +189,14 @@ export default async function DailyReportPage({
                 ))}
               </div>
             ) : (
-              <p className="mt-4 text-sm text-gray-400">금리 데이터 없음</p>
+              <p className="mt-4 text-sm t-text-tertiary">금리 데이터 없음</p>
             )}
           </div>
 
           {/* 거래량 핫스팟 */}
           {volumeSummary.length > 0 && (
-            <div className="rounded-2xl border border-surface-200 bg-white p-5">
-              <h2 className="font-bold text-dark-900">거래량 핫스팟</h2>
+            <div className="rounded-2xl border t-border bg-[var(--color-surface-card)] p-5">
+              <h2 className="font-bold t-text">거래량 핫스팟</h2>
               <div className="mt-4 space-y-2">
                 {volumeSummary.map((v, i) => {
                   const maxCount = volumeSummary[0]?.count || 1;
@@ -206,9 +206,9 @@ export default async function DailyReportPage({
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2">
                           <span className="rank-badge rank-badge-gold text-[10px]">{i + 1}</span>
-                          <span className="font-medium text-dark-900">{v.region}</span>
+                          <span className="font-medium t-text">{v.region}</span>
                         </span>
-                        <span className="font-bold tabular-nums text-dark-900">{v.count}건</span>
+                        <span className="font-bold tabular-nums t-text">{v.count}건</span>
                       </div>
                       <div className="mt-1 h-1.5 rounded-full bg-surface-100">
                         <div
@@ -225,7 +225,7 @@ export default async function DailyReportPage({
 
           <Link
             href="/rate/calculator"
-            className="card-hover block rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-5 text-center"
+            className="card-hover block rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50/30 to-transparent p-5 text-center"
           >
             <p className="font-bold text-brand-900">대출 이자 계산기</p>
             <p className="mt-1 text-sm text-brand-600">내 이자 얼마?</p>
@@ -247,27 +247,27 @@ function TxnCard({
 }) {
   const isDrop = type === "drop";
   return (
-    <div className="card-hover flex items-center gap-3 rounded-xl border border-surface-200 bg-white px-4 py-3.5">
+    <div className="card-hover flex items-center gap-3 rounded-xl border t-border bg-[var(--color-surface-card)] px-4 py-3.5">
       <div className={`rank-badge ${isDrop ? "rank-badge-drop" : "rank-badge-rise"}`}>
         {rank}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="truncate font-semibold text-dark-900">{txn.apt_name}</p>
-          <span className="flex-shrink-0 text-xs text-gray-400">{txn.size_sqm}㎡</span>
+          <p className="truncate font-semibold t-text">{txn.apt_name}</p>
+          <span className="flex-shrink-0 text-xs t-text-tertiary">{txn.size_sqm}㎡</span>
         </div>
-        <p className="mt-0.5 text-xs text-gray-400">
+        <p className="mt-0.5 text-xs t-text-tertiary">
           {txn.region_name} · {txn.trade_date}
         </p>
       </div>
       <div className="flex-shrink-0 text-right">
         <div className="flex items-center gap-2">
           {txn.highest_price && isDrop && (
-            <span className="text-xs text-gray-400 line-through">
+            <span className="text-xs t-text-tertiary line-through">
               {formatPrice(txn.highest_price)}
             </span>
           )}
-          <span className="font-bold tabular-nums text-dark-900">
+          <span className="font-bold tabular-nums t-text">
             {formatPrice(txn.trade_price)}
           </span>
         </div>

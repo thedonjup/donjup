@@ -47,13 +47,37 @@ export async function generateMetadata({
   params: Promise<{ region: string; slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
   const supabase = await createClient();
 
-  const { data: complex } = await supabase
+  let { data: complex } = await supabase
     .from("apt_complexes")
     .select("apt_name,region_name,dong_name")
-    .eq("slug", slug)
+    .eq("slug", decodedSlug)
     .single();
+
+  // Fallback: parse region_code from slug and search by region
+  if (!complex) {
+    const dashIdx = decodedSlug.indexOf("-");
+    if (dashIdx > 0) {
+      const regionCode = decodedSlug.substring(0, dashIdx);
+      const aptSlugPart = decodedSlug.substring(dashIdx + 1);
+      const { data: fallbackList } = await supabase
+        .from("apt_complexes")
+        .select("apt_name,region_name,dong_name,slug")
+        .eq("region_code", regionCode)
+        .limit(50);
+
+      if (fallbackList && fallbackList.length > 0) {
+        complex = fallbackList.find((c: Record<string, unknown>) => {
+          const s = String(c.slug ?? "");
+          const dbDash = s.indexOf("-");
+          const dbSuffix = dbDash > 0 ? s.substring(dbDash + 1) : s;
+          return dbSuffix === aptSlugPart || s === decodedSlug;
+        }) ?? null;
+      }
+    }
+  }
 
   if (!complex) {
     return { title: "단지 정보" };
@@ -80,17 +104,46 @@ export default async function AptDetailPage({
   params: Promise<{ region: string; slug: string }>;
 }) {
   const { slug, region } = await params;
+  const decodedSlug = decodeURIComponent(slug);
   const supabase = await createClient();
 
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 30000);
 
-  const { data: complex } = await supabase
+  // Try exact slug match first
+  let { data: complex } = await supabase
     .from("apt_complexes")
     .select("*")
-    .eq("slug", slug)
+    .eq("slug", decodedSlug)
     .abortSignal(ac.signal)
     .single();
+
+  // Fallback: parse region_code and apt_name from slug and query by those
+  if (!complex) {
+    const dashIdx = decodedSlug.indexOf("-");
+    if (dashIdx > 0) {
+      const regionCode = decodedSlug.substring(0, dashIdx);
+      const aptSlugPart = decodedSlug.substring(dashIdx + 1);
+      // Search by region_code and use ilike on slug for partial match
+      const { data: fallbackList } = await supabase
+        .from("apt_complexes")
+        .select("*")
+        .eq("region_code", regionCode)
+        .abortSignal(ac.signal)
+        .limit(50);
+
+      if (fallbackList && fallbackList.length > 0) {
+        // Find best match by comparing slug suffix
+        complex = fallbackList.find((c: Record<string, unknown>) => {
+          const s = String(c.slug ?? "");
+          // Check if the slug in DB matches when we strip leading region code
+          const dbDash = s.indexOf("-");
+          const dbSuffix = dbDash > 0 ? s.substring(dbDash + 1) : s;
+          return dbSuffix === aptSlugPart || s === decodedSlug;
+        }) ?? null;
+      }
+    }
+  }
 
   if (!complex) {
     clearTimeout(timer);

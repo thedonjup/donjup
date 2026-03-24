@@ -41,7 +41,7 @@ function sqmToPyeong(sqm: number): string {
 
 /** 단지 상세 링크용 slug 생성 */
 function makeAptSlug(regionCode: string, aptName: string): string {
-  return `${regionCode}-${aptName.replace(/[^가-힣a-zA-Z0-9]/g, "-").replace(/-+/g, "-").toLowerCase()}`;
+  return `${regionCode}-${aptName.replace(/[^가-힣a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase()}`;
 }
 
 export default async function RentPage({

@@ -21,13 +21,37 @@ export default async function OgImage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
   const supabase = await createClient();
 
-  const { data: complex } = await supabase
+  let { data: complex } = await supabase
     .from("apt_complexes")
-    .select("apt_name,region_name,dong_name")
-    .eq("slug", slug)
+    .select("apt_name,region_name,dong_name,slug")
+    .eq("slug", decodedSlug)
     .single();
+
+  // Fallback lookup by region_code + apt slug part
+  if (!complex) {
+    const dashIdx = decodedSlug.indexOf("-");
+    if (dashIdx > 0) {
+      const regionCode = decodedSlug.substring(0, dashIdx);
+      const aptSlugPart = decodedSlug.substring(dashIdx + 1);
+      const { data: fallbackList } = await supabase
+        .from("apt_complexes")
+        .select("apt_name,region_name,dong_name,slug")
+        .eq("region_code", regionCode)
+        .limit(50);
+
+      if (fallbackList && fallbackList.length > 0) {
+        complex = fallbackList.find((c: Record<string, unknown>) => {
+          const s = String(c.slug ?? "");
+          const dbDash = s.indexOf("-");
+          const dbSuffix = dbDash > 0 ? s.substring(dbDash + 1) : s;
+          return dbSuffix === aptSlugPart || s === decodedSlug;
+        }) ?? null;
+      }
+    }
+  }
 
   const { data: latest } = await supabase
     .from("apt_transactions")

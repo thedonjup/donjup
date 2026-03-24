@@ -143,14 +143,14 @@ export default async function MarketSidoPage({
               )}
               <Link
                 href={`/market/${sidoSlug}/${region.code}`}
-                className="card-hover block rounded-2xl border border-surface-200 bg-white p-5"
+                className="card-hover block rounded-2xl border t-border bg-[var(--color-surface-card)] p-5"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="rank-badge rank-badge-gold text-[11px]">{i + 1}</span>
-                    <h2 className="text-base font-bold text-dark-900">{region.name}</h2>
+                    <h2 className="text-base font-bold t-text">{region.name}</h2>
                   </div>
-                  <span className="rounded-full bg-surface-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-gray-600">
+                  <span className="rounded-full bg-surface-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums t-text-secondary">
                     {region.count.toLocaleString()}건
                   </span>
                 </div>
@@ -158,8 +158,8 @@ export default async function MarketSidoPage({
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {region.topDrop ? (
                     <div className="rounded-lg bg-drop-bg px-3 py-2">
-                      <p className="text-[10px] font-medium text-gray-500">최대 하락</p>
-                      <p className="mt-0.5 truncate text-xs font-semibold text-dark-900">
+                      <p className="text-[10px] font-medium t-text-secondary">최대 하락</p>
+                      <p className="mt-0.5 truncate text-xs font-semibold t-text">
                         {region.topDrop.apt_name}
                       </p>
                       <p className="text-sm font-bold tabular-nums text-drop">
@@ -168,14 +168,14 @@ export default async function MarketSidoPage({
                     </div>
                   ) : (
                     <div className="rounded-lg bg-surface-50 px-3 py-2">
-                      <p className="text-[10px] text-gray-400">하락 거래 없음</p>
+                      <p className="text-[10px] t-text-tertiary">하락 거래 없음</p>
                     </div>
                   )}
 
                   {region.topHigh ? (
                     <div className="rounded-lg bg-rise-bg px-3 py-2">
-                      <p className="text-[10px] font-medium text-gray-500">신고가</p>
-                      <p className="mt-0.5 truncate text-xs font-semibold text-dark-900">
+                      <p className="text-[10px] font-medium t-text-secondary">신고가</p>
+                      <p className="mt-0.5 truncate text-xs font-semibold t-text">
                         {region.topHigh.apt_name}
                       </p>
                       <p className="text-sm font-bold tabular-nums text-rise">
@@ -184,7 +184,7 @@ export default async function MarketSidoPage({
                     </div>
                   ) : (
                     <div className="rounded-lg bg-surface-50 px-3 py-2">
-                      <p className="text-[10px] text-gray-400">신고가 없음</p>
+                      <p className="text-[10px] t-text-tertiary">신고가 없음</p>
                     </div>
                   )}
                 </div>

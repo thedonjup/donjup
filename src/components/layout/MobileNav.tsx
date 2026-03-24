@@ -102,6 +102,21 @@ export default function MobileNav() {
           ))}
         </nav>
 
+        {/* Login / Profile */}
+        <div className="px-3 py-2 border-t border-[var(--color-border)]">
+          <Link
+            href="/profile"
+            onClick={() => setOpen(false)}
+            className="flex items-center rounded-xl px-4 py-3 text-[15px] font-medium transition hover:bg-[var(--color-surface-elevated)]"
+            style={{ color: "var(--color-text-primary)" }}
+          >
+            <svg className="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            로그인 / 프로필
+          </Link>
+        </div>
+
         {/* Bottom */}
         <div className="absolute bottom-0 left-0 right-0 border-t border-[var(--color-border)] p-5">
           <p className="text-xs text-[var(--color-text-tertiary)]">

@@ -71,6 +71,7 @@ function makeSlug(regionCode: string, aptName: string): string {
   return `${regionCode}-${aptName
     .replace(/[^가-힣a-zA-Z0-9]/g, "-")
     .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
     .toLowerCase()}`;
 }
 
@@ -110,7 +111,7 @@ export default function RankingTabs({
             className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-bold transition-all ${
               activeTab === tab.key
                 ? tab.activeColor + " shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                : "t-text-secondary hover:t-text"
             }`}
           >
             {tab.label}
@@ -132,7 +133,7 @@ export default function RankingTabs({
                 href={`/apt/${t.region_code}/${slug}`}
                 className="block"
               >
-                <div className="card-hover flex items-center gap-3 rounded-xl border border-surface-200 bg-white px-4 py-3.5 t-card">
+                <div className="card-hover flex items-center gap-3 rounded-xl border t-border px-4 py-3.5 t-card">
                   {/* Rank */}
                   <div className={`rank-badge ${currentTab.badgeClass}`}>
                     {i + 1}
@@ -210,7 +211,7 @@ export default function RankingTabs({
       {/* More Link */}
       <Link
         href="/market"
-        className="mt-4 flex items-center justify-center gap-2 rounded-xl border t-border bg-white py-3 text-sm font-semibold t-text-secondary transition hover:bg-surface-50 t-card"
+        className="mt-4 flex items-center justify-center gap-2 rounded-xl border t-border bg-[var(--color-surface-card)] py-3 text-sm font-semibold t-text-secondary transition hover:bg-surface-50 t-card"
       >
         전국 시/도별 시세 보기
         <span className="t-text-tertiary">&rarr;</span>
