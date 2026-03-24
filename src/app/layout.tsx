@@ -139,6 +139,8 @@ function Header() {
           <NavLink href="/rent">전월세</NavLink>
           <NavLink href="/trend">트렌드</NavLink>
           <NavLink href="/rate">금리현황</NavLink>
+          <NavLink href="/themes">테마</NavLink>
+          <NavLink href="/compare">비교</NavLink>
           <NavLink href="/rate/calculator">계산기</NavLink>
           <NavLink href="/daily/archive">데일리</NavLink>
           <NavLink href="/map">지도</NavLink>
@@ -246,6 +248,12 @@ function Footer() {
             </Link>
             <Link href="/trend" className="transition hover:opacity-80">
               트렌드
+            </Link>
+            <Link href="/themes" className="transition hover:opacity-80">
+              테마 컬렉션
+            </Link>
+            <Link href="/compare" className="transition hover:opacity-80">
+              단지 비교
             </Link>
             <Link href="/rate" className="transition hover:opacity-80">
               금리 현황

@@ -23,73 +23,139 @@ export async function GET(request: Request) {
   const q = searchParams.get("q")?.trim() || "";
   const type = parseInt(searchParams.get("type") || "1", 10);
 
-  if (q.length === 0) {
+  // New filter params
+  const builtYearMin = searchParams.get("builtYearMin");
+  const priceMin = searchParams.get("priceMin");
+  const priceMax = searchParams.get("priceMax");
+  const sizeMin = searchParams.get("sizeMin");
+  const sizeMax = searchParams.get("sizeMax");
+
+  // Determine if we have any filter (allow filterOnly mode without text query)
+  const hasFilters = builtYearMin || priceMin || priceMax || sizeMin || sizeMax;
+
+  if (q.length === 0 && !hasFilters) {
     return NextResponse.json({ results: [] });
   }
 
   try {
-    const parts = q.split(/\s+/).filter(Boolean);
     const conditions: string[] = [];
     const values: any[] = [];
     let paramIdx = 1;
 
-    if (parts.length >= 2) {
-      // 첫 단어: 지역, 나머지: 아파트명
-      const regionPart = parts[0];
-      const aptPart = parts.slice(1).join(" ");
+    // Text search conditions (only if query provided)
+    if (q.length > 0) {
+      const parts = q.split(/\s+/).filter(Boolean);
 
-      // 지역 매칭: region_code prefix OR region_name OR dong_name
-      const sidoCode = SIDO_SEARCH_MAP[regionPart];
-      if (sidoCode) {
-        if (sidoCode.length === 2) {
-          // 시/도 코드 (2자리) → region_code가 해당 prefix로 시작
-          conditions.push(`region_code LIKE $${paramIdx}`);
-          values.push(`${sidoCode}%`);
+      if (parts.length >= 2) {
+        // 첫 단어: 지역, 나머지: 아파트명
+        const regionPart = parts[0];
+        const aptPart = parts.slice(1).join(" ");
+
+        const sidoCode = SIDO_SEARCH_MAP[regionPart];
+        if (sidoCode) {
+          if (sidoCode.length === 2) {
+            conditions.push(`c.region_code LIKE $${paramIdx}`);
+            values.push(`${sidoCode}%`);
+          } else {
+            conditions.push(`c.region_code = $${paramIdx}`);
+            values.push(sidoCode);
+          }
         } else {
-          // 시군구 코드 (5자리) → 정확히 매칭
-          conditions.push(`region_code = $${paramIdx}`);
-          values.push(sidoCode);
+          conditions.push(`(c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
+          values.push(`%${regionPart}%`);
         }
+        paramIdx++;
+
+        conditions.push(`c.apt_name ILIKE $${paramIdx}`);
+        values.push(`%${aptPart}%`);
+        paramIdx++;
       } else {
-        // 매핑 안 되면 텍스트 검색
-        conditions.push(`(region_name ILIKE $${paramIdx} OR dong_name ILIKE $${paramIdx})`);
-        values.push(`%${regionPart}%`);
+        const keyword = parts[0];
+        const sidoCode = SIDO_SEARCH_MAP[keyword];
+
+        if (sidoCode) {
+          if (sidoCode.length === 2) {
+            conditions.push(`(c.region_code LIKE $${paramIdx} OR c.apt_name ILIKE $${paramIdx + 1} OR c.dong_name ILIKE $${paramIdx + 1})`);
+            values.push(`${sidoCode}%`, `%${keyword}%`);
+            paramIdx += 2;
+          } else {
+            conditions.push(`(c.region_code = $${paramIdx} OR c.apt_name ILIKE $${paramIdx + 1} OR c.dong_name ILIKE $${paramIdx + 1})`);
+            values.push(sidoCode, `%${keyword}%`);
+            paramIdx += 2;
+          }
+        } else {
+          conditions.push(`(c.apt_name ILIKE $${paramIdx} OR c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
+          values.push(`%${keyword}%`);
+          paramIdx++;
+        }
       }
-      paramIdx++;
+    }
 
-      // 아파트명 부분 매칭
-      conditions.push(`apt_name ILIKE $${paramIdx}`);
-      values.push(`%${aptPart}%`);
-      paramIdx++;
-    } else {
-      // 단일 키워드: 모든 필드에서 검색
-      const keyword = parts[0];
-      const sidoCode = SIDO_SEARCH_MAP[keyword];
-
-      if (sidoCode) {
-        if (sidoCode.length === 2) {
-          conditions.push(`(region_code LIKE $${paramIdx} OR apt_name ILIKE $${paramIdx + 1} OR dong_name ILIKE $${paramIdx + 1})`);
-          values.push(`${sidoCode}%`, `%${keyword}%`);
-          paramIdx += 2;
-        } else {
-          conditions.push(`(region_code = $${paramIdx} OR apt_name ILIKE $${paramIdx + 1} OR dong_name ILIKE $${paramIdx + 1})`);
-          values.push(sidoCode, `%${keyword}%`);
-          paramIdx += 2;
-        }
-      } else {
-        conditions.push(`(apt_name ILIKE $${paramIdx} OR region_name ILIKE $${paramIdx} OR dong_name ILIKE $${paramIdx})`);
-        values.push(`%${keyword}%`);
+    // Filter: built_year minimum
+    if (builtYearMin) {
+      const year = parseInt(builtYearMin, 10);
+      if (!isNaN(year)) {
+        conditions.push(`c.built_year >= $${paramIdx}`);
+        values.push(year);
         paramIdx++;
       }
     }
 
-    // property_type 필터 (apt_complexes에는 property_type 컬럼이 없으므로 비활성)
-    // TODO: apt_complexes에 property_type 추가 후 활성화
+    // For price/size filters, we need to JOIN with apt_transactions
+    const needsJoin = priceMin || priceMax || sizeMin || sizeMax;
+    const txConditions: string[] = [];
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-    const sql = `SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
-                 FROM apt_complexes ${where}
-                 ORDER BY apt_name LIMIT 50`;
+    if (priceMin) {
+      const p = parseInt(priceMin, 10);
+      if (!isNaN(p)) {
+        txConditions.push(`t.trade_price >= $${paramIdx}`);
+        values.push(p);
+        paramIdx++;
+      }
+    }
+    if (priceMax) {
+      const p = parseInt(priceMax, 10);
+      if (!isNaN(p)) {
+        txConditions.push(`t.trade_price <= $${paramIdx}`);
+        values.push(p);
+        paramIdx++;
+      }
+    }
+    if (sizeMin) {
+      const s = parseFloat(sizeMin);
+      if (!isNaN(s)) {
+        txConditions.push(`t.size_sqm >= $${paramIdx}`);
+        values.push(s);
+        paramIdx++;
+      }
+    }
+    if (sizeMax) {
+      const s = parseFloat(sizeMax);
+      if (!isNaN(s)) {
+        txConditions.push(`t.size_sqm <= $${paramIdx}`);
+        values.push(s);
+        paramIdx++;
+      }
+    }
+
+    const complexWhere = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+
+    let sql: string;
+
+    if (needsJoin) {
+      // JOIN with transactions for price/size filtering
+      const txWhere = txConditions.length > 0 ? `AND ${txConditions.join(" AND ")}` : "";
+      sql = `SELECT DISTINCT c.id, c.apt_name, c.region_code, c.region_name, c.dong_name, c.built_year, c.slug
+             FROM apt_complexes c
+             INNER JOIN apt_transactions t ON t.region_code = c.region_code AND t.apt_name = c.apt_name
+             WHERE ${complexWhere} ${txWhere}
+             ORDER BY c.apt_name LIMIT 50`;
+    } else {
+      sql = `SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
+             FROM apt_complexes c
+             WHERE ${complexWhere}
+             ORDER BY c.apt_name LIMIT 50`;
+    }
 
     const result = await getPool().query(sql, values);
 

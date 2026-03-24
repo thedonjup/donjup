@@ -43,6 +43,7 @@ export default async function HomePage({
   let rates: any[] = [];
   let totalTxns: number | null = 0;
   let totalComplexes: number | null = 0;
+  let popularItems: { page_path: string; page_type: string | null; view_count: number }[] = [];
 
   try {
     const supabase = await createClient();
@@ -53,7 +54,11 @@ export default async function HomePage({
 
     const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
 
-    const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount] = await Promise.allSettled([
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+    const startDateStr = startDate.toISOString().split("T")[0];
+
+    const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount, popularRes] = await Promise.allSettled([
       applyTypeFilter(supabase.from("apt_transactions").select(txFields).not("change_rate", "is", null).lt("change_rate", 0)).order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
       applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("is_new_high", true)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
       applyTypeFilter(supabase.from("apt_transactions").select(txFields)).order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10).abortSignal(ac.signal),
@@ -61,6 +66,7 @@ export default async function HomePage({
       supabase.from("finance_rates").select("rate_type,rate_value,prev_value,change_bp,base_date,source").order("base_date", { ascending: false }).limit(5).abortSignal(ac.signal),
       supabase.from("apt_transactions").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
       supabase.from("apt_complexes").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
+      supabase.from("page_views").select("page_path,page_type,view_count").gte("view_date", startDateStr).eq("page_type", "apt_detail").order("view_count", { ascending: false }).limit(10).abortSignal(ac.signal),
     ]);
 
     clearTimeout(timer);
@@ -72,6 +78,7 @@ export default async function HomePage({
     rates = ratesRes.status === "fulfilled" ? ratesRes.value.data ?? [] : [];
     totalTxns = txnCount.status === "fulfilled" ? txnCount.value.count : 0;
     totalComplexes = complexCount.status === "fulfilled" ? complexCount.value.count : 0;
+    popularItems = popularRes.status === "fulfilled" ? popularRes.value.data ?? [] : [];
   } catch (e) {
     console.error("[Homepage] DB query failed:", e instanceof Error ? e.message : e);
   }
@@ -298,18 +305,63 @@ export default async function HomePage({
                 desc="전세가율·월세 TOP"
               />
               <QuickLinkCard
-                href="/rate/calculator"
-                icon="calc"
-                label="대출 계산기"
-                desc="월 이자 시뮬레이션"
+                href="/themes"
+                icon="theme"
+                label="테마 컬렉션"
+                desc="재건축·대단지·신축"
               />
               <QuickLinkCard
-                href={`/daily/${new Date().toISOString().split("T")[0]}`}
-                icon="report"
-                label="데일리 리포트"
-                desc="오늘의 시장 종합"
+                href="/compare"
+                icon="compare"
+                label="단지 비교"
+                desc="최대 3개 단지 비교"
               />
             </div>
+
+            {/* Popular Complexes */}
+            {popularItems.length > 0 && (
+              <div className="rounded-2xl border t-border t-card p-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold t-text">인기 단지 TOP</h2>
+                  <span className="text-[10px] t-text-tertiary">최근 7일 조회수</span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {popularItems.map((item, i) => {
+                    // Extract apt name and region from page_path: /apt/{region}/{slug}
+                    const pathParts = item.page_path.split("/");
+                    const region = pathParts[2] ?? "";
+                    const slug = pathParts[3] ?? "";
+                    // Parse display name from slug: "11680-래미안-xxx" → "래미안 xxx"
+                    const slugParts = slug.split("-");
+                    const displayName = slugParts.length > 1
+                      ? decodeURIComponent(slugParts.slice(1).join(" "))
+                      : decodeURIComponent(slug);
+
+                    return (
+                      <Link
+                        key={item.page_path}
+                        href={item.page_path}
+                        className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition hover:bg-[var(--color-surface-elevated)]"
+                      >
+                        <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-[10px] font-bold ${
+                          i < 3
+                            ? "bg-brand-600 text-white"
+                            : "t-elevated t-text-tertiary"
+                        }`}>
+                          {i + 1}
+                        </span>
+                        <span className="flex-1 truncate text-sm font-medium t-text">
+                          {displayName}
+                        </span>
+                        <span className="flex-shrink-0 text-xs tabular-nums t-text-tertiary">
+                          {item.view_count.toLocaleString()}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Compact Rate Card */}
             {sortedRates.length > 0 && (
@@ -409,7 +461,7 @@ function QuickLinkCard({
   desc,
 }: {
   href: string;
-  icon: "search" | "rent" | "calc" | "report";
+  icon: "search" | "rent" | "calc" | "report" | "theme" | "compare";
   label: string;
   desc: string;
 }) {
@@ -471,6 +523,36 @@ function QuickLinkCard({
           strokeLinecap="round"
           strokeLinejoin="round"
           d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+        />
+      </svg>
+    ),
+    theme: (
+      <svg
+        className="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+        />
+      </svg>
+    ),
+    compare: (
+      <svg
+        className="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
         />
       </svg>
     ),
