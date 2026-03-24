@@ -133,6 +133,8 @@ function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 sm:flex">
+          <NavLink href="/today">오늘거래</NavLink>
+          <NavLink href="/new-highs">신고가</NavLink>
           <NavLink href="/market">지역별</NavLink>
           <NavLink href="/rent">전월세</NavLink>
           <NavLink href="/trend">트렌드</NavLink>
@@ -230,6 +232,12 @@ function Footer() {
 
           {/* Links */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+            <Link href="/today" className="transition hover:opacity-80">
+              오늘의 거래
+            </Link>
+            <Link href="/new-highs" className="transition hover:opacity-80">
+              오늘의 신고가
+            </Link>
             <Link href="/market" className="transition hover:opacity-80">
               지역별 시세
             </Link>

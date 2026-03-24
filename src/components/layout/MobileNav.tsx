@@ -6,6 +6,8 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 
 const NAV_ITEMS = [
   { href: "/", label: "홈" },
+  { href: "/today", label: "오늘의 거래" },
+  { href: "/new-highs", label: "오늘의 신고가" },
   { href: "/market", label: "지역별 시세" },
   { href: "/rent", label: "전월세" },
   { href: "/trend", label: "트렌드" },
