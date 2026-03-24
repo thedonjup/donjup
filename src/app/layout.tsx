@@ -145,10 +145,11 @@ function Header() {
           <UserMenu />
         </nav>
 
-        {/* Mobile: search + theme + hamburger (UserMenu는 햄버거 메뉴 안에) */}
+        {/* Mobile: search + theme + login + hamburger */}
         <div className="flex items-center gap-1 sm:hidden">
           <MobileSearchToggle />
           <ThemeToggle />
+          <UserMenu />
           <MobileNav />
         </div>
       </div>

@@ -111,12 +111,16 @@ export default async function AptDetailPage({
   const timer = setTimeout(() => ac.abort(), 30000);
 
   // Try exact slug match first
-  let { data: complex } = await supabase
+  let { data: complex, error: complexError } = await supabase
     .from("apt_complexes")
     .select("*")
     .eq("slug", decodedSlug)
     .abortSignal(ac.signal)
     .single();
+
+  if (complexError) {
+    console.error("[apt-detail] DB error:", complexError.message, "slug:", decodedSlug);
+  }
 
   // Fallback: parse region_code and apt_name from slug and query by those
   if (!complex) {
