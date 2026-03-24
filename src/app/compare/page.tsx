@@ -220,7 +220,7 @@ export default function ComparePage() {
             {selected.map((s) => (
               <span
                 key={s.complex.id}
-                className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700"
+                className="inline-flex items-center gap-1.5 rounded-full brand-tint-bg px-3 py-1.5 text-sm font-medium text-brand-600"
               >
                 {s.complex.apt_name}
                 <button
@@ -245,10 +245,10 @@ export default function ComparePage() {
       {/* Comparison Table */}
       {selected.length >= 2 ? (
         <section>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border t-border t-card">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b t-border">
+                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <th className="pb-3 pr-4 text-left text-xs font-medium t-text-tertiary w-32">
                     항목
                   </th>

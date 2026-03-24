@@ -157,7 +157,7 @@ export default async function SearchPage({
             </svg>
             상세 필터
             {hasFilters && (
-              <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+              <span className="rounded-full filter-tag px-2 py-0.5 text-xs font-medium">
                 필터 적용됨
               </span>
             )}
@@ -352,27 +352,27 @@ export default async function SearchPage({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium t-text-tertiary">적용된 필터:</span>
           {filterPriceMin && (
-            <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
+            <span className="rounded-full filter-tag px-2.5 py-1 text-xs font-medium">
               최소 {formatPrice(parseInt(filterPriceMin))}
             </span>
           )}
           {filterPriceMax && (
-            <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
+            <span className="rounded-full filter-tag px-2.5 py-1 text-xs font-medium">
               최대 {formatPrice(parseInt(filterPriceMax))}
             </span>
           )}
           {filterSizeMin && (
-            <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
+            <span className="rounded-full filter-tag px-2.5 py-1 text-xs font-medium">
               {filterSizeMin}m2 이상
             </span>
           )}
           {filterSizeMax && (
-            <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
+            <span className="rounded-full filter-tag px-2.5 py-1 text-xs font-medium">
               {filterSizeMax}m2 이하
             </span>
           )}
           {filterBuiltYearMin && (
-            <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
+            <span className="rounded-full filter-tag px-2.5 py-1 text-xs font-medium">
               {filterBuiltYearMin}년 이후 준공
             </span>
           )}

@@ -314,13 +314,13 @@ export default async function HomePage({
         <div className="mx-auto max-w-6xl px-4 py-6">
           <Link
             href="/search"
-            className="group flex items-center justify-between rounded-2xl border-2 border-brand-200 bg-gradient-to-r from-brand-50 to-brand-100/50 px-6 py-5 transition-all hover:border-brand-400 hover:shadow-lg"
+            className="group flex items-center justify-between rounded-2xl border-2 brand-tint-border brand-tint-bg px-6 py-5 transition-all hover:shadow-lg"
           >
             <div>
-              <p className="text-lg font-extrabold text-brand-900 sm:text-xl">
+              <p className="text-lg font-extrabold brand-tint-text sm:text-xl">
                 내 아파트는 얼마나 떨어졌을까?
               </p>
-              <p className="mt-1 text-sm text-brand-700/70">
+              <p className="mt-1 text-sm brand-tint-text-subtle">
                 아파트명을 검색하면 최고가 대비 변동률을 바로 확인할 수 있어요
               </p>
             </div>
@@ -628,7 +628,7 @@ function QuickLinkCard({
       href={href}
       className="card-hover flex flex-col items-center rounded-xl border t-border t-card p-4 text-center"
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg brand-tint-icon-bg text-brand-600">
         {iconMap[icon]}
       </div>
       <p className="mt-2 text-sm font-bold t-text">{label}</p>

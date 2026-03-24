@@ -37,7 +37,7 @@ const THEMES: ThemeDef[] = [
     description: "준공 30년 이상, 재건축 가능성이 높은 단지",
     icon: "🏗️",
     color: "text-amber-600",
-    bgColor: "bg-amber-50",
+    bgColor: "theme-bg-amber",
   },
   {
     id: "large-complex",
@@ -45,7 +45,7 @@ const THEMES: ThemeDef[] = [
     description: "1,000세대 이상 대규모 단지",
     icon: "🏢",
     color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    bgColor: "theme-bg-blue",
   },
   {
     id: "new-build",
@@ -53,7 +53,7 @@ const THEMES: ThemeDef[] = [
     description: "2020년 이후 준공된 신축 단지",
     icon: "✨",
     color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
+    bgColor: "theme-bg-emerald",
   },
   {
     id: "crash-deals",
@@ -61,7 +61,7 @@ const THEMES: ThemeDef[] = [
     description: "최고가 대비 20% 이상 하락한 거래",
     icon: "📉",
     color: "text-red-600",
-    bgColor: "bg-red-50",
+    bgColor: "theme-bg-red",
   },
 ];
 
@@ -183,7 +183,7 @@ export default async function ThemesPage({
               style={{ background: "var(--color-surface-card)" }}
             >
               <div className="flex items-center gap-3">
-                <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${theme.bgColor}`}>
+                <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${theme.bgColor}`} role="img">
                   {theme.icon}
                 </span>
                 <div>
@@ -221,41 +221,42 @@ export default async function ThemesPage({
             </div>
           ) : selectedTheme === "crash-deals" ? (
             /* 폭락 매물: 거래 기반 */
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-2xl border t-border t-card">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b t-border text-left text-xs t-text-tertiary">
-                    <th className="pb-2 pr-3 font-medium">#</th>
-                    <th className="pb-2 pr-3 font-medium">단지명</th>
-                    <th className="pb-2 pr-3 font-medium">지역</th>
-                    <th className="pb-2 pr-3 font-medium text-right">거래가</th>
-                    <th className="pb-2 pr-3 font-medium text-right">하락률</th>
-                    <th className="pb-2 font-medium">거래일</th>
+                  <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                    <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">단지명</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">지역</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">거래가</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">하락률</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">거래일</th>
                   </tr>
                 </thead>
                 <tbody>
                   {results.map((item, i) => (
                     <tr
                       key={`${item.id}-${i}`}
-                      className="border-b t-border transition hover:bg-[var(--color-surface-elevated)]"
+                      className="transition hover:bg-[var(--color-surface-elevated)]"
+                      style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
                     >
-                      <td className="py-3 pr-3 tabular-nums t-text-tertiary">{i + 1}</td>
-                      <td className="py-3 pr-3">
+                      <td className="px-4 py-3 tabular-nums t-text-tertiary">{i + 1}</td>
+                      <td className="px-4 py-3">
                         <Link
                           href={`/apt/${item.region_code}/${item.region_code}-${(item.apt_name ?? "").replace(/[^가-힣a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase()}`}
-                          className="font-semibold t-text hover:text-brand-600"
+                          className="font-semibold t-text hover:text-brand-600 transition"
                         >
                           {item.apt_name}
                         </Link>
                       </td>
-                      <td className="py-3 pr-3 t-text-secondary">{item.region_name}</td>
-                      <td className="py-3 pr-3 text-right font-bold tabular-nums t-text">
+                      <td className="px-4 py-3 t-text-secondary">{item.region_name}</td>
+                      <td className="px-4 py-3 text-right font-bold tabular-nums t-text">
                         {item.trade_price ? formatPrice(item.trade_price) : "-"}
                       </td>
-                      <td className="py-3 pr-3 text-right font-bold tabular-nums t-drop">
+                      <td className="px-4 py-3 text-right font-bold tabular-nums t-drop">
                         {item.change_rate != null ? `${item.change_rate.toFixed(1)}%` : "-"}
                       </td>
-                      <td className="py-3 text-xs tabular-nums t-text-tertiary">
+                      <td className="px-4 py-3 text-xs tabular-nums t-text-tertiary">
                         {item.trade_date ?? "-"}
                       </td>
                     </tr>

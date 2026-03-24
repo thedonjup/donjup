@@ -165,7 +165,7 @@ export default async function RateDashboardPage() {
                         <td className="px-4 py-3 font-medium t-text">
                           {BANK_LABELS[bank.rate_type] ?? bank.rate_type.replace("BANK_", "")}
                         </td>
-                        <td className="px-4 py-3 text-right font-bold tabular-nums">
+                        <td className="px-4 py-3 text-right font-bold tabular-nums t-text">
                           {bank.rate_value}%
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -216,7 +216,7 @@ export default async function RateDashboardPage() {
                         <td className="px-4 py-3 font-medium t-text">
                           {RATE_LABELS[type]}
                         </td>
-                        <td className="px-4 py-3 text-right font-bold tabular-nums">
+                        <td className="px-4 py-3 text-right font-bold tabular-nums t-text">
                           {rate.rate_value}%
                         </td>
                         <td className="px-4 py-3 text-right t-text-tertiary tabular-nums">
@@ -269,10 +269,9 @@ export default async function RateDashboardPage() {
         <div className="grid gap-3 sm:grid-cols-3">
           <Link
             href="/rate/calculator"
-            className="card-hover rounded-2xl border-2 border-brand-100 p-6 text-center"
-            style={{ background: "var(--color-surface-card)" }}
+            className="card-hover rounded-2xl border-2 brand-tint-border p-6 text-center t-card"
           >
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-sm font-bold text-brand-700">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl brand-tint-icon-bg text-sm font-bold text-brand-600">
               %%
             </div>
             <p className="mt-2 font-bold t-text">대출 이자 계산기</p>
@@ -282,10 +281,9 @@ export default async function RateDashboardPage() {
           </Link>
           <Link
             href="/rate/calculator?tab=dsr"
-            className="card-hover rounded-2xl border-2 border-brand-100 p-6 text-center"
-            style={{ background: "var(--color-surface-card)" }}
+            className="card-hover rounded-2xl border-2 brand-tint-border p-6 text-center t-card"
           >
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-sm font-bold text-brand-700">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl brand-tint-icon-bg text-sm font-bold text-brand-600">
               DSR
             </div>
             <p className="mt-2 font-bold t-text">DSR 계산기</p>

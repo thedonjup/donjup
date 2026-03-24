@@ -246,16 +246,16 @@ export default async function TrendPage() {
             시도별 데이터를 불러올 수 없습니다.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border t-border t-card">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b t-border text-left text-xs t-text-tertiary">
-                  <th className="pb-2 pr-3 font-medium">#</th>
-                  <th className="pb-2 pr-3 font-medium">시도</th>
-                  <th className="pb-2 pr-3 font-medium text-right">
+                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">#</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">시도</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">
                     평균 거래가
                   </th>
-                  <th className="pb-2 font-medium text-right">거래 건수</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">거래 건수</th>
                 </tr>
               </thead>
               <tbody>
@@ -266,15 +266,16 @@ export default async function TrendPage() {
                   return (
                     <tr
                       key={sido.slug}
-                      className="border-b t-border transition hover:bg-[var(--color-surface-elevated)]"
+                      className="transition hover:bg-[var(--color-surface-elevated)]"
+                      style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
                     >
-                      <td className="py-3 pr-3 tabular-nums t-text-tertiary">
+                      <td className="px-4 py-3 tabular-nums t-text-tertiary">
                         {i + 1}
                       </td>
-                      <td className="py-3 pr-3 font-semibold t-text">
+                      <td className="px-4 py-3 font-semibold t-text">
                         {sido.name}
                       </td>
-                      <td className="py-3 pr-3 text-right">
+                      <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <div className="hidden h-2 w-24 overflow-hidden rounded-full t-elevated sm:block">
                             <div
@@ -287,7 +288,7 @@ export default async function TrendPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 text-right tabular-nums t-text-secondary">
+                      <td className="px-4 py-3 text-right tabular-nums t-text-secondary">
                         {sido.count.toLocaleString()}건
                       </td>
                     </tr>

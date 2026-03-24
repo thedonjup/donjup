@@ -104,7 +104,7 @@ export default function RankingTabs({
   return (
     <div>
       {/* Tab Navigation */}
-      <div className="flex gap-1 rounded-xl bg-surface-100 p-1">
+      <div className="flex gap-1 rounded-xl tab-container-bg p-1">
         {TABS.map((tab) => (
           <button
             key={tab.key}
@@ -147,11 +147,11 @@ export default function RankingTabs({
                         {t.apt_name}
                       </p>
                       {showTypeBadge && t.property_type != null && PROPERTY_TYPE_LABELS[t.property_type] && (
-                        <span className="flex-shrink-0 rounded-full bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-600">
+                        <span className="flex-shrink-0 rounded-full brand-tint-bg px-1.5 py-0.5 text-[10px] font-semibold text-brand-600">
                           {PROPERTY_TYPE_LABELS[t.property_type]}
                         </span>
                       )}
-                      <span className="flex-shrink-0 rounded bg-surface-100 px-1.5 py-0.5 text-[11px] font-medium t-text-tertiary">
+                      <span className="flex-shrink-0 rounded t-elevated px-1.5 py-0.5 text-[11px] font-medium t-text-tertiary">
                         {formatSizeWithPyeong(t.size_sqm)}
                       </span>
                     </div>
@@ -230,7 +230,7 @@ export default function RankingTabs({
             );
           })
         ) : (
-          <div className="rounded-2xl border-2 border-dashed border-surface-200 p-10 text-center t-border">
+          <div className="rounded-2xl border-2 border-dashed t-border p-10 text-center">
             <p className="text-sm t-text-secondary">데이터 수집 중입니다</p>
             <p className="mt-1 text-xs t-text-tertiary">
               매일 밤 자동으로 업데이트됩니다
@@ -242,7 +242,7 @@ export default function RankingTabs({
       {/* More Link */}
       <Link
         href="/market"
-        className="mt-4 flex items-center justify-center gap-2 rounded-xl border t-border bg-[var(--color-surface-card)] py-3 text-sm font-semibold t-text-secondary transition hover:bg-surface-50 t-card"
+        className="mt-4 flex items-center justify-center gap-2 rounded-xl border t-border py-3 text-sm font-semibold t-text-secondary transition hover:bg-[var(--color-surface-elevated)] t-card"
       >
         전국 시/도별 시세 보기
         <span className="t-text-tertiary">&rarr;</span>

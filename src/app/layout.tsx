@@ -7,6 +7,7 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import MobileNav, { ThemeToggle } from "@/components/layout/MobileNav";
 import UserMenu from "@/components/auth/UserMenu";
 import PushPrompt from "@/components/PushPrompt";
+import BackToTop from "@/components/layout/BackToTop";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -117,6 +118,7 @@ export default function RootLayout({
           <Header />
           <main id="main-content" className="flex-1">{children}</main>
           <Footer />
+          <BackToTop />
           <PushPrompt />
           </AuthProvider>
         </ThemeProvider>

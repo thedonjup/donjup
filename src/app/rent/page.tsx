@@ -167,17 +167,17 @@ export default async function RentPage({
             해당 지역의 전세 거래 데이터가 없습니다.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border t-border t-card">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b t-border text-left text-xs t-text-tertiary">
-                  <th className="pb-2 pr-3 font-medium">#</th>
-                  <th className="pb-2 pr-3 font-medium">단지명</th>
-                  <th className="pb-2 pr-3 font-medium">지역</th>
-                  <th className="pb-2 pr-3 font-medium text-right">면적(평)</th>
-                  <th className="pb-2 pr-3 font-medium text-right">보증금</th>
-                  <th className="pb-2 pr-3 font-medium">유형</th>
-                  <th className="pb-2 font-medium">거래일</th>
+                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">#</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">단지명</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">지역</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">면적(평)</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">보증금</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">유형</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">거래일</th>
                 </tr>
               </thead>
               <tbody>
@@ -191,34 +191,35 @@ export default async function RentPage({
                   return (
                     <tr
                       key={`jeonse-${i}`}
-                      className="border-b t-border transition hover:bg-[var(--color-surface-elevated)]"
+                      className="transition hover:bg-[var(--color-surface-elevated)]"
+                      style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
                     >
-                      <td className="py-3 pr-3 tabular-nums t-text-tertiary">
+                      <td className="px-4 py-3 tabular-nums t-text-tertiary">
                         {i + 1}
                       </td>
-                      <td className="py-3 pr-3">
+                      <td className="px-4 py-3">
                         <Link
                           href={`/apt/${regionCode}/${slug}`}
-                          className="font-semibold t-text hover:text-brand-600"
+                          className="font-semibold t-text hover:text-brand-600 transition"
                         >
                           {aptName}
                         </Link>
                       </td>
-                      <td className="py-3 pr-3 t-text-secondary">
+                      <td className="px-4 py-3 t-text-secondary">
                         {String(item.region_name ?? "")}
                       </td>
-                      <td className="py-3 pr-3 text-right tabular-nums t-text-secondary">
+                      <td className="px-4 py-3 text-right tabular-nums t-text-secondary">
                         {sizeSqm}㎡({sqmToPyeong(sizeSqm)}평)
                       </td>
-                      <td className="py-3 pr-3 text-right font-bold tabular-nums t-rise">
+                      <td className="px-4 py-3 text-right font-bold tabular-nums t-rise">
                         {formatPrice(deposit)}
                       </td>
-                      <td className="py-3 pr-3">
+                      <td className="px-4 py-3">
                         <span className="rounded-full t-rise-bg px-2 py-0.5 text-xs font-medium t-rise">
                           전세
                         </span>
                       </td>
-                      <td className="py-3 text-xs tabular-nums t-text-tertiary">
+                      <td className="px-4 py-3 text-xs tabular-nums t-text-tertiary">
                         {String(item.trade_date ?? "")}
                       </td>
                     </tr>
@@ -245,18 +246,18 @@ export default async function RentPage({
             해당 지역의 월세 거래 데이터가 없습니다.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border t-border t-card">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b t-border text-left text-xs t-text-tertiary">
-                  <th className="pb-2 pr-3 font-medium">#</th>
-                  <th className="pb-2 pr-3 font-medium">단지명</th>
-                  <th className="pb-2 pr-3 font-medium">지역</th>
-                  <th className="pb-2 pr-3 font-medium text-right">면적(평)</th>
-                  <th className="pb-2 pr-3 font-medium text-right">보증금</th>
-                  <th className="pb-2 pr-3 font-medium text-right">월세</th>
-                  <th className="pb-2 pr-3 font-medium">유형</th>
-                  <th className="pb-2 font-medium">거래일</th>
+                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">#</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">단지명</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">지역</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">면적(평)</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">보증금</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium t-text-tertiary">월세</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">유형</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium t-text-tertiary">거래일</th>
                 </tr>
               </thead>
               <tbody>
@@ -271,37 +272,38 @@ export default async function RentPage({
                   return (
                     <tr
                       key={`wolse-${i}`}
-                      className="border-b t-border transition hover:bg-[var(--color-surface-elevated)]"
+                      className="transition hover:bg-[var(--color-surface-elevated)]"
+                      style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
                     >
-                      <td className="py-3 pr-3 tabular-nums t-text-tertiary">
+                      <td className="px-4 py-3 tabular-nums t-text-tertiary">
                         {i + 1}
                       </td>
-                      <td className="py-3 pr-3">
+                      <td className="px-4 py-3">
                         <Link
                           href={`/apt/${regionCode}/${slug}`}
-                          className="font-semibold t-text hover:text-brand-600"
+                          className="font-semibold t-text hover:text-brand-600 transition"
                         >
                           {aptName}
                         </Link>
                       </td>
-                      <td className="py-3 pr-3 t-text-secondary">
+                      <td className="px-4 py-3 t-text-secondary">
                         {String(item.region_name ?? "")}
                       </td>
-                      <td className="py-3 pr-3 text-right tabular-nums t-text-secondary">
+                      <td className="px-4 py-3 text-right tabular-nums t-text-secondary">
                         {sizeSqm}㎡({sqmToPyeong(sizeSqm)}평)
                       </td>
-                      <td className="py-3 pr-3 text-right tabular-nums font-semibold t-text">
+                      <td className="px-4 py-3 text-right tabular-nums font-semibold t-text">
                         {formatPrice(deposit)}
                       </td>
-                      <td className="py-3 pr-3 text-right font-bold tabular-nums text-gold-600">
+                      <td className="px-4 py-3 text-right font-bold tabular-nums gold-text">
                         {monthlyRent.toLocaleString()}만
                       </td>
-                      <td className="py-3 pr-3">
-                        <span className="rounded-full bg-gold-50 px-2 py-0.5 text-xs font-medium text-gold-600">
+                      <td className="px-4 py-3">
+                        <span className="rounded-full gold-badge-bg px-2 py-0.5 text-xs font-medium gold-text">
                           월세
                         </span>
                       </td>
-                      <td className="py-3 text-xs tabular-nums t-text-tertiary">
+                      <td className="px-4 py-3 text-xs tabular-nums t-text-tertiary">
                         {String(item.trade_date ?? "")}
                       </td>
                     </tr>

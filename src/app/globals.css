@@ -173,6 +173,93 @@ body {
   box-shadow: var(--shadow-card-hover);
 }
 
+/* Dark-mode-safe brand tints */
+.brand-tint-bg {
+  background: rgba(16, 185, 129, 0.08);
+}
+[data-theme="dark"] .brand-tint-bg {
+  background: rgba(52, 211, 153, 0.12);
+}
+.brand-tint-icon-bg {
+  background: rgba(16, 185, 129, 0.1);
+}
+[data-theme="dark"] .brand-tint-icon-bg {
+  background: rgba(52, 211, 153, 0.15);
+}
+.brand-tint-border {
+  border-color: rgba(16, 185, 129, 0.25);
+}
+[data-theme="dark"] .brand-tint-border {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+.brand-tint-text {
+  color: #065f46;
+}
+[data-theme="dark"] .brand-tint-text {
+  color: #6ee7b7;
+}
+.brand-tint-text-subtle {
+  color: rgba(5, 150, 105, 0.7);
+}
+[data-theme="dark"] .brand-tint-text-subtle {
+  color: rgba(110, 231, 183, 0.6);
+}
+
+/* Dark-mode-safe theme icon backgrounds */
+.theme-bg-amber {
+  background: rgba(245, 158, 11, 0.12);
+}
+[data-theme="dark"] .theme-bg-amber {
+  background: rgba(251, 191, 36, 0.15);
+}
+.theme-bg-blue {
+  background: rgba(59, 130, 246, 0.12);
+}
+[data-theme="dark"] .theme-bg-blue {
+  background: rgba(96, 165, 250, 0.15);
+}
+.theme-bg-emerald {
+  background: rgba(16, 185, 129, 0.12);
+}
+[data-theme="dark"] .theme-bg-emerald {
+  background: rgba(52, 211, 153, 0.15);
+}
+.theme-bg-red {
+  background: rgba(239, 68, 68, 0.12);
+}
+[data-theme="dark"] .theme-bg-red {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+/* Gold color support for dark mode */
+.gold-text {
+  color: #d97706;
+}
+[data-theme="dark"] .gold-text {
+  color: #fbbf24;
+}
+.gold-badge-bg {
+  background: rgba(245, 158, 11, 0.1);
+}
+[data-theme="dark"] .gold-badge-bg {
+  background: rgba(251, 191, 36, 0.15);
+}
+
+/* Filter tag */
+.filter-tag {
+  background: rgba(16, 185, 129, 0.08);
+  color: #047857;
+}
+[data-theme="dark"] .filter-tag {
+  background: rgba(52, 211, 153, 0.12);
+  color: #6ee7b7;
+}
+
+/* Tab container background */
+.tab-container-bg {
+  background: var(--color-surface-elevated);
+}
+
 /* Gradient text */
 .gradient-text {
   background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
@@ -235,4 +322,57 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   opacity: 1;
+}
+
+/* Mobile touch feedback */
+@media (max-width: 640px) {
+  .card-hover:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+  body {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  a, button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 0;
+  }
+}
+
+/* Smooth page transitions */
+@media (prefers-reduced-motion: no-preference) {
+  main {
+    animation: page-fade-in 0.25s ease-out;
+  }
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton animation */
+.skeleton-pulse {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-elevated) 25%,
+    var(--color-surface-inset) 37%,
+    var(--color-surface-elevated) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
