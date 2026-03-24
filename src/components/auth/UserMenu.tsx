@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { isAdmin } from "@/lib/admin/auth";
 import LoginModal from "./LoginModal";
 
 export default function UserMenu() {
@@ -30,8 +31,12 @@ export default function UserMenu() {
   if (loading) {
     return (
       <div
-        className="h-8 w-8 animate-pulse rounded-full"
-        style={{ background: "var(--color-surface-elevated)" }}
+        style={{
+          width: "32px",
+          height: "32px",
+          borderRadius: "50%",
+          background: "var(--color-surface-elevated, #e2e8f0)",
+        }}
       />
     );
   }
@@ -41,14 +46,29 @@ export default function UserMenu() {
     return (
       <>
         <button
-          onClick={() => setLoginOpen(true)}
-          className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-600 text-white transition hover:bg-brand-700 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5 sm:text-sm sm:font-medium"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setLoginOpen(true);
+          }}
+          style={{
+            width: "44px",
+            height: "44px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "8px",
+            border: "none",
+            background: "#059669",
+            color: "white",
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}
           aria-label="로그인"
         >
-          <svg className="h-4 w-4 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <span className="hidden sm:inline">로그인</span>
         </button>
         <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       </>
@@ -56,78 +76,134 @@ export default function UserMenu() {
   }
 
   // Logged in
+  const admin = isAdmin(user.email ?? null);
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div style={{ position: "relative" }} ref={dropdownRef}>
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="flex items-center gap-2 rounded-lg px-2 py-1 transition hover:bg-[var(--color-surface-elevated)]"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "4px 8px",
+          borderRadius: "8px",
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+        }}
       >
         {user.photoURL ? (
           <img
             src={user.photoURL}
             alt=""
-            className="h-7 w-7 rounded-full"
+            style={{ width: "28px", height: "28px", borderRadius: "50%" }}
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+          <div
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              background: "#059669",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "12px",
+              fontWeight: 700,
+            }}
+          >
             {(user.displayName ?? user.email ?? "U")[0]}
           </div>
         )}
-        <span
-          className="hidden text-sm font-medium sm:inline"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          {user.displayName ?? "사용자"}
-        </span>
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="hidden sm:block"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          <path
-            fillRule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-            clipRule="evenodd"
-          />
-        </svg>
       </button>
 
       {/* Dropdown */}
       {dropdownOpen && (
         <div
-          className="absolute right-0 top-full mt-2 w-48 rounded-xl border shadow-lg"
           style={{
-            background: "var(--color-surface-card)",
-            borderColor: "var(--color-border)",
+            position: "absolute",
+            right: 0,
+            top: "100%",
+            marginTop: "8px",
+            width: "192px",
+            borderRadius: "12px",
+            border: "1px solid var(--color-border, #e2e8f0)",
+            background: "var(--color-surface-card, #ffffff)",
+            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)",
+            zIndex: 9000,
+            overflow: "hidden",
           }}
         >
+          {/* User info */}
           <div
-            className="border-b px-4 py-3"
-            style={{ borderColor: "var(--color-border-subtle)" }}
+            style={{
+              padding: "12px 16px",
+              borderBottom: "1px solid var(--color-border-subtle, #f1f5f9)",
+            }}
           >
             <p
-              className="text-sm font-medium truncate"
-              style={{ color: "var(--color-text-primary)" }}
+              style={{
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "var(--color-text-primary, #0f172a)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
             >
               {user.displayName ?? "사용자"}
             </p>
             <p
-              className="text-xs truncate"
-              style={{ color: "var(--color-text-tertiary)" }}
+              style={{
+                fontSize: "12px",
+                color: "var(--color-text-tertiary, #94a3b8)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
             >
               {user.email}
             </p>
           </div>
-          <div className="py-1">
+
+          {/* Menu items */}
+          <div style={{ padding: "4px 0" }}>
+            {admin && (
+              <Link
+                href="/dam"
+                onClick={() => setDropdownOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 16px",
+                  fontSize: "14px",
+                  color: "#059669",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                관리자
+              </Link>
+            )}
             <Link
               href="/profile"
               onClick={() => setDropdownOpen(false)}
-              className="flex w-full items-center px-4 py-2 text-sm transition hover:bg-[var(--color-surface-elevated)]"
-              style={{ color: "var(--color-text-secondary)" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "8px 16px",
+                fontSize: "14px",
+                color: "var(--color-text-secondary, #475569)",
+                textDecoration: "none",
+              }}
             >
               프로필
             </Link>
@@ -136,8 +212,18 @@ export default function UserMenu() {
                 await signOut();
                 setDropdownOpen(false);
               }}
-              className="flex w-full items-center px-4 py-2 text-sm transition hover:bg-[var(--color-surface-elevated)]"
-              style={{ color: "var(--color-text-secondary)" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                padding: "8px 16px",
+                fontSize: "14px",
+                color: "var(--color-text-secondary, #475569)",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
             >
               로그아웃
             </button>

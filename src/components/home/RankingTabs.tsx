@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import { PROPERTY_TYPE_LABELS } from "@/components/PropertyTypeFilter";
+import { shareViaKakao } from "@/lib/kakao-share";
 
 export interface Transaction {
   id: string;
@@ -194,6 +195,36 @@ export default function RankingTabs({
                       </div>
                     )}
                   </div>
+
+                  {/* Share button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const dropLabel = isDrop && t.change_rate !== null
+                        ? `${t.apt_name} ${Math.abs(t.change_rate)}% 폭락!`
+                        : isHigh
+                          ? `${t.apt_name} 신고가 ${formatPrice(t.trade_price)} 경신!`
+                          : `${t.apt_name} ${formatPrice(t.trade_price)}`;
+                      const desc = isDrop && t.highest_price != null && t.change_rate !== null
+                        ? `최고가 ${formatPrice(t.highest_price)} → 현재 ${formatPrice(t.trade_price)} | 돈줍에서 확인`
+                        : `${t.region_name} · ${formatPrice(t.trade_price)} | 돈줍에서 확인`;
+                      shareViaKakao({
+                        title: dropLabel,
+                        description: desc,
+                        url: `https://donjup.com/apt/${t.region_code}/${slug}`,
+                      });
+                    }}
+                    className="flex-shrink-0 rounded-lg p-1.5 transition hover:bg-[var(--color-surface-elevated)]"
+                    style={{ color: "var(--color-text-tertiary)" }}
+                    aria-label="카카오톡 공유"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                      <polyline points="16 6 12 2 8 6" />
+                      <line x1="12" y1="2" x2="12" y2="15" />
+                    </svg>
+                  </button>
                 </div>
               </Link>
             );

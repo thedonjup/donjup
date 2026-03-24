@@ -95,6 +95,14 @@ export default function RootLayout({
               strategy="afterInteractive"
             />
           )}
+          {process.env.NEXT_PUBLIC_KAKAO_JS_KEY && (
+            <Script
+              src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"
+              integrity="sha384-DKYJZ8NLiK8MN4/C5P2ezmFnkrysYIcCY1qlT7NAmMiABPaLbcBzMhI4mOasSko"
+              crossOrigin="anonymous"
+              strategy="afterInteractive"
+            />
+          )}
           {process.env.NEXT_PUBLIC_GA_ID && (
             <>
               <Script
@@ -148,6 +156,7 @@ function Header() {
         <div className="flex items-center gap-1 lg:hidden">
           <MobileSearchToggle />
           <ThemeToggle />
+          <UserMenu />
           <MobileNav />
         </div>
       </div>

@@ -1,18 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { shareViaKakao } from "@/lib/kakao-share";
 
 interface ShareButtonsProps {
   url: string;
   title: string;
   description?: string;
+  imageUrl?: string;
 }
 
-export default function ShareButtons({ url, title, description }: ShareButtonsProps) {
+export default function ShareButtons({ url, title, description, imageUrl }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
 
   const fullUrl = (source: string) =>
     `${url}${url.includes("?") ? "&" : "?"}utm_source=${source}&utm_medium=share`;
+
+  /** 카카오톡 공유 */
+  const handleKakao = useCallback(() => {
+    shareViaKakao({
+      title,
+      description: description ?? "돈줍에서 확인하세요",
+      imageUrl,
+      url,
+    });
+  }, [url, title, description, imageUrl]);
 
   async function handleNativeShare() {
     try {
@@ -66,6 +78,21 @@ export default function ShareButtons({ url, title, description }: ShareButtonsPr
           공유
         </button>
       )}
+
+      <button
+        onClick={handleKakao}
+        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-80"
+        style={{
+          borderColor: "#FEE500",
+          color: "#3C1E1E",
+          background: "#FEE500",
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#3C1E1E">
+          <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.113 4.508 6.463-.2.728-.723 2.636-.828 3.047-.13.51.187.503.393.365.162-.108 2.575-1.746 3.62-2.457.746.108 1.517.165 2.307.165 5.523 0 10-3.463 10-7.583C22 6.463 17.523 3 12 3" />
+        </svg>
+        카카오톡
+      </button>
 
       <button
         onClick={handleTwitter}

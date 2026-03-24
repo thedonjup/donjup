@@ -46,13 +46,13 @@ export async function generateMetadata({
 }: {
   params: Promise<{ region: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug, region } = await params;
   const decodedSlug = decodeURIComponent(slug);
   const supabase = await createClient();
 
   let { data: complex } = await supabase
     .from("apt_complexes")
-    .select("apt_name,region_name,dong_name")
+    .select("apt_name,region_name,dong_name,region_code")
     .eq("slug", decodedSlug)
     .single();
 
@@ -64,7 +64,7 @@ export async function generateMetadata({
       const aptSlugPart = decodedSlug.substring(dashIdx + 1);
       const { data: fallbackList } = await supabase
         .from("apt_complexes")
-        .select("apt_name,region_name,dong_name,slug")
+        .select("apt_name,region_name,dong_name,slug,region_code")
         .eq("region_code", regionCode)
         .limit(50);
 
@@ -83,9 +83,46 @@ export async function generateMetadata({
     return { title: "단지 정보" };
   }
 
-  const title = `${complex.apt_name} 실거래가 - ${complex.region_name} ${complex.dong_name ?? ""}`;
+  // 최근 거래가 및 최고가 조회 (OG 태그에 가격 변동 정보 포함)
+  const { data: latestTxn } = await supabase
+    .from("apt_transactions")
+    .select("trade_price,highest_price,change_rate")
+    .eq("apt_name", complex.apt_name)
+    .eq("region_code", complex.region_code)
+    .order("trade_date", { ascending: false })
+    .limit(1)
+    .single();
+
+  const changeRate = latestTxn?.change_rate;
+  const tradePrice = latestTxn?.trade_price;
+  const highestPrice = latestTxn?.highest_price;
+
+  // 감정 자극형 타이틀: "래미안 퍼스티지 -15% 폭락 | 돈줍" or "래미안 퍼스티지 신고가 경신 | 돈줍"
+  const priceLabel = tradePrice ? formatPrice(tradePrice) : "";
+  const highLabel = highestPrice ? formatPrice(highestPrice) : "";
+
+  let ogTitle: string;
+  let ogDescription: string;
+
+  if (changeRate !== null && changeRate !== undefined && changeRate < 0) {
+    ogTitle = `${complex.apt_name} ${changeRate.toFixed(1)}% 폭락 | 돈줍`;
+    ogDescription = highLabel && priceLabel
+      ? `최고가 ${highLabel} → 현재 ${priceLabel} | 매일 업데이트되는 실거래가`
+      : `${complex.apt_name} 아파트 실거래가 시세를 확인하세요 | 돈줍`;
+  } else if (priceLabel) {
+    ogTitle = `${complex.apt_name} ${priceLabel} | 돈줍`;
+    ogDescription = `${complex.region_name} ${complex.dong_name ?? ""} · 매일 업데이트되는 실거래가`;
+  } else {
+    ogTitle = `${complex.apt_name} 실거래가 | 돈줍`;
+    ogDescription = `${complex.region_name} ${complex.dong_name ?? ""} 아파트 실거래가 시세를 확인하세요`;
+  }
+
+  const pageUrl = `https://donjup.com/apt/${region}/${slug}`;
+  const ogImageUrl = `https://donjup.com/opengraph-image`;
+
+  const seoTitle = `${complex.apt_name} 실거래가 - ${complex.region_name} ${complex.dong_name ?? ""}`;
   return {
-    title,
+    title: seoTitle,
     description: `${complex.apt_name} 아파트 실거래가 시세, 최고가 대비 변동률, 거래 이력을 확인하세요. ${complex.region_name} ${complex.dong_name ?? ""} 매매·전월세 시세 비교.`,
     keywords: [
       `${complex.apt_name} 실거래가`,
@@ -95,6 +132,28 @@ export async function generateMetadata({
       "아파트 실거래가",
       "아파트 시세 조회",
     ],
+    openGraph: {
+      title: ogTitle,
+      description: ogDescription,
+      url: pageUrl,
+      siteName: "돈줍 DonJup",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: ogTitle,
+        },
+      ],
+      locale: "ko_KR",
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: ogTitle,
+      description: ogDescription,
+      images: [ogImageUrl],
+    },
   };
 }
 
