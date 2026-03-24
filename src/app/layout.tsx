@@ -205,7 +205,7 @@ function MobileSearchToggle() {
   return (
     <a
       href="/search"
-      className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+      className="flex h-11 w-11 items-center justify-center rounded-lg transition-colors"
       style={{ color: "var(--color-text-secondary)" }}
       aria-label="검색"
     >

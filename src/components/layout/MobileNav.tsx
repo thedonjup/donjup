@@ -15,13 +15,14 @@ const NAV_ITEMS = [
   { href: "/rate/calculator", label: "대출 계산기" },
   { href: "/daily/archive", label: "데일리 리포트" },
   { href: "/map", label: "지도" },
+  { href: "/search", label: "검색" },
 ];
 
 export function HamburgerButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-[var(--color-surface-elevated)] sm:hidden"
+      className="flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-[var(--color-surface-elevated)] sm:hidden"
       aria-label="메뉴 열기"
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -37,7 +38,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-[var(--color-surface-elevated)]"
+      className="flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-[var(--color-surface-elevated)]"
       aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}
     >
       {theme === "dark" ? (
@@ -81,7 +82,7 @@ export default function MobileNav() {
           <span className="text-lg font-extrabold text-[var(--color-text-primary)]">돈줍</span>
           <button
             onClick={() => setOpen(false)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-[var(--color-surface-elevated)]"
+            className="flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-[var(--color-surface-elevated)]"
             aria-label="메뉴 닫기"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">

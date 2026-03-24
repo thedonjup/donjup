@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 interface LoginModalProps {
@@ -9,6 +10,25 @@ interface LoginModalProps {
 
 export default function LoginModal({ open, onClose }: LoginModalProps) {
   const { signInWithGoogle } = useAuth();
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (!open) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -27,12 +47,20 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       <div
         className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal card */}
-      <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <div
+        className="fixed inset-0 z-[90] flex items-center justify-center p-4"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label="로그인"
+      >
         <div
           className="relative w-full max-w-sm rounded-2xl p-8"
+          onClick={(e) => e.stopPropagation()}
           style={{
             background: "var(--color-surface-card)",
             border: "1px solid var(--color-border)",
@@ -41,7 +69,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-[var(--color-surface-elevated)]"
+            className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-[var(--color-surface-elevated)]"
             aria-label="닫기"
           >
             <svg

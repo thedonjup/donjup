@@ -269,24 +269,26 @@ export default async function RateDashboardPage() {
         <div className="grid gap-3 sm:grid-cols-3">
           <Link
             href="/rate/calculator"
-            className="card-hover rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 text-center"
+            className="card-hover rounded-2xl border-2 border-brand-100 p-6 text-center"
+            style={{ background: "var(--color-surface-card)" }}
           >
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-sm font-bold text-brand-700">
               %%
             </div>
-            <p className="mt-2 font-bold text-brand-900">대출 이자 계산기</p>
+            <p className="mt-2 font-bold t-text">대출 이자 계산기</p>
             <p className="mt-1 text-sm text-brand-600">
               원리금균등/원금균등 비교 계산
             </p>
           </Link>
           <Link
             href="/rate/calculator?tab=dsr"
-            className="card-hover rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50 to-white p-6 text-center"
+            className="card-hover rounded-2xl border-2 border-brand-100 p-6 text-center"
+            style={{ background: "var(--color-surface-card)" }}
           >
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-sm font-bold text-brand-700">
               DSR
             </div>
-            <p className="mt-2 font-bold text-brand-900">DSR 계산기</p>
+            <p className="mt-2 font-bold t-text">DSR 계산기</p>
             <p className="mt-1 text-sm text-brand-600">
               총부채원리금상환비율 확인
             </p>
