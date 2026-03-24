@@ -23,13 +23,13 @@ export const metadata: Metadata = {
 };
 
 export default async function TrendPage() {
-  const supabase = await createClient();
-
   // 최근 6개월 월별 거래량 추이
   // trade_date is stored as string (YYYY-MM-DD) — extract month via substring
   let volumeRaw: Record<string, unknown>[] | null = null;
+  let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
 
   try {
+    supabase = await createClient();
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 30000);
 
@@ -86,14 +86,16 @@ export default async function TrendPage() {
   let sidoAvgPrices: { name: string; slug: string; avgPrice: number; count: number }[] = [];
 
   try {
+    if (!supabase) supabase = await createClient();
     const ac2 = new AbortController();
     const timer2 = setTimeout(() => ac2.abort(), 5000);
+    const db = supabase;
 
     sidoAvgPrices = await Promise.all(
       sidoEntries.map(async ([, sido]) => {
         const sigunguCodes = Object.keys(sido.sigungu);
 
-        const { data, count } = await supabase
+        const { data, count } = await db
           .from("apt_transactions")
           .select("trade_price", { count: "exact" })
           .in("region_code", sigunguCodes)

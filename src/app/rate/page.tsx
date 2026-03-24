@@ -36,12 +36,11 @@ const BANK_LABELS: Record<string, string> = {
 };
 
 export default async function RateDashboardPage() {
-  const supabase = await createClient();
-
   let allRates: any[] | null = null;
   let bankRatesRaw: any[] | null = null;
 
   try {
+    const supabase = await createClient();
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 30000);
 

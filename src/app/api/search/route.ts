@@ -161,6 +161,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ results: result.rows });
   } catch (e: any) {
-    return NextResponse.json({ results: [], error: e.message });
+    console.error("[Search API] Query failed:", e.message ?? e);
+    return NextResponse.json({ results: [], error: e.message }, { status: 500 });
   }
 }

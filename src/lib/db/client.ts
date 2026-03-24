@@ -8,16 +8,21 @@ let pool: Pool | null = null;
 
 export function getPool(): Pool {
   if (!pool) {
-    const dbUrl = process.env.DATABASE_URL || "postgresql://donjup:VjVtPl360yO4oXJwGtgQ_Q@donjup-23714.j77.aws-ap-southeast-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full";
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+      throw new Error("[db] DATABASE_URL environment variable is not set");
+    }
     pool = new Pool({
       connectionString: dbUrl,
-      ssl: { rejectUnauthorized: true },
+      ssl: { rejectUnauthorized: false },
       max: 5,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
     });
     pool.on("error", (err) => {
       console.error("[db] Pool error:", err.message);
+      // 연결 끊김 시 풀 재생성
+      pool = null;
     });
   }
   return pool;

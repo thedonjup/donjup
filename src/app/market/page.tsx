@@ -28,8 +28,6 @@ export default async function MarketIndexPage({
   const propertyType = typeof typeParam === "string" ? parseInt(typeParam, 10) : 1;
   const validType = [0, 1, 2, 3].includes(propertyType) ? propertyType : 1;
 
-  const supabase = await createClient();
-
   const sidoEntries = Object.entries(REGION_HIERARCHY);
 
   let sidoStats: {
@@ -44,6 +42,7 @@ export default async function MarketIndexPage({
   }[] = [];
 
   try {
+    const supabase = await createClient();
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 30000);
 
