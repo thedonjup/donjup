@@ -131,29 +131,23 @@ function Header() {
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-1 sm:flex">
+        {/* Desktop Navigation — 1024px 이상에서만 표시 */}
+        <nav className="hidden items-center gap-0.5 lg:flex">
           <NavLink href="/today">오늘거래</NavLink>
           <NavLink href="/new-highs">신고가</NavLink>
           <NavLink href="/market">지역별</NavLink>
           <NavLink href="/rent">전월세</NavLink>
-          <NavLink href="/trend">트렌드</NavLink>
-          <NavLink href="/rate">금리현황</NavLink>
-          <NavLink href="/themes">테마</NavLink>
-          <NavLink href="/compare">비교</NavLink>
-          <NavLink href="/rate/calculator">계산기</NavLink>
-          <NavLink href="/daily/archive">데일리</NavLink>
+          <NavLink href="/rate">금리</NavLink>
           <NavLink href="/map">지도</NavLink>
           <HeaderSearchForm />
           <ThemeToggle />
           <UserMenu />
         </nav>
 
-        {/* Mobile: search + theme + login + hamburger */}
-        <div className="flex items-center gap-1 sm:hidden">
+        {/* Mobile + Tablet: 1024px 미만 */}
+        <div className="flex items-center gap-1 lg:hidden">
           <MobileSearchToggle />
           <ThemeToggle />
-          <UserMenu />
           <MobileNav />
         </div>
       </div>
