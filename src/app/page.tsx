@@ -28,6 +28,12 @@ const jsonLd = {
   },
 };
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function filterByType(rows: any[], validType: number): any[] {
+  if (validType === 0) return rows;
+  return rows.filter((r: any) => r.property_type === validType);
+}
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -47,38 +53,71 @@ export default async function HomePage({
 
   try {
     const supabase = await createClient();
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000); // 30초 타임아웃 (CockroachDB 해외 리전)
 
-    const txFields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level,property_type";
+    // --- Try reading from homepage_cache first (1 query instead of 7) ---
+    const { data: cache } = await supabase
+      .from("homepage_cache")
+      .select("drops,highs,volume,recent,rates,total_transactions,total_complexes,updated_at")
+      .eq("id", 1)
+      .single();
 
-    const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
+    if (cache && cache.drops) {
+      // Cache hit — filter by property type client-side
+      const allDrops = typeof cache.drops === "string" ? JSON.parse(cache.drops) : cache.drops;
+      const allHighs = typeof cache.highs === "string" ? JSON.parse(cache.highs) : cache.highs;
+      const allVolume = typeof cache.volume === "string" ? JSON.parse(cache.volume) : cache.volume;
+      const allRecent = typeof cache.recent === "string" ? JSON.parse(cache.recent) : cache.recent;
 
+      drops = filterByType(allDrops ?? [], validType).slice(0, 10);
+      highs = filterByType(allHighs ?? [], validType).slice(0, 10);
+      volume = filterByType(allVolume ?? [], validType).slice(0, 10);
+      recent = filterByType(allRecent ?? [], validType).slice(0, 10);
+      rates = typeof cache.rates === "string" ? JSON.parse(cache.rates) : (cache.rates ?? []);
+      totalTxns = Number(cache.total_transactions) || 0;
+      totalComplexes = Number(cache.total_complexes) || 0;
+    } else {
+      // Cache miss — fall back to direct queries
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 30000);
+
+      const txFields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level,property_type";
+
+      const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
+
+      const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount] = await Promise.allSettled([
+        applyTypeFilter(supabase.from("apt_transactions").select(txFields).not("change_rate", "is", null).lt("change_rate", 0)).order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
+        applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("is_new_high", true)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
+        applyTypeFilter(supabase.from("apt_transactions").select(txFields)).order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10).abortSignal(ac.signal),
+        applyTypeFilter(supabase.from("apt_transactions").select(txFields)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
+        supabase.from("finance_rates").select("rate_type,rate_value,prev_value,change_bp,base_date,source").order("base_date", { ascending: false }).limit(5).abortSignal(ac.signal),
+        supabase.from("apt_transactions").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
+        supabase.from("apt_complexes").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
+      ]);
+
+      clearTimeout(timer);
+
+      drops = dropsRes.status === "fulfilled" ? dropsRes.value.data ?? [] : [];
+      highs = highsRes.status === "fulfilled" ? highsRes.value.data ?? [] : [];
+      volume = volumeRes.status === "fulfilled" ? volumeRes.value.data ?? [] : [];
+      recent = recentRes.status === "fulfilled" ? recentRes.value.data ?? [] : [];
+      rates = ratesRes.status === "fulfilled" ? ratesRes.value.data ?? [] : [];
+      totalTxns = txnCount.status === "fulfilled" ? txnCount.value.count : 0;
+      totalComplexes = complexCount.status === "fulfilled" ? complexCount.value.count : 0;
+    }
+
+    // Popular items — lightweight query on page_views
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7);
     const startDateStr = startDate.toISOString().split("T")[0];
 
-    const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount, popularRes] = await Promise.allSettled([
-      applyTypeFilter(supabase.from("apt_transactions").select(txFields).not("change_rate", "is", null).lt("change_rate", 0)).order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
-      applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("is_new_high", true)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-      applyTypeFilter(supabase.from("apt_transactions").select(txFields)).order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10).abortSignal(ac.signal),
-      applyTypeFilter(supabase.from("apt_transactions").select(txFields)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-      supabase.from("finance_rates").select("rate_type,rate_value,prev_value,change_bp,base_date,source").order("base_date", { ascending: false }).limit(5).abortSignal(ac.signal),
-      supabase.from("apt_transactions").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
-      supabase.from("apt_complexes").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
-      supabase.from("page_views").select("page_path,page_type,view_count").gte("view_date", startDateStr).eq("page_type", "apt_detail").order("view_count", { ascending: false }).limit(10).abortSignal(ac.signal),
-    ]);
-
-    clearTimeout(timer);
-
-    drops = dropsRes.status === "fulfilled" ? dropsRes.value.data ?? [] : [];
-    highs = highsRes.status === "fulfilled" ? highsRes.value.data ?? [] : [];
-    volume = volumeRes.status === "fulfilled" ? volumeRes.value.data ?? [] : [];
-    recent = recentRes.status === "fulfilled" ? recentRes.value.data ?? [] : [];
-    rates = ratesRes.status === "fulfilled" ? ratesRes.value.data ?? [] : [];
-    totalTxns = txnCount.status === "fulfilled" ? txnCount.value.count : 0;
-    totalComplexes = complexCount.status === "fulfilled" ? complexCount.value.count : 0;
-    popularItems = popularRes.status === "fulfilled" ? popularRes.value.data ?? [] : [];
+    const { data: popularData } = await supabase
+      .from("page_views")
+      .select("page_path,page_type,view_count")
+      .gte("view_date", startDateStr)
+      .eq("page_type", "apt_detail")
+      .order("view_count", { ascending: false })
+      .limit(10);
+    popularItems = popularData ?? [];
   } catch (e) {
     console.error("[Homepage] DB query failed:", e instanceof Error ? e.message : e);
   }
