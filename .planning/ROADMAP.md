@@ -50,6 +50,12 @@ Plans:
 
 **Requirements:** CLN-01, CLN-02, CLN-03, CLN-04, CLN-05
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — formatPrice 중복 제거, Instagram 클라이언트 통합, 미사용 패키지 제거 (CLN-01, CLN-02, CLN-03)
+- [ ] 02-02-PLAN.md — supabase→db 리네이밍 + Storage stub 제거 (CLN-04, CLN-05)
+
 **Scope:**
 - KakaoMap.tsx의 로컬 formatPrice 제거, src/lib/format.ts에서 import
 - Instagram 클라이언트 통합 (src/lib/api/instagram.ts + src/lib/instagram/client.ts → 하나로)
@@ -213,4 +219,4 @@ Phase 5 (성능) ─────────────────────
 
 ---
 *Roadmap created: 2026-03-26*
-*Last updated: 2026-03-26 after Phase 1 planning*
+*Last updated: 2026-03-26 after Phase 2 planning*
