@@ -42,6 +42,7 @@ export default function Comments({ aptSlug }: { aptSlug: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function Comments({ aptSlug }: { aptSlug: string }) {
       if (!user || !text.trim() || submitting) return;
 
       setSubmitting(true);
+      setSubmitError(null);
       try {
         await addDoc(collection(db, "comments", aptSlug, "messages"), {
           uid: user.uid,
@@ -75,7 +77,7 @@ export default function Comments({ aptSlug }: { aptSlug: string }) {
         });
         setText("");
       } catch {
-        // silently fail
+        setSubmitError("댓글 작성에 실패했습니다. 다시 시도해주세요.");
       } finally {
         setSubmitting(false);
       }
@@ -137,6 +139,9 @@ export default function Comments({ aptSlug }: { aptSlug: string }) {
                   {submitting ? "작성 중..." : "작성"}
                 </button>
               </div>
+              {submitError && (
+                <p className="mt-1 text-xs text-red-500">{submitError}</p>
+              )}
             </div>
           </div>
         </form>

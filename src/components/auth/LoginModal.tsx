@@ -12,6 +12,7 @@ interface LoginModalProps {
 export default function LoginModal({ open, onClose }: LoginModalProps) {
   const { signInWithGoogle } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -19,6 +20,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
 
   useEffect(() => {
     if (!open) return;
+    setLoginError(null);
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
@@ -28,15 +30,17 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
   if (!open || !mounted) return null;
 
   const handleGoogle = async () => {
+    setLoginError(null);
     try {
       await signInWithGoogle();
       onClose();
-    } catch {
-      // silently ignore
+    } catch (e: any) {
+      if (e?.code === "auth/popup-closed-by-user") return;
+      setLoginError("로그인에 실패했습니다. 다시 시도해주세요.");
     }
   };
 
-  const modalContent = (
+  return createPortal(
     <div
       style={{
         position: "fixed",
@@ -194,6 +198,11 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
           </button>
         </div>
 
+        {loginError && (
+          <p style={{ marginTop: "12px", textAlign: "center", fontSize: "13px", color: "#dc2626", fontWeight: 500 }}>
+            {loginError}
+          </p>
+        )}
         <p style={{ marginTop: "16px", textAlign: "center", fontSize: "12px", color: "var(--color-text-tertiary)" }}>
           카카오/네이버 로그인은 준비 중입니다.
         </p>
@@ -202,8 +211,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
           로그인 시 <a href="/privacy" style={{ textDecoration: "underline" }}>개인정보처리방침</a> 및 이용약관에 동의하는 것으로 간주합니다.
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
-
-  return createPortal(modalContent, document.body);
 }

@@ -46,14 +46,18 @@ export default function RegionSelector() {
   }
 
   function handleSave() {
-    if (selected.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(selected));
-    }
+    try {
+      if (selected.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(selected));
+      }
+    } catch { /* quota exceeded */ }
     setVisible(false);
   }
 
   function handleDismiss() {
-    localStorage.setItem(DISMISSED_KEY, "1");
+    try {
+      localStorage.setItem(DISMISSED_KEY, "1");
+    } catch { /* quota exceeded */ }
     setVisible(false);
   }
 

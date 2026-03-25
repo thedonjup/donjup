@@ -39,6 +39,7 @@ export default function ComparePage() {
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<CompareData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const doSearch = useCallback(async (q: string) => {
     if (q.trim().length === 0) {
@@ -48,6 +49,7 @@ export default function ComparePage() {
     setSearching(true);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
+      if (!res.ok) throw new Error("검색 실패");
       const json = await res.json();
       setSearchResults(json.results ?? []);
     } catch {
@@ -61,9 +63,11 @@ export default function ComparePage() {
     if (selected.some((s) => s.complex.id === complex.id)) return;
 
     setLoading(true);
+    setError(null);
     try {
       // Fetch transaction data for this complex
       const res = await fetch(`/api/apt/${complex.id}`);
+      if (!res.ok) throw new Error("데이터 로드 실패");
       const json = await res.json();
 
       const transactions = json.transactions ?? [];
@@ -102,8 +106,8 @@ export default function ComparePage() {
           latestRent,
         },
       ]);
-    } catch {
-      // Still add with no data
+    } catch (e: any) {
+      setError(e.message ?? "데이터를 불러올 수 없습니다");
       setSelected((prev) => [
         ...prev,
         {
@@ -211,6 +215,9 @@ export default function ComparePage() {
       {/* Loading indicator */}
       {loading && (
         <div className="mb-4 text-center text-sm t-text-tertiary">데이터를 불러오는 중...</div>
+      )}
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-600">{error}</div>
       )}
 
       {/* Selected Complexes Tags */}

@@ -29,9 +29,12 @@ export default function CoupangBanner({
 
   useEffect(() => {
     fetch(`/api/coupang/products?category=${category}&limit=${limit}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
       .then((d) => setProducts(d.products ?? []))
-      .catch(() => {});
+      .catch(() => setProducts([]));
   }, [category, limit]);
 
   if (products.length === 0) return null;
