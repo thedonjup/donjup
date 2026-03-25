@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     siteName: "돈줍 DonJup",
     title: "돈줍 - 부동산 실거래가 폭락/신고가 랭킹",
     description: "매일 자동 업데이트되는 전국 아파트 폭락·신고가 랭킹과 금리 변동 정보",
-    images: [{ url: "/logo.svg", width: 512, height: 512, alt: "돈줍 로고" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "돈줍 - 부동산 실거래가 폭락/신고가 랭킹" }],
   },
   twitter: {
     card: "summary_large_image",

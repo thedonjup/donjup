@@ -119,7 +119,7 @@ export async function generateMetadata({
   }
 
   const pageUrl = `https://donjup.com/apt/${region}/${slug}`;
-  const ogImageUrl = `https://donjup.com/opengraph-image`;
+  const ogImageUrl = `https://donjup.com/apt/${region}/${slug}/opengraph-image`;
 
   const seoTitle = `${complex.apt_name} 실거래가 - ${complex.region_name} ${complex.dong_name ?? ""}`;
   return {
