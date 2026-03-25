@@ -59,5 +59,45 @@ export default async function MapPage() {
     trade_date: t.trade_date,
   }));
 
-  return <KakaoMap transactions={mapTransactions} />;
+  // 거래 데이터 요약 (SSR용)
+  const totalCount = mapTransactions.length;
+  const newHighCount = mapTransactions.filter(t => t.is_new_high).length;
+  const dropCount = mapTransactions.filter(t => t.change_rate !== null && t.change_rate <= -10).length;
+
+  // 지역별 거래 수 상위 5개
+  const regionCounts: Record<string, number> = {};
+  for (const t of mapTransactions) {
+    regionCounts[t.region_name] = (regionCounts[t.region_name] || 0) + 1;
+  }
+  const topRegions = Object.entries(regionCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  return (
+    <>
+      <KakaoMap transactions={mapTransactions} />
+      {/* 크롤러용 SSR 텍스트 - 시각적으로 숨김 처리 */}
+      <section className="sr-only" aria-label="지도 거래 요약">
+        <h1>전국 아파트 실거래가 지도</h1>
+        <p>
+          최근 거래 {totalCount}건을 지도에서 확인하세요.
+          신고가 {newHighCount}건, 10% 이상 하락 {dropCount}건이 포함되어 있습니다.
+        </p>
+        {topRegions.length > 0 && (
+          <>
+            <h2>주요 거래 지역</h2>
+            <ul>
+              {topRegions.map(([region, count]) => (
+                <li key={region}>{region}: {count}건</li>
+              ))}
+            </ul>
+          </>
+        )}
+        <p>
+          지도에서 마커를 클릭하면 아파트별 상세 실거래 정보를 확인할 수 있습니다.
+          폭락(빨간색), 하락(주황색), 신고가(초록색) 마커로 구분됩니다.
+        </p>
+      </section>
+    </>
+  );
 }
