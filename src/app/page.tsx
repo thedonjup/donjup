@@ -7,8 +7,13 @@ import RankingTabs from "@/components/home/RankingTabs";
 import type { Transaction } from "@/components/home/RankingTabs";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import { FaqJsonLd } from "@/components/seo/JsonLd";
+import type { Metadata } from "next";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const jsonLd = {
   "@context": "https://schema.org",
