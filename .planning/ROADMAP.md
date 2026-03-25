@@ -24,6 +24,12 @@
 
 **Requirements:** SEO-01, SEO-02, SEO-03, SEO-04
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Canonical URL 수정 및 고유 title 설정 (SEO-01, SEO-02)
+- [ ] 01-02-PLAN.md — 지도 SSR 콘텐츠 추가 및 OG Image 확인 (SEO-03, SEO-04)
+
 **Scope:**
 - canonical URL을 모든 페이지에서 해당 페이지 URL로 수정
 - compare, profile, dam 페이지에 고유 title 설정
@@ -207,4 +213,4 @@ Phase 5 (성능) ─────────────────────
 
 ---
 *Roadmap created: 2026-03-26*
-*Last updated: 2026-03-26 after initial creation*
+*Last updated: 2026-03-26 after Phase 1 planning*
