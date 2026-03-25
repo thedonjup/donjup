@@ -1,8 +1,22 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+current_phase: 01
+status: executing
+last_updated: "2026-03-25T22:56:24.873Z"
+progress:
+  total_phases: 8
+  completed_phases: 0
+  total_plans: 2
+  completed_plans: 1
+---
+
 # Project State: 돈줍 사이트 안정화
 
-**Current Phase:** — (not started)
+**Current Phase:** 01
 **Milestone:** v1.0 — 사이트 안정화
-**Status:** Initialized
+**Status:** Executing Phase 01
 
 ## Active Phase
 

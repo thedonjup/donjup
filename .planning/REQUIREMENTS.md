@@ -9,8 +9,8 @@
 
 - [ ] **SEO-01**: 모든 페이지의 canonical URL이 해당 페이지의 실제 URL을 가리킨다
 - [ ] **SEO-02**: compare, profile, dam 페이지에 고유 title이 설정된다
-- [ ] **SEO-03**: 지도 페이지 SSR에서 빈 상태 대신 유의미한 콘텐츠가 렌더링된다
-- [ ] **SEO-04**: 주요 서브 페이지(today, new-highs, market, rate)에 전용 OG Image가 생성된다
+- [x] **SEO-03**: 지도 페이지 SSR에서 빈 상태 대신 유의미한 콘텐츠가 렌더링된다
+- [x] **SEO-04**: 주요 서브 페이지(today, new-highs, market, rate)에 전용 OG Image가 생성된다
 
 ### 코드 정리 / 리팩토링
 
@@ -86,8 +86,8 @@
 |-------------|-------|--------|
 | SEO-01 | Phase 1 | Pending |
 | SEO-02 | Phase 1 | Pending |
-| SEO-03 | Phase 1 | Pending |
-| SEO-04 | Phase 1 | Pending |
+| SEO-03 | Phase 1 | Complete |
+| SEO-04 | Phase 1 | Complete |
 | CLN-01 | Phase 2 | Pending |
 | CLN-02 | Phase 2 | Pending |
 | CLN-03 | Phase 2 | Pending |

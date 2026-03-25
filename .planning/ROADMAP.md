@@ -8,7 +8,7 @@
 
 | # | Phase | Goal | Requirements | Risk |
 |---|-------|------|-------------|------|
-| 1 | SEO / 메타데이터 수정 | 검색엔진 최적화 치명적 버그 해결 | SEO-01~04 | Low |
+| 1 | SEO / 메타데이터 수정 | 1/2 | In Progress|  |
 | 2 | 코드 정리 (패키지/네이밍) | 미사용 코드 제거, 네이밍 정리 | CLN-01~05 | Low |
 | 3 | 컴포넌트 분할 | 대형 파일 서브 컴포넌트로 분할 | CLN-06 | Medium |
 | 4 | 에러 핸들링 / 로깅 | 에러 바운더리 + 구조화 로깅 | ERR-01~04 | Low |
@@ -24,11 +24,11 @@
 
 **Requirements:** SEO-01, SEO-02, SEO-03, SEO-04
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 01-01-PLAN.md — Canonical URL 수정 및 고유 title 설정 (SEO-01, SEO-02)
-- [ ] 01-02-PLAN.md — 지도 SSR 콘텐츠 추가 및 OG Image 확인 (SEO-03, SEO-04)
+- [x] 01-02-PLAN.md — 지도 SSR 콘텐츠 추가 및 OG Image 확인 (SEO-03, SEO-04)
 
 **Scope:**
 - canonical URL을 모든 페이지에서 해당 페이지 URL로 수정
