@@ -332,10 +332,11 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
           <div className="flex-1 overflow-y-auto">
             {filteredTransactions.length === 0 ? (
               <div
-                className="flex h-40 items-center justify-center text-sm"
+                className="flex h-40 flex-col items-center justify-center gap-2 px-4 text-center text-sm"
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                좌표가 있는 거래 데이터가 없습니다
+                <p>지도 데이터를 불러오는 중입니다</p>
+                <p className="text-xs">전국 아파트 실거래가를 지도에서 확인할 수 있습니다. 폭락, 하락, 신고가 단지를 색상별로 구분하여 표시합니다.</p>
               </div>
             ) : (
               filteredTransactions.map((item) => (
