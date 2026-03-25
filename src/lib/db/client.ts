@@ -773,57 +773,12 @@ class RpcCaller {
 }
 
 // ---------------------------------------------------------------------------
-// Storage stub (for code that uses supabase.storage)
-// ---------------------------------------------------------------------------
-
-class StorageBucketApi {
-  private bucket: string;
-
-  constructor(bucket: string) {
-    this.bucket = bucket;
-  }
-
-  async upload(
-    path: string,
-    data: Buffer | Blob,
-    opts?: { contentType?: string; upsert?: boolean }
-  ): Promise<{ data: { path: string } | null; error: { message: string } | null }> {
-    // Storage operations still need Supabase — this is a stub.
-    // For now, return an error indicating storage must be handled separately.
-    console.warn(
-      `[db] Storage upload to "${this.bucket}/${path}" — Supabase storage not available via pg adapter.`
-    );
-    return {
-      data: null,
-      error: { message: "Storage operations require Supabase client. Use a separate storage adapter." },
-    };
-  }
-
-  getPublicUrl(path: string): { data: { publicUrl: string } } {
-    // Build a placeholder URL; real implementation would use the Supabase storage URL
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-    return {
-      data: {
-        publicUrl: `${supabaseUrl}/storage/v1/object/public/${this.bucket}/${path}`,
-      },
-    };
-  }
-}
-
-class StorageApi {
-  from(bucket: string): StorageBucketApi {
-    return new StorageBucketApi(bucket);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Public API — drop-in replacement for Supabase client
 // ---------------------------------------------------------------------------
 
 export interface DbClient {
   from: (table: string) => QueryBuilder;
   rpc: (fnName: string, args?: Record<string, any>) => RpcCaller;
-  storage: StorageApi;
 }
 
 export function createDbClient(): DbClient {
@@ -831,7 +786,6 @@ export function createDbClient(): DbClient {
     from: (table: string) => new QueryBuilder(table),
     rpc: (fnName: string, args: Record<string, any> = {}) =>
       new RpcCaller(fnName, args),
-    storage: new StorageApi(),
   };
 }
 

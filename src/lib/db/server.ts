@@ -1,4 +1,4 @@
-import { createDbClient, type DbClient } from "@/lib/db/client";
+import { createDbClient, type DbClient } from "./client";
 
 export async function createClient(): Promise<DbClient> {
   return createDbClient();

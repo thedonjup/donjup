@@ -1,4 +1,4 @@
-import { createDbClient, type DbClient } from "@/lib/db/client";
+import { createDbClient, type DbClient } from "./client";
 
 /**
  * Rent/index data client — now uses the same CockroachDB pool
