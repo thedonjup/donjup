@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { formatPrice } from "@/lib/format";
 
 declare global {
   interface Window {
@@ -36,17 +37,6 @@ function getMarkerLabel(item: MapTransaction): string {
   if (item.change_rate !== null && item.change_rate <= -10) return "하락";
   if (item.is_new_high) return "신고가";
   return "";
-}
-
-function formatPrice(price: number): string {
-  if (price >= 10000) {
-    const billions = Math.floor(price / 10000);
-    const remainder = price % 10000;
-    return remainder > 0
-      ? `${billions}억 ${remainder.toLocaleString()}만`
-      : `${billions}억`;
-  }
-  return `${price.toLocaleString()}만`;
 }
 
 interface KakaoMapProps {
