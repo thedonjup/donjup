@@ -166,7 +166,7 @@ function Header() {
         </Link>
 
         {/* Desktop Navigation — 1024px 이상에서만 표시 */}
-        <nav className="hidden items-center gap-0.5 lg:flex">
+        <nav className="hidden items-center gap-0.5 lg:flex" aria-label="주요 내비게이션">
           <NavLink href="/today">오늘거래</NavLink>
           <NavLink href="/new-highs">신고가</NavLink>
           <NavLink href="/market">지역별</NavLink>
@@ -249,7 +249,7 @@ function MobileSearchToggle() {
 
 function Footer() {
   return (
-    <footer className="border-t" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
+    <footer className="border-t" aria-label="사이트 정보" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
           {/* Brand */}

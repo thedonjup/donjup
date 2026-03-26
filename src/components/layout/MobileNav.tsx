@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
@@ -20,12 +20,15 @@ const NAV_ITEMS = [
   { href: "/search", label: "검색" },
 ];
 
-export function HamburgerButton({ onClick }: { onClick: () => void }) {
+export function HamburgerButton({ onClick, buttonRef }: { onClick: () => void; buttonRef?: React.RefObject<HTMLButtonElement | null> }) {
   return (
     <button
+      ref={buttonRef}
       onClick={onClick}
       style={{ width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", background: "transparent", cursor: "pointer", color: "var(--color-text-secondary)" }}
       aria-label="메뉴 열기"
+      aria-expanded={false}
+      aria-haspopup="dialog"
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
         <path d="M3 5h14M3 10h14M3 15h14" />
@@ -60,15 +63,31 @@ export function ThemeToggle() {
 export default function MobileNav() {
   const [open, setOpen] = useState(false);
   const { theme } = useTheme();
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const openButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // 메뉴 열 때 스크롤 잠금
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
+      closeButtonRef.current?.focus();
     } else {
       document.body.style.overflow = "";
+      openButtonRef.current?.focus();
     }
     return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  // Escape 키로 드로어 닫기
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open]);
 
   const isDark = theme === "dark";
@@ -80,11 +99,12 @@ export default function MobileNav() {
 
   return (
     <>
-      <HamburgerButton onClick={() => setOpen(true)} />
+      <HamburgerButton onClick={() => setOpen(true)} buttonRef={openButtonRef} />
 
       {/* Backdrop */}
       {open && (
         <div
+          aria-hidden="true"
           style={{
             position: "fixed",
             top: 0, left: 0, right: 0, bottom: 0,
@@ -98,6 +118,9 @@ export default function MobileNav() {
 
       {/* Drawer */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="내비게이션 메뉴"
         style={{
           position: "fixed",
           top: 0,
@@ -115,6 +138,7 @@ export default function MobileNav() {
         <div style={{ display: "flex", height: "64px", alignItems: "center", justifyContent: "space-between", padding: "0 20px" }}>
           <span style={{ fontSize: "18px", fontWeight: 800, color: textPrimary }}>돈줍</span>
           <button
+            ref={closeButtonRef}
             onClick={() => setOpen(false)}
             style={{ width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "8px", border: "none", background: "transparent", cursor: "pointer", color: textSecondary }}
             aria-label="메뉴 닫기"
