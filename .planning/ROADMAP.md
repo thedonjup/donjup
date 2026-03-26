@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-26
 **Milestone:** v1.0 — 사이트 안정화
-**Phases:** 8
+**Phases:** 9
 
 ## Phase Overview
 
@@ -16,6 +16,7 @@
 | 6 | TypeScript 타입 강화 | 핵심 모듈 any 제거, 인터페이스 정의 | TYPE-01~03 | Low |
 | 7 | 접근성 (a11y) | 2/2 | Complete   | 2026-03-26 |
 | 8 | 보안 강화 | 1/1 | Complete   | 2026-03-26 |
+| 9 | 모바일 UI 전면 개편 | 모바일 읽기/터치/탐색 최적화 | MOBILE-01~09 | Low |
 
 ## Phase Details
 
@@ -225,6 +226,39 @@ Plans:
 
 ---
 
+### Phase 9: 모바일 UI 전면 개편
+**Goal:** 모바일(width < 768px)에서 모든 페이지가 읽기/터치/탐색에 최적화된다
+
+**Requirements:** MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04, MOBILE-05, MOBILE-06, MOBILE-07, MOBILE-08, MOBILE-09
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — 신고가 모바일 카드 + 금리 은행명 한국어화 + 홈 히어로 모바일 타이포그래피 (MOBILE-06, MOBILE-07, MOBILE-09)
+- [ ] 09-02-PLAN.md — MobileNav 터치 차단 수정 + 면적 선택 수평 칩 + 차트 모바일 최적화 (MOBILE-02, MOBILE-03, MOBILE-04)
+- [ ] 09-03-PLAN.md — 거래 테이블 모바일 카드 전환 + 지도 페이지 모바일 레이아웃 수정 (MOBILE-01, MOBILE-05, MOBILE-08)
+
+**Scope:**
+- 신고가/오늘거래 테이블 → 모바일 카드 레이아웃
+- 사이드 메뉴 backdrop 터치 차단 수정
+- 면적 선택 UI → 수평 스크롤 칩
+- 차트 모바일 높이 280px + Y축 레이블 간소화
+- 거래 테이블 → 모바일 카드 전환
+- 홈 히어로 모바일 타이포그래피
+- 금리 은행명 코드 → 한국어 fallback 강화
+- 지도 페이지 로딩 텍스트 + 바텀시트 safe area
+
+**Dependencies:** 없음 (독립적, 기존 기능 유지하며 모바일 UI만 개선)
+
+**Success Criteria:**
+- 모든 테이블이 모바일에서 카드 형태로 표시 (`sm:hidden` + `hidden sm:block` 패턴)
+- 사이드 메뉴 backdrop에 `touchAction: none` 존재
+- 면적 칩이 `overflow-x-auto` 수평 스크롤
+- 차트 모바일 280px 높이
+- `pnpm build` 성공
+
+---
+
 ## Dependency Graph
 
 ```
@@ -235,6 +269,7 @@ Phase 5 (성능) ─────────────────────
                     Phase 6 (타입) ─────────────┤   │
                     Phase 7 (접근성) ────────────┤   │
                                                 └───┴── Phase 8 (보안)
+Phase 9 (모바일UI) ─── 독립적 (병렬 실행 가능)
 ```
 
 ## Risk Register
@@ -246,7 +281,8 @@ Phase 5 (성능) ─────────────────────
 | CSP 헤더로 외부 스크립트 차단 | GA/AdSense/Kakao 동작 중단 | 도메인별 허용 규칙 사전 정의 |
 | pg_trgm 인덱스 추가 시 Neon 제한 | 인덱스 생성 실패 | Neon free tier 제약 확인 |
 | 크론잡 스케줄 변경 시 데이터 수집 누락 | 일일 데이터 빈틈 | 변경 전후 데이터 검증 |
+| 모바일 카드 전환 시 데스크탑 UI 깨짐 | UX 퇴화 | sm: breakpoint 분기 + 빌드 검증 |
 
 ---
 *Roadmap created: 2026-03-26*
-*Last updated: 2026-03-26 after Phase 7 planning*
+*Last updated: 2026-03-27 after Phase 9 planning*
