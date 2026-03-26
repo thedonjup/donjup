@@ -206,6 +206,7 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
       <div className="relative flex-1">
         {!sdkReady && (
           <div
+            aria-live="polite"
             className="flex h-full items-center justify-center"
             style={{ background: "var(--color-surface-page)" }}
           >
@@ -217,7 +218,18 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
             </div>
           </div>
         )}
-        <div ref={mapRef} className="h-full w-full" />
+        <p className="sr-only">
+          카카오맵 기반 전국 아파트 실거래가 지도입니다.
+          현재 {filteredTransactions.length}건의 거래가 표시되어 있습니다.
+          지도 조작은 마우스 또는 터치로 가능합니다.
+        </p>
+        <div
+          ref={mapRef}
+          role="application"
+          aria-label="전국 아파트 실거래가 지도"
+          aria-roledescription="인터랙티브 지도"
+          className="h-full w-full"
+        />
       </div>
 
       <MobileBottomSheet

@@ -42,7 +42,7 @@ export default function MapSidePanel({
             background: "var(--color-surface-card)",
           }}
         >
-          <div className="flex gap-2">
+          <div role="group" aria-label="지도 필터" className="flex gap-2">
             <FilterChip
               active={filter === "all"}
               onClick={() => setFilter("all")}
