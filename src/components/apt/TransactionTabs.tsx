@@ -2,20 +2,9 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
+import type { AptTransaction, AptRentTransaction } from "@/components/apt/AptDetailClient";
 
-interface Transaction {
-  id: string;
-  size_sqm: number;
-  floor: number;
-  trade_price: number;
-  trade_date: string;
-  highest_price: number | null;
-  change_rate: number | null;
-  is_new_high: boolean;
-  is_significant_drop: boolean;
-  deal_type: string | null;
-  drop_level?: "normal" | "decline" | "crash" | "severe";
-}
+type Transaction = AptTransaction;
 
 const DROP_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   decline: { label: "하락", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
@@ -23,16 +12,7 @@ const DROP_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: stri
   severe: { label: "대폭락", color: "#dc2626", bg: "rgba(220,38,38,0.12)" },
 };
 
-interface RentTransaction {
-  id: string;
-  size_sqm: number;
-  floor: number | null;
-  deposit: number;
-  monthly_rent: number;
-  rent_type: string;
-  contract_type: string | null;
-  trade_date: string;
-}
+type RentTransaction = AptRentTransaction;
 
 function sqmToPyeong(sqm: number): string {
   return (sqm / 3.3058).toFixed(0);
@@ -46,13 +26,22 @@ function formatSize(sqm: number, unit: "sqm" | "pyeong"): string {
 export default function TransactionTabs({
   saleTxns,
   rentTxns,
+  externalSelectedSize,
+  sizeUnit: externalSizeUnit,
 }: {
   saleTxns: Transaction[];
   rentTxns: RentTransaction[];
+  externalSelectedSize?: number | null;
+  sizeUnit?: "sqm" | "pyeong";
 }) {
   const [tab, setTab] = useState<"sale" | "rent">("sale");
-  const [selectedSize, setSelectedSize] = useState<number | null>(null);
-  const [sizeUnit, setSizeUnit] = useState<"sqm" | "pyeong">("sqm");
+  const [internalSelectedSize, setInternalSelectedSize] = useState<number | null>(null);
+  const [internalSizeUnit, setInternalSizeUnit] = useState<"sqm" | "pyeong">("sqm");
+
+  const selectedSize = externalSelectedSize !== undefined ? externalSelectedSize : internalSelectedSize;
+  const setSelectedSize = externalSelectedSize !== undefined ? () => {} : setInternalSelectedSize;
+  const sizeUnit = externalSizeUnit ?? internalSizeUnit;
+  const setSizeUnit = externalSizeUnit ? () => {} : setInternalSizeUnit;
 
   // 면적 목록 추출 (매매 + 전월세 통합)
   const sizeOptions = useMemo(() => {
@@ -84,8 +73,8 @@ export default function TransactionTabs({
 
   return (
     <div>
-      {/* 면적 필터 + ㎡/평 토글 */}
-      {sizeOptions.length > 1 && (
+      {/* 면적 필터 + ㎡/평 토글 (외부 제어 시 숨김) */}
+      {sizeOptions.length > 1 && externalSelectedSize === undefined && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium" style={{ color: "var(--color-text-tertiary)" }}>

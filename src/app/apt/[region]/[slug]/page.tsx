@@ -7,8 +7,7 @@ import AdSlot from "@/components/ads/AdSlot";
 import CoupangBanner from "@/components/CoupangBanner";
 import ShareButtons from "@/components/ShareButtons";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
-import PriceHistoryChart from "@/components/charts/PriceHistoryChartWrapper";
-import TransactionTabs from "@/components/apt/TransactionTabs";
+import AptDetailClient, { type AptTransaction, type AptRentTransaction } from "@/components/apt/AptDetailClient";
 import NotifyButton from "@/components/apt/NotifyButton";
 import FavoriteButton from "@/components/apt/FavoriteButton";
 import MiniLoanCalculator from "@/components/apt/MiniLoanCalculator";
@@ -18,29 +17,8 @@ import ViewDetailTracker from "@/components/analytics/ViewDetailTracker";
 
 export const revalidate = 3600;
 
-interface Transaction {
-  id: string;
-  size_sqm: number;
-  floor: number;
-  trade_price: number;
-  trade_date: string;
-  highest_price: number | null;
-  change_rate: number | null;
-  is_new_high: boolean;
-  is_significant_drop: boolean;
-  deal_type: string | null;
-}
-
-interface RentTransaction {
-  id: string;
-  size_sqm: number;
-  floor: number | null;
-  deposit: number;
-  monthly_rent: number;
-  rent_type: string;
-  contract_type: string | null;
-  trade_date: string;
-}
+type Transaction = AptTransaction;
+type RentTransaction = AptRentTransaction;
 
 export async function generateMetadata({
   params,
@@ -422,30 +400,14 @@ export default async function AptDetailPage({
         />
       </div>
 
-      {/* 가격 추이 차트 */}
-      {txns.length >= 2 && (
-        <div className="mb-8">
-          <PriceHistoryChart
-            transactions={txns.map((t) => ({
-              trade_date: t.trade_date,
-              trade_price: t.trade_price,
-              size_sqm: t.size_sqm,
-            }))}
-          />
-        </div>
-      )}
+      {/* 면적 선택 + 가격 추이 차트 + 거래 이력 (통합 상태 관리) */}
+      <AptDetailClient saleTxns={txns} rentTxns={rentTxns} />
 
-      <AdSlot slotId="apt-detail-infeed" format="infeed" />
+      <AdSlot slotId="apt-detail-infeed" format="infeed" className="mt-6" />
 
       <div className="mt-6 grid gap-8 lg:grid-cols-3">
-        {/* 좌측: 거래 이력 탭 */}
-        <div className="lg:col-span-2">
-          <h2 className="mb-4 text-lg font-bold t-text">거래 이력</h2>
-          <TransactionTabs saleTxns={txns} rentTxns={rentTxns} />
-        </div>
-
         {/* 우측 사이드바 */}
-        <aside className="space-y-6">
+        <aside className="space-y-6 lg:col-start-3">
           {/* 면적별 시세 */}
           <div className="rounded-2xl border p-5" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
             <h2 className="mb-4 font-bold t-text">면적별 시세</h2>

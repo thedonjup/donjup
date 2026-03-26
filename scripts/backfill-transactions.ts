@@ -23,7 +23,7 @@ if (!DATABASE_URL || !MOLIT_API_KEY) {
   process.exit(1);
 }
 
-const pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: true }, max: 3 });
+const pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 });
 
 // Supabase 호환 간이 래퍼
 type DbResult = { data: any; error: any };
