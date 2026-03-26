@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 04
 status: executing
-last_updated: "2026-03-26T07:00:00.000Z"
+last_updated: "2026-03-26T08:00:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 3
@@ -20,7 +20,7 @@ progress:
 
 ## Active Phase
 
-Phase 04 — 에러 핸들링 (Plan 04-01 complete)
+Phase 04 — 에러 핸들링 (Plan 04-01 complete, Plan 04-02 complete)
 
 ## Completed Phases
 
@@ -48,6 +48,8 @@ Phase 04 — 에러 핸들링 (Plan 04-01 complete)
 | 2026-03-26 | MapTransaction KakaoMap.tsx에서 re-export | map/page.tsx 변경 없이 하위 호환성 유지 |
 | 2026-03-26 | 외부 로깅 라이브러리 미사용 | 서버리스 환경 오버헤드 최소화 |
 | 2026-03-26 | global-error.tsx 인라인 스타일 | globals.css가 layout.tsx 밖에서 로드 불가 |
+| 2026-03-26 | 크론잡 응답에는 e.message 허용 | CRON_SECRET 보호 내부 엔드포인트이므로 운영 디버깅 우선 |
+| 2026-03-26 | generic 에러 메시지 한국어 통일 | "서버 오류가 발생했습니다" — 사용자 대면 일관성 |
 
 ---
 *State initialized: 2026-03-26*
