@@ -1,42 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import Link from "next/link";
-import { formatPrice } from "@/lib/format";
+import {
+  MapTransaction,
+  getMarkerColor,
+  buildInfoWindowContent,
+} from "./map-utils";
+import MapSidePanel from "./MapSidePanel";
+import MobileBottomSheet from "./MobileBottomSheet";
+
+export type { MapTransaction } from "./map-utils";
 
 declare global {
   interface Window {
     kakao: any;
   }
-}
-
-export interface MapTransaction {
-  id: string;
-  apt_name: string;
-  region_name: string;
-  dong_name: string | null;
-  trade_price: number;
-  change_rate: number | null;
-  is_new_high: boolean;
-  slug: string;
-  latitude: number;
-  longitude: number;
-  size_sqm: number | null;
-  trade_date: string | null;
-}
-
-function getMarkerColor(item: MapTransaction): string {
-  if (item.change_rate !== null && item.change_rate <= -15) return "#dc2626";
-  if (item.change_rate !== null && item.change_rate <= -10) return "#f97316";
-  if (item.is_new_high) return "#10b981";
-  return "#94a3b8";
-}
-
-function getMarkerLabel(item: MapTransaction): string {
-  if (item.change_rate !== null && item.change_rate <= -15) return "폭락";
-  if (item.change_rate !== null && item.change_rate <= -10) return "하락";
-  if (item.is_new_high) return "신고가";
-  return "";
 }
 
 interface KakaoMapProps {
@@ -85,7 +63,6 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
 
     mapInstanceRef.current = map;
 
-    // Add zoom control
     const zoomControl = new kakao.maps.ZoomControl();
     map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
 
@@ -102,7 +79,6 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
     const kakao = window.kakao;
     const map = mapInstanceRef.current;
 
-    // Clear existing
     if (clustererRef.current) {
       clustererRef.current.clear();
     }
@@ -119,7 +95,6 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
       const position = new kakao.maps.LatLng(item.latitude, item.longitude);
       const color = getMarkerColor(item);
 
-      // Create custom marker content
       const markerContent = document.createElement("div");
       markerContent.style.cssText = `
         width: 14px; height: 14px; border-radius: 50%;
@@ -134,42 +109,7 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
         xAnchor: 0.5,
       });
 
-      const label = getMarkerLabel(item);
-      const rateStr =
-        item.change_rate !== null
-          ? `${item.change_rate > 0 ? "+" : ""}${item.change_rate.toFixed(1)}%`
-          : "-";
-      const rateColor =
-        item.change_rate !== null && item.change_rate < 0
-          ? "var(--color-semantic-drop)"
-          : item.is_new_high
-            ? "var(--color-semantic-rise)"
-            : "var(--color-text-secondary)";
-
-      const infoContent = `
-        <div style="
-          padding: 12px 16px; border-radius: 12px; min-width: 200px; max-width: 260px;
-          background: var(--color-surface-card, #fff); border: 1px solid var(--color-border, #e2e8f0);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: inherit;
-        ">
-          <div style="font-weight: 700; font-size: 14px; color: var(--color-text-primary, #0f172a); margin-bottom: 4px;">
-            ${item.apt_name}
-            ${label ? `<span style="font-size: 11px; font-weight: 600; color: ${color}; margin-left: 4px;">${label}</span>` : ""}
-          </div>
-          <div style="font-size: 12px; color: var(--color-text-secondary, #475569); margin-bottom: 6px;">
-            ${item.region_name} ${item.dong_name || ""}
-          </div>
-          <div style="font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 4px;">
-            ${formatPrice(item.trade_price)}
-            <span style="font-size: 12px; color: ${rateColor}; margin-left: 6px;">${rateStr}</span>
-          </div>
-          ${item.size_sqm ? `<div style="font-size: 11px; color: var(--color-text-tertiary, #94a3b8);">${item.size_sqm}㎡ ${item.trade_date ? `· ${item.trade_date}` : ""}</div>` : ""}
-          <a href="/apt/${item.slug}" style="
-            display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600;
-            color: #059669; text-decoration: none;
-          ">상세보기 &rarr;</a>
-        </div>
-      `;
+      const infoContent = buildInfoWindowContent(item);
 
       markerContent.addEventListener("click", () => {
         if (infoWindowRef.current) {
@@ -192,7 +132,6 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
 
     markersRef.current = markers;
 
-    // Close infowindow when clicking map background
     kakao.maps.event.addListener(map, "click", () => {
       if (infoWindowRef.current) {
         infoWindowRef.current.setMap(null);
@@ -211,49 +150,11 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
       mapInstanceRef.current.setLevel(5);
       setActiveId(item.id);
 
-      // Show info window
       if (infoWindowRef.current) {
         infoWindowRef.current.setMap(null);
       }
 
-      const color = getMarkerColor(item);
-      const label = getMarkerLabel(item);
-      const rateStr =
-        item.change_rate !== null
-          ? `${item.change_rate > 0 ? "+" : ""}${item.change_rate.toFixed(1)}%`
-          : "-";
-      const rateColor =
-        item.change_rate !== null && item.change_rate < 0
-          ? "var(--color-semantic-drop)"
-          : item.is_new_high
-            ? "var(--color-semantic-rise)"
-            : "var(--color-text-secondary)";
-
-      const infoContent = `
-        <div style="
-          padding: 12px 16px; border-radius: 12px; min-width: 200px; max-width: 260px;
-          background: var(--color-surface-card, #fff); border: 1px solid var(--color-border, #e2e8f0);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: inherit;
-        ">
-          <div style="font-weight: 700; font-size: 14px; color: var(--color-text-primary, #0f172a); margin-bottom: 4px;">
-            ${item.apt_name}
-            ${label ? `<span style="font-size: 11px; font-weight: 600; color: ${color}; margin-left: 4px;">${label}</span>` : ""}
-          </div>
-          <div style="font-size: 12px; color: var(--color-text-secondary, #475569); margin-bottom: 6px;">
-            ${item.region_name} ${item.dong_name || ""}
-          </div>
-          <div style="font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 4px;">
-            ${formatPrice(item.trade_price)}
-            <span style="font-size: 12px; color: ${rateColor}; margin-left: 6px;">${rateStr}</span>
-          </div>
-          ${item.size_sqm ? `<div style="font-size: 11px; color: var(--color-text-tertiary, #94a3b8);">${item.size_sqm}㎡ ${item.trade_date ? `· ${item.trade_date}` : ""}</div>` : ""}
-          <a href="/apt/${item.slug}" style="
-            display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600;
-            color: #059669; text-decoration: none;
-          ">상세보기 &rarr;</a>
-        </div>
-      `;
-
+      const infoContent = buildInfoWindowContent(item);
       const infoWindow = new kakao.maps.CustomOverlay({
         position,
         content: infoContent,
@@ -268,167 +169,15 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
 
   return (
     <div className="flex h-[calc(100vh-64px)] w-full">
-      {/* Left panel */}
-      <div
-        className={`relative flex-shrink-0 overflow-hidden border-r transition-all duration-300 ${
-          panelOpen ? "w-[380px]" : "w-0"
-        }`}
-        style={{
-          borderColor: "var(--color-border)",
-          background: "var(--color-surface-card)",
-        }}
-      >
-        <div className="flex h-full w-[380px] flex-col">
-          {/* Filters */}
-          <div
-            className="sticky top-0 z-10 border-b p-3"
-            style={{
-              borderColor: "var(--color-border)",
-              background: "var(--color-surface-card)",
-            }}
-          >
-            <div className="flex gap-2">
-              <FilterChip
-                active={filter === "all"}
-                onClick={() => setFilter("all")}
-                color="#94a3b8"
-              >
-                전체
-              </FilterChip>
-              <FilterChip
-                active={filter === "drop"}
-                onClick={() => setFilter("drop")}
-                color="#ef4444"
-              >
-                폭락/하락
-              </FilterChip>
-              <FilterChip
-                active={filter === "high"}
-                onClick={() => setFilter("high")}
-                color="#10b981"
-              >
-                신고가
-              </FilterChip>
-            </div>
-            <div
-              className="mt-2 text-xs"
-              style={{ color: "var(--color-text-tertiary)" }}
-            >
-              {filteredTransactions.length}개 단지
-            </div>
-          </div>
-
-          {/* List */}
-          <div className="flex-1 overflow-y-auto">
-            {filteredTransactions.length === 0 ? (
-              <div
-                className="flex h-40 flex-col items-center justify-center gap-2 px-4 text-center text-sm"
-                style={{ color: "var(--color-text-tertiary)" }}
-              >
-                <p>지도 데이터를 불러오는 중입니다</p>
-                <p className="text-xs">전국 아파트 실거래가를 지도에서 확인할 수 있습니다. 폭락, 하락, 신고가 단지를 색상별로 구분하여 표시합니다.</p>
-              </div>
-            ) : (
-              filteredTransactions.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleItemClick(item)}
-                  className="w-full border-b px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-elevated)]"
-                  style={{
-                    borderColor: "var(--color-border-subtle)",
-                    borderLeft:
-                      activeId === item.id
-                        ? "3px solid #059669"
-                        : "3px solid transparent",
-                  }}
-                >
-                  <div className="flex items-start gap-2">
-                    <span
-                      className="mt-1.5 block h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                      style={{ background: getMarkerColor(item) }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div
-                        className="truncate text-sm font-bold"
-                        style={{ color: "var(--color-text-primary)" }}
-                      >
-                        {item.apt_name}
-                      </div>
-                      <div
-                        className="text-xs"
-                        style={{ color: "var(--color-text-tertiary)" }}
-                      >
-                        {item.region_name} {item.dong_name || ""}
-                      </div>
-                      <div className="mt-1 flex items-baseline gap-2">
-                        <span
-                          className="tabular-nums text-sm font-bold"
-                          style={{ color: "var(--color-text-primary)" }}
-                        >
-                          {formatPrice(item.trade_price)}
-                        </span>
-                        {item.change_rate !== null && (
-                          <span
-                            className="tabular-nums text-xs font-semibold"
-                            style={{
-                              color:
-                                item.change_rate < 0
-                                  ? "var(--color-semantic-drop)"
-                                  : "var(--color-semantic-rise)",
-                            }}
-                          >
-                            {item.change_rate > 0 ? "+" : ""}
-                            {item.change_rate.toFixed(1)}%
-                          </span>
-                        )}
-                        {getMarkerLabel(item) && (
-                          <span
-                            className="rounded px-1.5 py-0.5 text-[11px] font-semibold text-white"
-                            style={{ background: getMarkerColor(item) }}
-                          >
-                            {getMarkerLabel(item)}
-                          </span>
-                        )}
-                      </div>
-                      {item.size_sqm && (
-                        <div
-                          className="mt-0.5 text-[11px]"
-                          style={{ color: "var(--color-text-tertiary)" }}
-                        >
-                          {item.size_sqm}㎡
-                          {item.trade_date ? ` · ${item.trade_date}` : ""}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-
-          {/* Panel toggle */}
-          <button
-            onClick={() => setPanelOpen(false)}
-            className="flex items-center gap-1 border-t px-4 py-2 text-xs font-medium transition-colors hover:bg-[var(--color-surface-elevated)]"
-            style={{
-              borderColor: "var(--color-border)",
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-            패널 접기
-          </button>
-        </div>
-      </div>
+      <MapSidePanel
+        transactions={filteredTransactions}
+        activeId={activeId}
+        filter={filter}
+        setFilter={setFilter}
+        panelOpen={panelOpen}
+        setPanelOpen={setPanelOpen}
+        onItemClick={handleItemClick}
+      />
 
       {/* Expand handle (when panel is closed) */}
       {!panelOpen && (
@@ -471,7 +220,6 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
         <div ref={mapRef} className="h-full w-full" />
       </div>
 
-      {/* Mobile bottom sheet */}
       <MobileBottomSheet
         transactions={filteredTransactions}
         activeId={activeId}
@@ -479,152 +227,6 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
         setFilter={setFilter}
         onItemClick={handleItemClick}
       />
-    </div>
-  );
-}
-
-function FilterChip({
-  active,
-  onClick,
-  color,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  color: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
-      style={{
-        background: active ? color : "var(--color-surface-elevated)",
-        color: active ? "#fff" : "var(--color-text-secondary)",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function MobileBottomSheet({
-  transactions,
-  activeId,
-  filter,
-  setFilter,
-  onItemClick,
-}: {
-  transactions: MapTransaction[];
-  activeId: string | null;
-  filter: "all" | "drop" | "high";
-  setFilter: (f: "all" | "drop" | "high") => void;
-  onItemClick: (item: MapTransaction) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div
-      className={`fixed bottom-0 left-0 right-0 z-30 rounded-t-2xl border-t transition-all duration-300 md:hidden ${
-        expanded ? "h-[60vh]" : "h-[140px]"
-      }`}
-      style={{
-        borderColor: "var(--color-border)",
-        background: "var(--color-surface-card)",
-        boxShadow: "0 -4px 20px rgba(0,0,0,0.1)",
-      }}
-    >
-      {/* Drag handle */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full justify-center py-2"
-      >
-        <div
-          className="h-1 w-10 rounded-full"
-          style={{ background: "var(--color-text-tertiary)" }}
-        />
-      </button>
-
-      {/* Filter chips */}
-      <div className="flex gap-2 px-4 pb-2">
-        <FilterChip
-          active={filter === "all"}
-          onClick={() => setFilter("all")}
-          color="#94a3b8"
-        >
-          전체
-        </FilterChip>
-        <FilterChip
-          active={filter === "drop"}
-          onClick={() => setFilter("drop")}
-          color="#ef4444"
-        >
-          폭락/하락
-        </FilterChip>
-        <FilterChip
-          active={filter === "high"}
-          onClick={() => setFilter("high")}
-          color="#10b981"
-        >
-          신고가
-        </FilterChip>
-        <span
-          className="ml-auto self-center text-xs"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          {transactions.length}개
-        </span>
-      </div>
-
-      {/* Scrollable list */}
-      <div className="overflow-y-auto px-4" style={{ maxHeight: "calc(100% - 70px)" }}>
-        {transactions.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => {
-              onItemClick(item);
-              setExpanded(false);
-            }}
-            className="flex w-full items-center gap-3 border-b py-2.5 text-left"
-            style={{ borderColor: "var(--color-border-subtle)" }}
-          >
-            <span
-              className="block h-2.5 w-2.5 flex-shrink-0 rounded-full"
-              style={{ background: getMarkerColor(item) }}
-            />
-            <div className="min-w-0 flex-1">
-              <span
-                className="block truncate text-sm font-bold"
-                style={{ color: "var(--color-text-primary)" }}
-              >
-                {item.apt_name}
-              </span>
-              <span className="flex items-baseline gap-2">
-                <span
-                  className="tabular-nums text-xs font-bold"
-                  style={{ color: "var(--color-text-primary)" }}
-                >
-                  {formatPrice(item.trade_price)}
-                </span>
-                {item.change_rate !== null && (
-                  <span
-                    className="tabular-nums text-[11px] font-semibold"
-                    style={{
-                      color:
-                        item.change_rate < 0
-                          ? "var(--color-semantic-drop)"
-                          : "var(--color-semantic-rise)",
-                    }}
-                  >
-                    {item.change_rate > 0 ? "+" : ""}
-                    {item.change_rate.toFixed(1)}%
-                  </span>
-                )}
-              </span>
-            </div>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
