@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 02
 status: executing
-last_updated: "2026-03-26T00:04:54.929Z"
+last_updated: "2026-03-26T00:05:00Z"
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State: 돈줍 사이트 안정화
@@ -42,6 +42,8 @@ None — run `/gsd:plan-phase 1` to start.
 | 2026-03-26 | 새 기능 없이 안정화만 | 현재 품질 문제 우선 해결 |
 | 2026-03-26 | ORM 교체 없이 기존 개선만 | 전면 교체 리스크 큼 |
 | 2026-03-26 | Fine 단위 (8 phases) | 사용자 선택 |
+| 2026-03-26 | formatPrice single-source via @/lib/format | 중복 정의 제거, 유지보수성 향상 |
+| 2026-03-26 | postgres + @neondatabase/serverless 제거 | 미사용 패키지, pg만 유지 |
 
 ---
 *State initialized: 2026-03-26*

@@ -53,7 +53,7 @@ Plans:
 **Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 02-01-PLAN.md — formatPrice 중복 제거, Instagram 클라이언트 통합, 미사용 패키지 제거 (CLN-01, CLN-02, CLN-03)
+- [x] 02-01-PLAN.md — formatPrice 중복 제거, Instagram 클라이언트 통합, 미사용 패키지 제거 (CLN-01, CLN-02, CLN-03)
 - [x] 02-02-PLAN.md — supabase→db 리네이밍 + Storage stub 제거 (CLN-04, CLN-05)
 
 **Scope:**

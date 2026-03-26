@@ -14,9 +14,9 @@
 
 ### 코드 정리 / 리팩토링
 
-- [ ] **CLN-01**: formatPrice 함수가 단일 소스(src/lib/format.ts)에서만 정의된다
-- [ ] **CLN-02**: Instagram API 클라이언트가 하나로 통합된다
-- [ ] **CLN-03**: 미사용 PostgreSQL 패키지(postgres, @neondatabase/serverless)가 제거된다
+- [x] **CLN-01**: formatPrice 함수가 단일 소스(src/lib/format.ts)에서만 정의된다
+- [x] **CLN-02**: Instagram API 클라이언트가 하나로 통합된다
+- [x] **CLN-03**: 미사용 PostgreSQL 패키지(postgres, @neondatabase/serverless)가 제거된다
 - [x] **CLN-04**: src/lib/supabase/ 디렉토리가 실제 역할에 맞게 src/lib/db/로 리네이밍된다
 - [x] **CLN-05**: Storage stub이 제거되거나 적절한 구현으로 교체된다
 - [ ] **CLN-06**: 대형 컴포넌트(calculator 1101줄, KakaoMap 640줄)가 서브 컴포넌트로 분할된다
@@ -88,9 +88,9 @@
 | SEO-02 | Phase 1 | Complete |
 | SEO-03 | Phase 1 | Complete |
 | SEO-04 | Phase 1 | Complete |
-| CLN-01 | Phase 2 | Pending |
-| CLN-02 | Phase 2 | Pending |
-| CLN-03 | Phase 2 | Pending |
+| CLN-01 | Phase 2 | Complete |
+| CLN-02 | Phase 2 | Complete |
+| CLN-03 | Phase 2 | Complete |
 | CLN-04 | Phase 2 | Complete |
 | CLN-05 | Phase 2 | Complete |
 | CLN-06 | Phase 3 | Pending |
