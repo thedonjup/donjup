@@ -87,9 +87,24 @@ export default async function SearchPage({
       let paramIdx = 1;
 
       if (query.length > 0) {
-        conditions.push(`(c.apt_name ILIKE $${paramIdx} OR c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
-        values.push(`%${query}%`);
-        paramIdx++;
+        const parts = query.split(/\s+/).filter(Boolean);
+
+        if (parts.length >= 2) {
+          // "동대문 두산" → 지역 + 아파트명 분리 검색
+          const regionPart = parts[0];
+          const aptPart = parts.slice(1).join(" ");
+          conditions.push(`(c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
+          values.push(`%${regionPart}%`);
+          paramIdx++;
+          conditions.push(`c.apt_name ILIKE $${paramIdx}`);
+          values.push(`%${aptPart}%`);
+          paramIdx++;
+        } else {
+          // 단일 키워드 — 아파트명/지역명/동명 모두 검색
+          conditions.push(`(c.apt_name ILIKE $${paramIdx} OR c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
+          values.push(`%${parts[0]}%`);
+          paramIdx++;
+        }
       }
 
       if (filterBuiltYearMin) {
