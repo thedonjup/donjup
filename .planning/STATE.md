@@ -4,19 +4,19 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 08
 status: executing
-last_updated: "2026-03-26T02:08:08.672Z"
+last_updated: "2026-03-26T02:11:29.547Z"
 progress:
   total_phases: 8
   completed_phases: 8
   total_plans: 14
-  completed_plans: 16
+  completed_plans: 18
 ---
 
 # Project State: 돈줍 사이트 안정화
 
 **Current Phase:** 08
 **Milestone:** v1.0 — 사이트 안정화
-**Status:** Executing Phase 08
+**Status:** Phase 08 Complete
 
 ## Active Phase
 
@@ -66,6 +66,11 @@ Phase 06 — 타입 (Plan 06-01, 06-02 complete)
 | 2026-03-26 | TransactionTabs tabpanel hidden 속성 토글 | conditional render 대신 DOM 유지로 스크린 리더 접근성 개선 |
 | 2026-03-26 | MobileNav Escape 핸들러 별도 useEffect | open 상태 의존성 분리로 리스너 정확한 attach/detach 보장 |
 | 2026-03-26 | CSP unsafe-inline + unsafe-eval 유지 | layout.tsx 인라인 스크립트(theme init, GA, JSON-LD) + Kakao Maps SDK eval 사용 — nonce 리팩터 다음 마일스톤으로 |
+| 2026-03-26 | ADMIN_EMAILS 서버 전용 | NEXT_PUBLIC_ prefix 제거로 클라이언트 번들 노출 차단 |
+| 2026-03-26 | ssl: true (Neon 표준 CA 신뢰) | rejectUnauthorized: false 제거 — Neon은 공인 CA 사용 |
+
+| 2026-03-26 | DAM content API Firebase ID token 인증 | 클라이언트가 Firebase Auth 사용하므로 CRON_SECRET보다 ID token이 적합 |
+| 2026-03-26 | push subscribe origin 허용 목록 제한 | donjup.com + www.donjup.com만 허용, 개발환경 제외 |
 
 ---
-*Last updated: 2026-03-26 after 08-03 completion*
+*Last updated: 2026-03-26 after 08-02 completion*

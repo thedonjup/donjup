@@ -201,6 +201,11 @@ Plans:
 
 **Requirements:** SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06
 
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 08-01-PLAN.md — ADMIN_EMAILS 서버 전용 이동 + SSL 설정 수정 + rate limiter 확인 (SEC-01, SEC-03, SEC-05)
+
 **Scope:**
 - NEXT_PUBLIC_ADMIN_EMAILS → ADMIN_EMAILS (서버 전용)
 - DAM content API에 CRON_SECRET 또는 Firebase 인증 추가
