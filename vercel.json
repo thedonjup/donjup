@@ -1,6 +1,34 @@
 {
   "crons": [
     {
+      "path": "/api/cron/fetch-reb-index",
+      "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/cron/fetch-bank-rates",
+      "schedule": "30 10 * * 1"
+    },
+    {
+      "path": "/api/cron/fetch-transactions?type=2&batch=0",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-transactions?type=3&batch=0",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/cron/geocode-complexes",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/generate-cardnews",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/post-instagram",
+      "schedule": "30 19 * * *"
+    },
+    {
       "path": "/api/cron/fetch-transactions?batch=0",
       "schedule": "0 20 * * *"
     },
@@ -21,76 +49,48 @@
       "schedule": "40 20 * * *"
     },
     {
-      "path": "/api/cron/fetch-transactions?type=2&batch=0",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/fetch-transactions?type=3&batch=0",
-      "schedule": "0 16 * * *"
-    },
-    {
       "path": "/api/cron/fetch-rents?batch=0",
-      "schedule": "5 20 * * *"
+      "schedule": "0 21 * * *"
     },
     {
       "path": "/api/cron/fetch-rents?batch=1",
-      "schedule": "15 20 * * *"
+      "schedule": "10 21 * * *"
     },
     {
       "path": "/api/cron/fetch-rents?batch=2",
-      "schedule": "25 20 * * *"
+      "schedule": "20 21 * * *"
     },
     {
       "path": "/api/cron/fetch-rents?batch=3",
-      "schedule": "35 20 * * *"
+      "schedule": "30 21 * * *"
     },
     {
       "path": "/api/cron/fetch-rents?batch=4",
-      "schedule": "45 20 * * *"
+      "schedule": "40 21 * * *"
     },
     {
       "path": "/api/cron/enrich-complexes",
       "schedule": "50 21 * * *"
     },
     {
-      "path": "/api/cron/fetch-reb-index",
-      "schedule": "0 10 * * 1"
-    },
-    {
-      "path": "/api/cron/fetch-bank-rates",
-      "schedule": "0 10 * * 1"
-    },
-    {
       "path": "/api/cron/fetch-rates",
-      "schedule": "0 22 * * *"
+      "schedule": "10 22 * * *"
     },
     {
       "path": "/api/cron/validate-data",
-      "schedule": "50 22 * * *"
+      "schedule": "30 22 * * *"
     },
     {
       "path": "/api/cron/generate-report",
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/api/cron/generate-cardnews",
-      "schedule": "0 19 * * *"
-    },
-    {
       "path": "/api/cron/send-push",
-      "schedule": "5 23 * * *"
+      "schedule": "10 23 * * *"
     },
     {
       "path": "/api/cron/generate-seeding",
       "schedule": "30 23 * * *"
-    },
-    {
-      "path": "/api/cron/post-instagram",
-      "schedule": "30 19 * * *"
-    },
-    {
-      "path": "/api/cron/geocode-complexes",
-      "schedule": "0 17 * * *"
     }
   ]
 }
