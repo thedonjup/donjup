@@ -1,5 +1,54 @@
 import type { NextConfig } from "next";
 
+const cspDirectives = [
+  "default-src 'self'",
+  [
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "https://dapi.kakao.com",
+    "https://t1.kakaocdn.net",
+    "https://t1.daumcdn.net",
+    "https://www.googletagmanager.com",
+    "https://www.google-analytics.com",
+    "https://pagead2.googlesyndication.com",
+    "https://adservice.google.com",
+    "https://adservice.google.co.kr",
+    "https://va.vercel-scripts.com",
+  ].join(" "),
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https: http:",
+  "font-src 'self' data:",
+  [
+    "connect-src 'self'",
+    "https://dapi.kakao.com",
+    "https://kapi.kakao.com",
+    "https://www.google-analytics.com",
+    "https://analytics.google.com",
+    "https://firestore.googleapis.com",
+    "https://firebaseinstallations.googleapis.com",
+    "https://identitytoolkit.googleapis.com",
+    "https://securetoken.googleapis.com",
+    "https://www.googleapis.com",
+    "https://pagead2.googlesyndication.com",
+    "https://adservice.google.com",
+    "wss://*.firebaseio.com",
+    "https://*.supabase.co",
+    "https://vercel.live",
+    "https://va.vercel-scripts.com",
+  ].join(" "),
+  [
+    "frame-src 'self'",
+    "https://accounts.google.com",
+    "https://tpc.googlesyndication.com",
+    "https://googleads.g.doubleclick.net",
+    "https://www.google.com",
+    "https://vercel.live",
+  ].join(" "),
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pg", "postgres"],
   async headers() {
@@ -15,6 +64,7 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          { key: "Content-Security-Policy", value: cspDirectives },
         ],
       },
     ];
