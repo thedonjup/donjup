@@ -5,6 +5,8 @@ import AdSlot from "@/components/ads/AdSlot";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import SearchTracker from "@/components/analytics/SearchTracker";
 import { PricePresets, SizePresets, YearPresets } from "@/components/search/FilterPresets";
+import { getPool } from "@/lib/db/client";
+import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 
 type SearchPageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -80,31 +82,41 @@ export default async function SearchPage({
 
   if (hasSearch) {
     try {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL
-        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      const conditions: string[] = [];
+      const values: (string | number)[] = [];
+      let paramIdx = 1;
 
-      const apiParams = new URLSearchParams();
-      if (query) apiParams.set("q", query);
-      apiParams.set("type", String(validType));
-      if (filterPriceMin) apiParams.set("priceMin", filterPriceMin);
-      if (filterPriceMax) apiParams.set("priceMax", filterPriceMax);
-      if (filterSizeMin) apiParams.set("sizeMin", filterSizeMin);
-      if (filterSizeMax) apiParams.set("sizeMax", filterSizeMax);
-      if (filterBuiltYearMin) apiParams.set("builtYearMin", filterBuiltYearMin);
+      if (query.length > 0) {
+        conditions.push(`(c.apt_name ILIKE $${paramIdx} OR c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
+        values.push(`%${query}%`);
+        paramIdx++;
+      }
 
-      const res = await fetch(
-        `${origin}/api/search?${apiParams.toString()}`,
-        { next: { revalidate: 300 } }
-      );
-      const json = await res.json();
-      results = (json.results ?? []).map((d: { id: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; slug: string }) => ({
+      if (filterBuiltYearMin) {
+        const year = parseInt(filterBuiltYearMin, 10);
+        if (!isNaN(year)) {
+          conditions.push(`c.built_year >= $${paramIdx}`);
+          values.push(year);
+          paramIdx++;
+        }
+      }
+
+      const complexWhere = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+
+      const sql = `SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
+                   FROM apt_complexes c
+                   WHERE ${complexWhere}
+                   ORDER BY c.apt_name LIMIT 50`;
+
+      const result = await getPool().query(sql, values);
+      results = result.rows.map((d: { id: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; slug: string }) => ({
         ...d,
         sido_name: null,
         sigungu_name: null,
         latest_trade_price: null,
       }));
     } catch {
-      // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+      // DB 연결 실패 시 빈 데이터로 페이지 렌더링
     }
   }
 
