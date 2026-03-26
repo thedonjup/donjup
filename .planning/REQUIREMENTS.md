@@ -54,7 +54,7 @@
 - [ ] **SEC-02**: DAM content 엔드포인트에 인증이 추가된다
 - [ ] **SEC-03**: push subscribe 엔드포인트에 보안이 강화된다
 - [ ] **SEC-04**: SSL rejectUnauthorized가 true로 설정된다
-- [ ] **SEC-05**: CSP 헤더가 추가된다 (Kakao SDK, GA, AdSense, Firebase 허용)
+- [x] **SEC-05**: CSP 헤더가 추가된다 (Kakao SDK, GA, AdSense, Firebase 허용)
 - [ ] **SEC-06**: proxy.ts의 rate limiter가 서버리스 대응으로 교체되거나 제거된다
 
 ## v2 Requirements
@@ -113,7 +113,7 @@
 | SEC-02 | Phase 8 | Pending |
 | SEC-03 | Phase 8 | Pending |
 | SEC-04 | Phase 8 | Pending |
-| SEC-05 | Phase 8 | Pending |
+| SEC-05 | Phase 8 | Complete |
 | SEC-06 | Phase 8 | Pending |
 
 **Coverage:**

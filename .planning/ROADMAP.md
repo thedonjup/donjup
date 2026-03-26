@@ -15,7 +15,7 @@
 | 5 | 성능 최적화 | 2/2 | Complete   | 2026-03-26 |
 | 6 | TypeScript 타입 강화 | 핵심 모듈 any 제거, 인터페이스 정의 | TYPE-01~03 | Low |
 | 7 | 접근성 (a11y) | 2/2 | Complete   | 2026-03-26 |
-| 8 | 보안 강화 | 인증, CSP, SSL, 환경변수 정리 | SEC-01~06 | Medium |
+| 8 | 보안 강화 | 1/1 | Complete   | 2026-03-26 |
 
 ## Phase Details
 
