@@ -3,6 +3,8 @@ import { createRentServiceClient } from "@/lib/db/rent-client";
 import { fetchRentTransactions } from "@/lib/api/molit-rent";
 import { delay } from "@/lib/api/molit";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 300; // 5분 (Vercel Pro)
 
@@ -114,6 +116,11 @@ export async function GET(request: Request) {
         errors.push(`${name}(${dealYearMonth}): ${msg}`);
       }
     }
+  }
+
+  if (errors.length > 0) {
+    logger.error("Fetch-rents had errors", { errorCount: errors.length, cron: "fetch-rents" });
+    await sendSlackAlert(`[fetch-rents] ${errors.length}건 에러: ${errors.slice(0, 3).join(", ")}`);
   }
 
   return NextResponse.json({

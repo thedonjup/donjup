@@ -5,6 +5,8 @@ import {
   bankNameToRateType,
   type MortgageProduct,
 } from "@/lib/api/finlife";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -119,6 +121,11 @@ export async function GET(request: Request) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     errors.push(msg);
+  }
+
+  if (errors.length > 0) {
+    logger.error("Fetch-bank-rates had errors", { errorCount: errors.length, cron: "fetch-bank-rates" });
+    await sendSlackAlert(`[fetch-bank-rates] ${errors.length}건 에러: ${errors.slice(0, 3).join(", ")}`);
   }
 
   return NextResponse.json({

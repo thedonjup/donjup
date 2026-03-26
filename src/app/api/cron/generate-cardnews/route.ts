@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { generateCardNews } from "@/lib/cardnews/render";
 import type { CardType, RankItem } from "@/lib/cardnews/types";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -99,6 +101,8 @@ export async function GET(request: Request) {
     });
 
     if (queueError) {
+      logger.error("Generate-cardnews queue insert failed", { error: queueError, cron: "generate-cardnews" });
+      await sendSlackAlert(`[generate-cardnews] Queue insert 실패: ${queueError.message}`);
       return NextResponse.json(
         { success: false, error: `Queue insert failed: ${queueError.message}` },
         { status: 500 }
@@ -114,6 +118,8 @@ export async function GET(request: Request) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    logger.error("Generate-cardnews failed", { error: e, cron: "generate-cardnews" });
+    await sendSlackAlert(`[generate-cardnews] 실패: ${msg}`);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

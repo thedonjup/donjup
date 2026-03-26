@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -332,6 +334,8 @@ export async function GET(request: Request) {
       .insert(rows);
 
     if (insertError) {
+      logger.error("Generate-seeding insert failed", { error: insertError, cron: "generate-seeding" });
+      await sendSlackAlert(`[generate-seeding] DB insert 실패: ${insertError.message}`);
       return NextResponse.json(
         { success: false, error: insertError.message },
         { status: 500 }
@@ -345,6 +349,8 @@ export async function GET(request: Request) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    logger.error("Generate-seeding failed", { error: e, cron: "generate-seeding" });
+    await sendSlackAlert(`[generate-seeding] 실패: ${msg}`);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

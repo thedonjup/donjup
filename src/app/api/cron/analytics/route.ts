@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db/client";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -110,7 +112,10 @@ export async function GET(request: Request) {
       },
     });
   } catch (e) {
-    errors.push(e instanceof Error ? e.message : String(e));
+    const msg = e instanceof Error ? e.message : String(e);
+    errors.push(msg);
+    logger.error("Analytics cron failed", { error: e, cron: "analytics" });
+    await sendSlackAlert(`[analytics] 실패: ${msg}`);
     return NextResponse.json({
       success: false,
       message: "분석 데이터 수집 실패",

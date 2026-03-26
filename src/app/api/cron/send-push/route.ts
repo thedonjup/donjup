@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import webpush from "web-push";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -109,6 +111,8 @@ export async function GET(request: Request) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    logger.error("Send-push failed", { error: e, cron: "send-push" });
+    await sendSlackAlert(`[send-push] 실패: ${msg}`);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

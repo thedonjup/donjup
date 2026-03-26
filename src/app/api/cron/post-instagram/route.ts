@@ -5,6 +5,8 @@ import {
   publishCarousel,
   getRemainingQuota,
 } from "@/lib/instagram/client";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 120;
 
@@ -106,10 +108,7 @@ export async function GET(request: Request) {
 
     if (historyError) {
       // Log but don't fail — the post was already published
-      console.error(
-        "[post-instagram] Failed to record history:",
-        historyError.message
-      );
+      logger.error("Post-instagram failed to record history", { error: historyError, cron: "post-instagram" });
     }
 
     // ---------------------------------------------------------------
@@ -125,10 +124,8 @@ export async function GET(request: Request) {
       .eq("id", id);
 
     if (updateError) {
-      console.error(
-        "[post-instagram] Failed to update queue:",
-        updateError.message
-      );
+      logger.error("Post-instagram failed to update queue", { error: updateError, cron: "post-instagram" });
+      await sendSlackAlert(`[post-instagram] Queue 업데이트 실패 (포스팅은 완료): ${updateError.message}`);
       return NextResponse.json(
         {
           success: false,
@@ -147,7 +144,8 @@ export async function GET(request: Request) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[post-instagram] Error:", msg);
+    logger.error("Post-instagram failed", { error: e, cron: "post-instagram" });
+    await sendSlackAlert(`[post-instagram] 실패: ${msg}`);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

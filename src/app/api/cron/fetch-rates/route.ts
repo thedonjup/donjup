@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { fetchAllRates, type EcosRateItem } from "@/lib/api/ecos";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -57,6 +59,11 @@ export async function GET(request: Request) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     errors.push(msg);
+  }
+
+  if (errors.length > 0) {
+    logger.error("Fetch-rates had errors", { errorCount: errors.length, cron: "fetch-rates" });
+    await sendSlackAlert(`[fetch-rates] ${errors.length}건 에러: ${errors.slice(0, 3).join(", ")}`);
   }
 
   return NextResponse.json({

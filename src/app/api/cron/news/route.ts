@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db/client";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -66,6 +68,11 @@ export async function GET(request: Request) {
     }
   } catch (e) {
     errors.push(e instanceof Error ? e.message : String(e));
+  }
+
+  if (errors.length > 0) {
+    logger.error("News cron had errors", { errorCount: errors.length, cron: "news" });
+    await sendSlackAlert(`[news] ${errors.length}건 에러: ${errors.slice(0, 3).join(", ")}`);
   }
 
   return NextResponse.json({

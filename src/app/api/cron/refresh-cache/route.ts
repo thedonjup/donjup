@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db/client";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -95,9 +97,11 @@ export async function GET(request: Request) {
       highs: highsRes.rows.length,
     });
   } catch (error) {
-    console.error("[refresh-cache] Error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error("Refresh-cache failed", { error, cron: "refresh-cache" });
+    await sendSlackAlert(`[refresh-cache] 실패: ${msg}`);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: msg },
       { status: 500 }
     );
   }

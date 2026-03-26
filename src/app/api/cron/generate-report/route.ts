@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
 
@@ -94,6 +96,8 @@ export async function GET(request: Request) {
       );
 
     if (error) {
+      logger.error("Generate-report DB upsert failed", { error, cron: "generate-report" });
+      await sendSlackAlert(`[generate-report] DB upsert 실패: ${error.message}`);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
@@ -111,7 +115,7 @@ export async function GET(request: Request) {
         pushResult = await pushRes.json();
       }
     } catch (pushErr) {
-      console.error("[generate-report] Push trigger failed:", pushErr instanceof Error ? pushErr.message : pushErr);
+      logger.error("Generate-report push trigger failed", { error: pushErr, cron: "generate-report" });
     }
 
     return NextResponse.json({
@@ -128,6 +132,8 @@ export async function GET(request: Request) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    logger.error("Generate-report failed", { error: e, cron: "generate-report" });
+    await sendSlackAlert(`[generate-report] 실패: ${msg}`);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

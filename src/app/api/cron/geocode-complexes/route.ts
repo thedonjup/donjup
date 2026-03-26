@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 300; // 5분
 
@@ -28,6 +30,8 @@ export async function GET(request: Request) {
     .limit(100);
 
   if (fetchError) {
+    logger.error("Geocode-complexes DB fetch failed", { error: fetchError, cron: "geocode-complexes" });
+    await sendSlackAlert(`[geocode-complexes] DB 조회 실패: ${fetchError.message}`);
     return NextResponse.json(
       { error: `DB 조회 실패: ${fetchError.message}` },
       { status: 500 },
@@ -110,9 +114,15 @@ export async function GET(request: Request) {
 
       // Rate limiting: ~50ms between requests
       await new Promise((r) => setTimeout(r, 50));
-    } catch (err: any) {
-      errors.push(`${complex.apt_name}: ${err.message}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`${complex.apt_name}: ${msg}`);
     }
+  }
+
+  if (errors.length > 0) {
+    logger.error("Geocode-complexes had errors", { errorCount: errors.length, cron: "geocode-complexes" });
+    await sendSlackAlert(`[geocode-complexes] ${errors.length}건 에러: ${errors.slice(0, 3).join(", ")}`);
   }
 
   return NextResponse.json({

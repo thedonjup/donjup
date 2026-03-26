@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { fetchBuildingLedger } from "@/lib/api/building-ledger";
 import { delay } from "@/lib/api/molit";
+import { logger } from "@/lib/logger";
+import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 300; // 5분 (Vercel Pro)
 
@@ -22,6 +24,8 @@ export async function GET(request: Request) {
     .limit(100);
 
   if (fetchError) {
+    logger.error("Enrich-complexes DB fetch failed", { error: fetchError, cron: "enrich-complexes" });
+    await sendSlackAlert(`[enrich-complexes] DB 조회 실패: ${fetchError.message}`);
     return NextResponse.json(
       { error: `DB 조회 실패: ${fetchError.message}` },
       { status: 500 }
@@ -80,6 +84,11 @@ export async function GET(request: Request) {
       const msg = e instanceof Error ? e.message : String(e);
       errors.push(`${complex.apt_name}: ${msg}`);
     }
+  }
+
+  if (errors.length > 0) {
+    logger.error("Enrich-complexes had errors", { errorCount: errors.length, cron: "enrich-complexes" });
+    await sendSlackAlert(`[enrich-complexes] ${errors.length}건 에러: ${errors.slice(0, 3).join(", ")}`);
   }
 
   return NextResponse.json({

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { sendSlackAlert } from "@/lib/alert";
+import { logger } from "@/lib/logger";
 
 export const maxDuration = 300; // 5분
 
