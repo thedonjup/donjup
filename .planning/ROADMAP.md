@@ -101,7 +101,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — 구조화 로깅 유틸 + 브랜드 에러 페이지 (ERR-01, ERR-03)
+- [x] 04-01-PLAN.md — 구조화 로깅 유틸 + 브랜드 에러 페이지 (ERR-01, ERR-03)
 - [ ] 04-02-PLAN.md — API 에러 응답 정리 + 크론잡 Slack 알림 (ERR-02, ERR-04)
 
 **Scope:**
