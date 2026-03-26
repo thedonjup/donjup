@@ -4,12 +4,15 @@ import { useState, useMemo, createContext, useContext } from "react";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChart";
 import TransactionTabs from "@/components/apt/TransactionTabs";
 
-// 전용면적 비율 (일반적으로 공급면적의 약 79~82%)
-function exclusiveArea(supplySqm: number): number {
+// DB의 size_sqm = 전용면적. 공급면적 = 전용 / 비율
+function supplyArea(exclusiveSqm: number): number {
   // 소형(60㎡ 이하) 약 80%, 중형(60~85) 약 79%, 대형(85+) 약 78%
-  const ratio = supplySqm <= 60 ? 0.80 : supplySqm <= 85 ? 0.79 : 0.78;
-  return Math.round(supplySqm * ratio * 10) / 10;
+  const ratio = exclusiveSqm <= 60 ? 0.80 : exclusiveSqm <= 85 ? 0.79 : 0.78;
+  return Math.round((exclusiveSqm / ratio) * 10) / 10;
 }
+
+// 저층 기준 (1~3층)
+const LOW_FLOOR_MAX = 3;
 
 function sqmToPyeong(sqm: number): number {
   return Math.round(sqm / 3.3058);
@@ -75,12 +78,15 @@ export default function AptDetailClient({
   }, [saleTxns, rentTxns]);
 
   const sizePriceMap = useMemo(() => {
-    const map = new Map<number, { latestSale: number | null; latestJeonse: number | null }>();
+    const map = new Map<number, { highFloorSale: number | null; lowFloorSale: number | null; latestJeonse: number | null }>();
     for (const size of sizeOptions) {
-      const saleTx = saleTxns.find((t) => t.size_sqm === size);
+      const sizeMatches = saleTxns.filter((t) => t.size_sqm === size);
+      const highFloorTx = sizeMatches.find((t) => t.floor > LOW_FLOOR_MAX);
+      const lowFloorTx = sizeMatches.find((t) => t.floor <= LOW_FLOOR_MAX);
       const jeonseTx = rentTxns.find((t) => t.size_sqm === size && t.rent_type === "전세");
       map.set(size, {
-        latestSale: saleTx?.trade_price ?? null,
+        highFloorSale: highFloorTx?.trade_price ?? null,
+        lowFloorSale: lowFloorTx?.trade_price ?? null,
         latestJeonse: jeonseTx?.deposit ?? null,
       });
     }
@@ -92,14 +98,14 @@ export default function AptDetailClient({
     return `${sqm}㎡`;
   }
 
-  function formatSizeDetail(sqm: number): string {
-    const supplyPy = sqmToPyeong(sqm);
-    const excl = exclusiveArea(sqm);
-    const exclPy = sqmToPyeong(excl);
+  function formatSizeDetail(exclusiveSqm: number): string {
+    const supply = supplyArea(exclusiveSqm);
+    const exclPy = sqmToPyeong(exclusiveSqm);
+    const supplyPy = sqmToPyeong(supply);
     if (sizeUnit === "pyeong") {
-      return `공급 ${supplyPy}평 / 전용 ${exclPy}평`;
+      return `전용 ${exclPy}평 / 공급 ${supplyPy}평`;
     }
-    return `공급 ${sqm}㎡ / 전용 ${excl}㎡`;
+    return `전용 ${exclusiveSqm}㎡ / 공급 ${supply}㎡`;
   }
 
   function formatPriceShort(v: number): string {
@@ -166,11 +172,11 @@ export default function AptDetailClient({
                   <div className="text-[10px] mt-0.5" style={{ opacity: 0.8 }}>
                     {formatSizeDetail(size)}
                   </div>
-                  {(prices?.latestSale || prices?.latestJeonse) && (
+                  {(prices?.highFloorSale || prices?.lowFloorSale || prices?.latestJeonse) && (
                     <div className="text-[10px] mt-0.5 tabular-nums" style={{ opacity: 0.7 }}>
-                      {prices.latestSale ? `매매 ${formatPriceShort(prices.latestSale)}` : ""}
-                      {prices.latestSale && prices.latestJeonse ? " / " : ""}
-                      {prices.latestJeonse ? `전세 ${formatPriceShort(prices.latestJeonse)}` : ""}
+                      {prices.highFloorSale ? `고층 ${formatPriceShort(prices.highFloorSale)}` : ""}
+                      {prices.lowFloorSale ? ` / 저층 ${formatPriceShort(prices.lowFloorSale)}` : ""}
+                      {prices.latestJeonse ? ` / 전세 ${formatPriceShort(prices.latestJeonse)}` : ""}
                     </div>
                   )}
                 </button>
@@ -180,19 +186,24 @@ export default function AptDetailClient({
         </div>
       )}
 
-      {/* 가격 추이 차트 */}
+      {/* 가격 추이 차트 (고층만 — 저층 1~3층 제외) */}
       {saleTxns.length >= 2 && (
         <div className="mb-8">
           <PriceHistoryChart
-            transactions={saleTxns.map((t) => ({
-              trade_date: t.trade_date,
-              trade_price: t.trade_price,
-              size_sqm: t.size_sqm,
-            }))}
+            transactions={saleTxns
+              .filter((t) => t.floor > LOW_FLOOR_MAX)
+              .map((t) => ({
+                trade_date: t.trade_date,
+                trade_price: t.trade_price,
+                size_sqm: t.size_sqm,
+              }))}
             externalSelectedSize={selectedSize}
             onSizeChange={setSelectedSize}
             sizeUnit={sizeUnit}
           />
+          <p className="mt-1 text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
+            * 그래프는 4층 이상 거래만 반영 (저층 1~3층 제외)
+          </p>
         </div>
       )}
 
