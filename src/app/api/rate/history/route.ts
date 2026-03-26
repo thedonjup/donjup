@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { logger } from "@/lib/logger";
+import type { FinanceRate } from "@/types/db";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -29,5 +30,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 
-  return NextResponse.json({ data });
+  const rates: Pick<FinanceRate, "rate_type" | "rate_value" | "change_bp" | "base_date">[] =
+    (data ?? []) as Pick<FinanceRate, "rate_type" | "rate_value" | "change_bp" | "base_date">[];
+
+  return NextResponse.json({ data: rates });
 }

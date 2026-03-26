@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import type { DailyReport } from "@/types/db";
 
 export async function GET(
   request: Request,
@@ -20,7 +21,7 @@ export async function GET(
     if (error || !data) {
       return NextResponse.json({ error: "리포트가 없습니다." }, { status: 404 });
     }
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: data as DailyReport });
   }
 
   // 날짜로 조회
@@ -34,5 +35,5 @@ export async function GET(
     return NextResponse.json({ error: "해당 날짜 리포트가 없습니다." }, { status: 404 });
   }
 
-  return NextResponse.json({ data });
+  return NextResponse.json({ data: data as DailyReport });
 }

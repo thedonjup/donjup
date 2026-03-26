@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { logger } from "@/lib/logger";
+import type { AptComplex } from "@/types/db";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -27,8 +28,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 
+  const complexes: AptComplex[] = (data ?? []) as AptComplex[];
+
   return NextResponse.json({
-    data,
+    data: complexes,
     pagination: {
       page,
       limit,

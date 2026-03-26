@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { logger } from "@/lib/logger";
+import type { FinanceRate } from "@/types/db";
 
 /**
  * 은행별 주담대 최저금리 조회 API
@@ -23,7 +24,7 @@ export async function GET() {
   }
 
   // 은행별 최신 값만 추출
-  const latestByBank = new Map<string, { rate_type: string; rate_value: number; base_date: string }>();
+  const latestByBank = new Map<string, Pick<FinanceRate, "rate_type" | "rate_value" | "base_date">>();
   for (const row of data ?? []) {
     if (!latestByBank.has(row.rate_type)) {
       latestByBank.set(row.rate_type, row);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import type { AptComplex, AptTransaction } from "@/types/db";
 
 export async function GET(
   request: Request,
@@ -11,18 +12,20 @@ export async function GET(
   // slug 또는 UUID로 조회
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-  const { data: complex, error } = await supabase
+  const { data: complexData, error } = await supabase
     .from("apt_complexes")
     .select("*")
     .eq(isUuid ? "id" : "slug", id)
     .single();
 
-  if (error || !complex) {
+  if (error || !complexData) {
     return NextResponse.json({ error: "단지를 찾을 수 없습니다." }, { status: 404 });
   }
 
+  const complex = complexData as AptComplex;
+
   // 최근 거래 내역
-  const { data: transactions } = await supabase
+  const { data: transactionsData } = await supabase
     .from("apt_transactions")
     .select("*")
     .eq("apt_name", complex.apt_name)
@@ -30,8 +33,10 @@ export async function GET(
     .order("trade_date", { ascending: false })
     .limit(50);
 
+  const transactions: AptTransaction[] = (transactionsData ?? []) as AptTransaction[];
+
   return NextResponse.json({
     complex,
-    transactions: transactions ?? [],
+    transactions,
   });
 }

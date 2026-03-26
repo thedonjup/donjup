@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 
   try {
     const conditions: string[] = [];
-    const values: any[] = [];
+    const values: (string | number)[] = [];
     let paramIdx = 1;
 
     // Text search conditions (only if query provided)
