@@ -9,7 +9,7 @@ progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 11
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State: 돈줍 사이트 안정화
@@ -20,7 +20,7 @@ progress:
 
 ## Active Phase
 
-Phase 06 — 타입 (Plan 06-01 complete)
+Phase 06 — 타입 (Plan 06-01, 06-02 complete)
 
 ## Completed Phases
 
@@ -58,6 +58,8 @@ Phase 06 — 타입 (Plan 06-01 complete)
 | 2026-03-26 | In-memory rate limiter 제거 | 서버리스 cold start마다 초기화되어 무효 — Vercel WAF 권고 |
 | 2026-03-26 | JSONB 컬럼은 unknown 타입 사용 | any 대신 타입 안전성 확보 |
 | 2026-03-26 | extremes route Partial<AptTransaction> | partial select이므로 전체 타입 강제 불가 |
+| 2026-03-26 | Kakao SDK → kakao.d.ts 미니멀 namespace | 공식 TS 타입 없음, 필요 클래스만 선언 |
+| 2026-03-26 | client.ts then() any 유지 | unknown으로 변경 시 전체 codebase 연쇄 오류 |
 
 ---
-*State initialized: 2026-03-26*
+*Last updated: 2026-03-26 after 06-02 completion*
