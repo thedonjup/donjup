@@ -1,8 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { logger } from "@/lib/logger";
+import { getAdminAuth } from "@/lib/firebase/admin";
+import { isAdmin } from "@/lib/admin/auth";
+
+async function verifyAdminToken(request: NextRequest): Promise<{ ok: boolean; response?: NextResponse }> {
+  const authHeader = request.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (!token) {
+    return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  }
+
+  const adminAuth = getAdminAuth();
+  if (!adminAuth) {
+    return { ok: false, response: NextResponse.json({ error: "Firebase Admin SDK not configured" }, { status: 503 }) };
+  }
+
+  try {
+    const decoded = await adminAuth.verifyIdToken(token);
+    if (!isAdmin(decoded.email ?? null)) {
+      return { ok: false, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    }
+  } catch {
+    return { ok: false, response: NextResponse.json({ error: "Invalid token" }, { status: 401 }) };
+  }
+
+  return { ok: true };
+}
 
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdminToken(request);
+  if (!auth.ok) return auth.response!;
+
   try {
     const db = createServiceClient();
     const { searchParams } = new URL(request.url);
@@ -37,6 +67,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const auth = await verifyAdminToken(request);
+  if (!auth.ok) return auth.response!;
+
   try {
     const db = createServiceClient();
     const body = await request.json();

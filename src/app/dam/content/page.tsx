@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 type Tab = "cardnews" | "seeding" | "insta";
 
@@ -14,15 +15,20 @@ interface ContentItem {
 }
 
 export default function ContentManagement() {
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("cardnews");
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   const fetchItems = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/dam/content?tab=${tab}`);
+      const idToken = await user.getIdToken();
+      const res = await fetch(`/api/dam/content?tab=${tab}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
       if (!res.ok) throw new Error("API 요청 실패");
       const data = await res.json();
       setItems((data.items as ContentItem[]) ?? []);
@@ -35,14 +41,16 @@ export default function ContentManagement() {
 
   useEffect(() => {
     fetchItems();
-  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tab, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAction = async (id: number, action: "posted" | "hold" | "deleted") => {
+    if (!user) return;
     setActionLoading(id);
     try {
+      const idToken = await user.getIdToken();
       await fetch("/api/dam/content", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ id, status: action }),
       });
       await fetchItems();
