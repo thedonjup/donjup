@@ -14,7 +14,7 @@
 | 4 | 에러 핸들링 / 로깅 | 에러 바운더리 + 구조화 로깅 | ERR-01~04 | Low |
 | 5 | 성능 최적화 | 2/2 | Complete   | 2026-03-26 |
 | 6 | TypeScript 타입 강화 | 핵심 모듈 any 제거, 인터페이스 정의 | TYPE-01~03 | Low |
-| 7 | 접근성 (a11y) | 1/2 | In Progress|  |
+| 7 | 접근성 (a11y) | 2/2 | Complete   | 2026-03-26 |
 | 8 | 보안 강화 | 인증, CSP, SSL, 환경변수 정리 | SEC-01~06 | Medium |
 
 ## Phase Details
@@ -175,10 +175,10 @@ Plans:
 
 **Requirements:** A11Y-01, A11Y-02, A11Y-03, A11Y-04
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 07-01-PLAN.md — ARIA 속성 + 키보드 내비게이션 + skip-to-content 검증 (A11Y-01, A11Y-02, A11Y-04)
+- [x] 07-01-PLAN.md — ARIA 속성 + 키보드 내비게이션 + skip-to-content 검증 (A11Y-01, A11Y-02, A11Y-04)
 - [x] 07-02-PLAN.md — 차트/지도 텍스트 대안 (A11Y-03)
 
 **Scope:**

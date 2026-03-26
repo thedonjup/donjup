@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 07
 status: executing
-last_updated: "2026-03-26T01:50:13.541Z"
+last_updated: "2026-03-26T01:52:03.862Z"
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 13
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State: 돈줍 사이트 안정화
@@ -62,6 +62,9 @@ Phase 06 — 타입 (Plan 06-01, 06-02 complete)
 | 2026-03-26 | client.ts then() any 유지 | unknown으로 변경 시 전체 codebase 연쇄 오류 |
 | 2026-03-26 | role=figure on PriceHistoryChart | Recharts SVG 컨테이너 레벨 처리 |
 | 2026-03-26 | role=application on KakaoMap | 인터랙티브 지도 위젯 적합 role |
+| 2026-03-26 | Roving tabindex로 탭 키보드 내비게이션 구현 | WAI-ARIA authoring practices 권장 방식 |
+| 2026-03-26 | TransactionTabs tabpanel hidden 속성 토글 | conditional render 대신 DOM 유지로 스크린 리더 접근성 개선 |
+| 2026-03-26 | MobileNav Escape 핸들러 별도 useEffect | open 상태 의존성 분리로 리스너 정확한 attach/detach 보장 |
 
 ---
-*Last updated: 2026-03-26 after 07-02 completion*
+*Last updated: 2026-03-26 after 07-01 completion*

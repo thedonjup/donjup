@@ -43,10 +43,10 @@
 
 ### 접근성
 
-- [ ] **A11Y-01**: 주요 인터랙티브 요소(탭, 버튼, 링크)에 ARIA 속성이 추가된다
-- [ ] **A11Y-02**: 키보드 내비게이션이 주요 페이지에서 동작한다
-- [ ] **A11Y-03**: 차트/지도에 텍스트 대안이 제공된다
-- [ ] **A11Y-04**: skip navigation 링크가 레이아웃에 추가된다
+- [x] **A11Y-01**: 주요 인터랙티브 요소(탭, 버튼, 링크)에 ARIA 속성이 추가된다
+- [x] **A11Y-02**: 키보드 내비게이션이 주요 페이지에서 동작한다
+- [x] **A11Y-03**: 차트/지도에 텍스트 대안이 제공된다
+- [x] **A11Y-04**: skip navigation 링크가 레이아웃에 추가된다
 
 ### 보안
 
@@ -105,10 +105,10 @@
 | TYPE-01 | Phase 6 | Complete |
 | TYPE-02 | Phase 6 | Complete |
 | TYPE-03 | Phase 6 | Pending |
-| A11Y-01 | Phase 7 | Pending |
-| A11Y-02 | Phase 7 | Pending |
-| A11Y-03 | Phase 7 | Pending |
-| A11Y-04 | Phase 7 | Pending |
+| A11Y-01 | Phase 7 | Complete |
+| A11Y-02 | Phase 7 | Complete |
+| A11Y-03 | Phase 7 | Complete |
+| A11Y-04 | Phase 7 | Complete |
 | SEC-01 | Phase 8 | Pending |
 | SEC-02 | Phase 8 | Pending |
 | SEC-03 | Phase 8 | Pending |
