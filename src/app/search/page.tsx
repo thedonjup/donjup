@@ -79,9 +79,8 @@ export default async function SearchPage({
 
   if (hasSearch) {
     try {
-      const origin = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "http://localhost:3000";
+      const origin = process.env.NEXT_PUBLIC_SITE_URL
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
       const apiParams = new URLSearchParams();
       if (query) apiParams.set("q", query);
