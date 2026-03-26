@@ -13,7 +13,7 @@ export type { MapTransaction } from "./map-utils";
 
 declare global {
   interface Window {
-    kakao: any;
+    kakao: typeof kakao;
   }
 }
 
@@ -23,10 +23,10 @@ interface KakaoMapProps {
 
 export default function KakaoMap({ transactions }: KakaoMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const clustererRef = useRef<any>(null);
-  const infoWindowRef = useRef<any>(null);
+  const mapInstanceRef = useRef<kakao.maps.Map | null>(null);
+  const markersRef = useRef<kakao.maps.CustomOverlay[]>([]);
+  const clustererRef = useRef<kakao.maps.services.MarkerClusterer | null>(null);
+  const infoWindowRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -86,10 +86,10 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
     markersRef.current = [];
 
     if (infoWindowRef.current) {
-      infoWindowRef.current.close();
+      infoWindowRef.current.setMap(null);
     }
 
-    const markers: any[] = [];
+    const markers: kakao.maps.CustomOverlay[] = [];
 
     filteredTransactions.forEach((item) => {
       const position = new kakao.maps.LatLng(item.latitude, item.longitude);

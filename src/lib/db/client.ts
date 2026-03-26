@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Pool } from "pg";
 
 // ---------------------------------------------------------------------------
@@ -34,7 +33,7 @@ export function getPool(): Pool {
 
 interface Condition {
   clause: string;
-  values: any[];
+  values: unknown[];
 }
 
 type OperationType = "select" | "insert" | "upsert" | "update" | "delete";
@@ -54,8 +53,8 @@ class QueryBuilder {
   private _signal: AbortSignal | null = null;
 
   // For insert / upsert / update
-  private insertData: Record<string, any>[] | null = null;
-  private updateData: Record<string, any> | null = null;
+  private insertData: Record<string, unknown>[] | null = null;
+  private updateData: Record<string, unknown> | null = null;
   private upsertConflictCols: string | null = null;
   private upsertIgnoreDuplicates: boolean = false;
 
@@ -98,37 +97,37 @@ class QueryBuilder {
     return `$${this.paramIdx}`;
   }
 
-  eq(col: string, val: any): this {
+  eq(col: string, val: unknown): this {
     const p = this.nextParam();
     this.conditions.push({ clause: `"${col}" = ${p}`, values: [val] });
     return this;
   }
 
-  neq(col: string, val: any): this {
+  neq(col: string, val: unknown): this {
     const p = this.nextParam();
     this.conditions.push({ clause: `"${col}" != ${p}`, values: [val] });
     return this;
   }
 
-  lt(col: string, val: any): this {
+  lt(col: string, val: unknown): this {
     const p = this.nextParam();
     this.conditions.push({ clause: `"${col}" < ${p}`, values: [val] });
     return this;
   }
 
-  gt(col: string, val: any): this {
+  gt(col: string, val: unknown): this {
     const p = this.nextParam();
     this.conditions.push({ clause: `"${col}" > ${p}`, values: [val] });
     return this;
   }
 
-  gte(col: string, val: any): this {
+  gte(col: string, val: unknown): this {
     const p = this.nextParam();
     this.conditions.push({ clause: `"${col}" >= ${p}`, values: [val] });
     return this;
   }
 
-  lte(col: string, val: any): this {
+  lte(col: string, val: unknown): this {
     const p = this.nextParam();
     this.conditions.push({ clause: `"${col}" <= ${p}`, values: [val] });
     return this;
@@ -158,7 +157,7 @@ class QueryBuilder {
     return this;
   }
 
-  in(col: string, vals: any[]): this {
+  in(col: string, vals: unknown[]): this {
     if (vals.length === 0) {
       // Impossible condition
       this.conditions.push({ clause: "FALSE", values: [] });
@@ -176,7 +175,7 @@ class QueryBuilder {
    * .not("col", "is", null) → col IS NOT NULL
    * .not("col", "eq", val) → col != val
    */
-  not(col: string, op: string, val: any): this {
+  not(col: string, op: string, val: unknown): this {
     if (op === "is" && val === null) {
       this.conditions.push({ clause: `"${col}" IS NOT NULL`, values: [] });
     } else if (op === "eq") {
@@ -211,7 +210,7 @@ class QueryBuilder {
   or(conditions: string): this {
     const parts = this.parseOrConditions(conditions);
     const sqlParts: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     for (const part of parts) {
       const { col, op, val } = part;
@@ -258,14 +257,14 @@ class QueryBuilder {
 
   // ------ MUTATION OPERATIONS ------
 
-  insert(data: Record<string, any> | Record<string, any>[]): this {
+  insert(data: Record<string, unknown> | Record<string, unknown>[]): this {
     this.operation = "insert";
     this.insertData = Array.isArray(data) ? data : [data];
     return this;
   }
 
   upsert(
-    data: Record<string, any> | Record<string, any>[],
+    data: Record<string, unknown> | Record<string, unknown>[],
     opts?: { onConflict?: string; ignoreDuplicates?: boolean }
   ): this {
     this.operation = "upsert";
@@ -275,7 +274,7 @@ class QueryBuilder {
     return this;
   }
 
-  update(data: Record<string, any>): this {
+  update(data: Record<string, unknown>): this {
     this.operation = "update";
     this.updateData = data;
     return this;
@@ -291,14 +290,13 @@ class QueryBuilder {
   /**
    * Thenable: allows `await queryBuilder` to work like Supabase.
    */
-  then(
-    resolve: (value: any) => any,
-    reject?: (reason?: any) => any
-  ): Promise<any> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  then(resolve: (value: any) => any, reject?: (reason?: any) => any): Promise<any> {
     return this.execute().then(resolve, reject);
   }
 
   private async execute(): Promise<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
     error: { message: string } | null;
     count?: number | null;
@@ -318,8 +316,8 @@ class QueryBuilder {
         default:
           return { data: null, error: { message: `Unknown operation: ${this.operation}` } };
       }
-    } catch (e: any) {
-      return { data: null, error: { message: e.message ?? String(e) }, count: null };
+    } catch (e: unknown) {
+      return { data: null, error: { message: e instanceof Error ? e.message : String(e) }, count: null };
     }
   }
 
@@ -334,7 +332,7 @@ class QueryBuilder {
       // COUNT only, no data
       const { sql, values } = this.buildCountSQL();
       const result = await this.query(sql, values);
-      return { data: null, error: null, count: parseInt(result.rows[0]?.count ?? "0", 10) };
+      return { data: null, error: null, count: parseInt(String(result.rows[0]?.count ?? "0"), 10) };
     }
 
     if (this.isCount && !this.isHead) {
@@ -350,7 +348,7 @@ class QueryBuilder {
       return {
         data: dataResult.rows,
         error: null,
-        count: parseInt(countResult.rows[0]?.count ?? "0", 10),
+        count: parseInt(String(countResult.rows[0]?.count ?? "0"), 10),
       };
     }
 
@@ -364,7 +362,7 @@ class QueryBuilder {
     return { data: result.rows, error: null };
   }
 
-  private buildSelectSQL(): { sql: string; values: any[] } {
+  private buildSelectSQL(): { sql: string; values: unknown[] } {
     const cols = this.parseSelectCols(this.selectCols);
     let sql = `SELECT ${cols} FROM "${this.table}"`;
     const { whereClause, values } = this.buildWhere();
@@ -377,7 +375,7 @@ class QueryBuilder {
     return { sql, values };
   }
 
-  private buildCountSQL(): { sql: string; values: any[] } {
+  private buildCountSQL(): { sql: string; values: unknown[] } {
     let sql = `SELECT COUNT(*) as count FROM "${this.table}"`;
     const { whereClause, values } = this.buildWhere();
     if (whereClause) sql += ` WHERE ${whereClause}`;
@@ -457,7 +455,7 @@ class QueryBuilder {
 
     this.paramIdx = 0;
     const setClauses: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     for (const [col, val] of Object.entries(this.updateData)) {
       this.paramIdx++;
@@ -502,10 +500,10 @@ class QueryBuilder {
 
   private buildInsertSQL(
     cols: string[],
-    rows: Record<string, any>[]
-  ): { sql: string; values: any[] } {
+    rows: Record<string, unknown>[]
+  ): { sql: string; values: unknown[] } {
     const quotedCols = cols.map((c) => `"${c}"`).join(", ");
-    const values: any[] = [];
+    const values: unknown[] = [];
     const rowPlaceholders: string[] = [];
 
     let paramCounter = 0;
@@ -530,13 +528,13 @@ class QueryBuilder {
     return { sql, values };
   }
 
-  private buildWhere(): { whereClause: string; values: any[] } {
+  private buildWhere(): { whereClause: string; values: unknown[] } {
     if (this.conditions.length === 0) {
       return { whereClause: "", values: [] };
     }
 
     const clauses: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     for (const cond of this.conditions) {
       clauses.push(cond.clause);
@@ -638,7 +636,7 @@ class QueryBuilder {
     return results;
   }
 
-  private orPartToSql(col: string, op: string, val: string, values: any[]): string {
+  private orPartToSql(col: string, op: string, val: string, values: unknown[]): string {
     const quotedCol = `"${col}"`;
 
     switch (op) {
@@ -696,7 +694,7 @@ class QueryBuilder {
     }
   }
 
-  private parseValue(val: string): any {
+  private parseValue(val: string): unknown {
     // Try to parse as number
     if (/^-?\d+(\.\d+)?$/.test(val)) {
       return parseFloat(val);
@@ -707,23 +705,29 @@ class QueryBuilder {
     return val;
   }
 
-  private async query(sql: string, values: any[]): Promise<{ rows: any[] }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async query(sql: string, values: unknown[]): Promise<{ rows: Record<string, unknown>[] }> {
     const p = getPool();
     try {
-      const result = await p.query(sql, values);
+      // pg accepts any[] for values; cast needed since our internal values are unknown[]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await p.query(sql, values as any[]);
       // Date 객체를 문자열로 변환 (React 렌더링 호환)
-      const rows = result.rows.map((row: any) => {
-        const out: any = {};
+      const rows = result.rows.map((row: Record<string, unknown>) => {
+        const out: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(row)) {
           out[k] = v instanceof Date ? v.toISOString().split("T")[0] : v;
         }
         return out;
       });
       return { rows };
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Add SQL to error for debugging in dev
-      const enriched = new Error(`${err.message}\nSQL: ${sql}\nParams: ${JSON.stringify(values)}`);
-      (enriched as any).code = err.code;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const enriched = new Error(`${errMsg}\nSQL: ${sql}\nParams: ${JSON.stringify(values)}`);
+      if (err instanceof Error && 'code' in err) {
+        (enriched as NodeJS.ErrnoException).code = (err as NodeJS.ErrnoException).code;
+      }
       throw enriched;
     }
   }
@@ -735,10 +739,10 @@ class QueryBuilder {
 
 class RpcCaller {
   private fnName: string;
-  private args: Record<string, any>;
+  private args: Record<string, unknown>;
   private _signal: AbortSignal | null = null;
 
-  constructor(fnName: string, args: Record<string, any>) {
+  constructor(fnName: string, args: Record<string, unknown>) {
     this.fnName = fnName;
     this.args = args;
   }
@@ -748,13 +752,12 @@ class RpcCaller {
     return this;
   }
 
-  then(
-    resolve: (value: any) => any,
-    reject?: (reason?: any) => any
-  ): Promise<any> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  then(resolve: (value: any) => any, reject?: (reason?: any) => any): Promise<any> {
     return this.execute().then(resolve, reject);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async execute(): Promise<{ data: any; error: { message: string } | null }> {
     try {
       const p = getPool();
@@ -766,8 +769,8 @@ class RpcCaller {
       const sql = `SELECT * FROM "${this.fnName}"(${params.join(", ")})`;
       const result = await p.query(sql, values);
       return { data: result.rows, error: null };
-    } catch (e: any) {
-      return { data: null, error: { message: e.message ?? String(e) } };
+    } catch (e: unknown) {
+      return { data: null, error: { message: e instanceof Error ? e.message : String(e) } };
     }
   }
 }
@@ -778,13 +781,13 @@ class RpcCaller {
 
 export interface DbClient {
   from: (table: string) => QueryBuilder;
-  rpc: (fnName: string, args?: Record<string, any>) => RpcCaller;
+  rpc: (fnName: string, args?: Record<string, unknown>) => RpcCaller;
 }
 
 export function createDbClient(): DbClient {
   return {
     from: (table: string) => new QueryBuilder(table),
-    rpc: (fnName: string, args: Record<string, any> = {}) =>
+    rpc: (fnName: string, args: Record<string, unknown> = {}) =>
       new RpcCaller(fnName, args),
   };
 }
