@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -24,15 +25,16 @@ export async function POST(request: Request) {
     );
 
     if (error) {
+      logger.error("Failed to save push subscription", { error, route: "/api/push/subscribe" });
       return NextResponse.json(
-        { error: error.message },
+        { error: "서버 오류가 발생했습니다" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    logger.error("Unexpected error in push subscribe", { error: e, route: "/api/push/subscribe" });
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db/client";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
+import { logger } from "@/lib/logger";
 
 // 시/도 약칭 → region_code prefix 매핑
 const SIDO_SEARCH_MAP: Record<string, string> = {};
@@ -160,8 +161,8 @@ export async function GET(request: Request) {
     const result = await getPool().query(sql, values);
 
     return NextResponse.json({ results: result.rows });
-  } catch (e: any) {
-    console.error("[Search API] Query failed:", e.message ?? e);
-    return NextResponse.json({ results: [], error: e.message }, { status: 500 });
+  } catch (e) {
+    logger.error("Search query failed", { error: e, route: "/api/search" });
+    return NextResponse.json({ results: [], error: "검색 중 오류가 발생했습니다" }, { status: 500 });
   }
 }

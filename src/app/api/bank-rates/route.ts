@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
 
 /**
  * 은행별 주담대 최저금리 조회 API
@@ -17,7 +18,8 @@ export async function GET() {
     .limit(50);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logger.error("Failed to fetch bank rates", { error, route: "/api/bank-rates" });
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 
   // 은행별 최신 값만 추출

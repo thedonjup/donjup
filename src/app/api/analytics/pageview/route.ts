@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +26,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      logger.error("Failed to increment page view", { error, route: "/api/analytics/pageview" });
+      return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

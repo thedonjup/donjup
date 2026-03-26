@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -19,7 +20,8 @@ export async function GET(request: Request) {
     .limit(limit);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logger.error("Failed to fetch popular pages", { error, route: "/api/analytics/popular" });
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 
   return NextResponse.json({ data: data ?? [] });

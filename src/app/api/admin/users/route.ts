@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { isAdmin } from "@/lib/admin/auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   // --- Auth: verify caller is admin ---
@@ -45,8 +46,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ users, total: users.length });
   } catch (e) {
+    logger.error("Failed to list users", { error: e, route: "/api/admin/users" });
     return NextResponse.json(
-      { error: "Failed to list users", detail: String(e) },
+      { error: "Failed to list users" },
       { status: 500 },
     );
   }

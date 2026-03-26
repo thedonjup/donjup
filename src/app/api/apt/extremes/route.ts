@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -18,7 +19,8 @@ export async function GET(request: NextRequest) {
       .limit(limit);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      logger.error("Failed to fetch new-high transactions", { error, route: "/api/apt/extremes" });
+      return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
     }
     return NextResponse.json({ type: "high", data });
   }
@@ -32,7 +34,8 @@ export async function GET(request: NextRequest) {
     .limit(limit);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logger.error("Failed to fetch drop transactions", { error, route: "/api/apt/extremes" });
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
   return NextResponse.json({ type: "drop", data });
 }

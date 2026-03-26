@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,12 +25,14 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await query;
     if (error) {
-      return NextResponse.json({ items: [], error: error.message }, { status: 500 });
+      logger.error("Failed to fetch dam content", { error, route: "/api/dam/content" });
+      return NextResponse.json({ items: [], error: "서버 오류가 발생했습니다" }, { status: 500 });
     }
 
     return NextResponse.json({ items: data ?? [] });
   } catch (e) {
-    return NextResponse.json({ items: [], error: String(e) }, { status: 500 });
+    logger.error("Unexpected error in dam content GET", { error: e, route: "/api/dam/content" });
+    return NextResponse.json({ items: [], error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 }
 
@@ -49,11 +52,13 @@ export async function PATCH(request: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      logger.error("Failed to update dam content status", { error, route: "/api/dam/content PATCH" });
+      return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    logger.error("Unexpected error in dam content PATCH", { error: e, route: "/api/dam/content PATCH" });
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 }
