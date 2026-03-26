@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";

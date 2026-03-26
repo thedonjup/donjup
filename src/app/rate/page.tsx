@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";

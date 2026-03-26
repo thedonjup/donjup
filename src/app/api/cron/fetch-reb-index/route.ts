@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createRentServiceClient } from "@/lib/supabase/rent-client";
+import { createRentServiceClient } from "@/lib/db/rent-client";
 import { fetchAllIndices, type RebIndexItem } from "@/lib/api/reb";
 
 export const maxDuration = 120;

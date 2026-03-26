@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/db/server";
 
 const ITEMS_PER_SITEMAP = 5000;
 

@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { createRentServiceClient } from "@/lib/supabase/rent-client";
+import { createClient } from "@/lib/db/server";
+import { createRentServiceClient } from "@/lib/db/rent-client";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";

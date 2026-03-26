@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createRentServiceClient } from "@/lib/supabase/rent-client";
+import { createRentServiceClient } from "@/lib/db/rent-client";
 import { fetchRentTransactions } from "@/lib/api/molit-rent";
 import { delay } from "@/lib/api/molit";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";

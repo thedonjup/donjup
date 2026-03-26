@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/db/server";
 
 export async function GET(request: Request) {
   // 관리자 API 인증

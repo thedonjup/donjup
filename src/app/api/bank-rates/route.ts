@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/db/server";
 
 /**
  * 은행별 주담대 최저금리 조회 API

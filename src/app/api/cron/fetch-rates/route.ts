@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/db/server";
 import { fetchAllRates, type EcosRateItem } from "@/lib/api/ecos";
 
 export const maxDuration = 60;

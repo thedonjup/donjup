@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/db/server";
 import { generateCardNews } from "@/lib/cardnews/render";
 import type { CardType, RankItem } from "@/lib/cardnews/types";
 
@@ -61,32 +61,9 @@ export async function GET(request: Request) {
     const dateStr = today.replace(/-/g, ".");
     const buffers = await generateCardNews(dateStr, cardType, items);
 
-    // Supabase Storage 업로드
+    // Storage upload not available — cards are generated but not persisted
+    // TODO: wire up an actual storage provider when available
     const storageUrls: string[] = [];
-    const folder = `cardnews/${today}/${cardType}`;
-
-    for (let i = 0; i < buffers.length; i++) {
-      const fileName = `${folder}/${String(i + 1).padStart(2, "0")}.png`;
-      const { error: uploadError } = await supabase.storage
-        .from("content")
-        .upload(fileName, buffers[i], {
-          contentType: "image/png",
-          upsert: true,
-        });
-
-      if (uploadError) {
-        return NextResponse.json(
-          { success: false, error: `Upload failed: ${uploadError.message}` },
-          { status: 500 }
-        );
-      }
-
-      const { data: urlData } = supabase.storage
-        .from("content")
-        .getPublicUrl(fileName);
-
-      storageUrls.push(urlData.publicUrl);
-    }
 
     // caption & hashtags 생성
     const typeLabel = cardType === "drop" ? "폭락" : "신고가";

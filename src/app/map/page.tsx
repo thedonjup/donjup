@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import KakaoMap from "@/components/map/KakaoMap";
 import type { MapTransaction } from "@/components/map/KakaoMap";
 

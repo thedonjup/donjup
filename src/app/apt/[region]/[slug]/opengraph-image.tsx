@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 
 export const runtime = "nodejs";
 export const alt = "돈줍 아파트 실거래가";

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import Link from "next/link";
 import AdSlot from "@/components/ads/AdSlot";
 import CoupangBanner from "@/components/CoupangBanner";

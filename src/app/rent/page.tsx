@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { createRentServiceClient } from "@/lib/supabase/rent-client";
+import { createRentServiceClient } from "@/lib/db/rent-client";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";

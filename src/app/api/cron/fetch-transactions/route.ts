@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/db/server";
 import { sendSlackAlert } from "@/lib/alert";
 import { fetchTransactions, delay } from "@/lib/api/molit";
 import {
