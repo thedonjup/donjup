@@ -125,6 +125,12 @@ Plans:
 
 **Requirements:** PERF-01, PERF-02, PERF-03, PERF-04
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — pg_trgm GIN 인덱스 + DB 커넥션 풀 조정 (PERF-01, PERF-02)
+- [ ] 05-02-PLAN.md — 크론잡 스케줄 정리 + 인메모리 rate limiter 제거 (PERF-03, PERF-04)
+
 **Scope:**
 - pg_trgm 확장 활성화 + GIN 인덱스 생성 (apt_name, region_name, dong_name)
 - DB 커넥션 풀 max 조정 또는 Neon pooler 활용
@@ -225,4 +231,4 @@ Phase 5 (성능) ─────────────────────
 
 ---
 *Roadmap created: 2026-03-26*
-*Last updated: 2026-03-26 after Phase 4 planning*
+*Last updated: 2026-03-26 after Phase 5 planning*
