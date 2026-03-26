@@ -61,8 +61,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        // HTML 페이지 — 캐시하지 않음 (배포 후 즉시 새 버전 제공)
+        source: "/((?!_next/static|_next/image|favicon).*)",
         headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
           { key: "Content-Security-Policy-Report-Only", value: cspDirectives },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
@@ -72,6 +74,14 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+        ],
+      },
+      {
+        // SW 파일 — 캐시하지 않음 (업데이트 즉시 반영)
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
         ],
       },
     ];
