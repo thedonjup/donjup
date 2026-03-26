@@ -16,9 +16,9 @@ const cspDirectives = [
     "https://connect.facebook.net",
     "https://va.vercel-scripts.com",
   ].join(" "),
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
   "img-src 'self' data: blob: https: http:",
-  "font-src 'self' https://fonts.gstatic.com data:",
+  "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
   [
     "connect-src 'self'",
     "https://dapi.kakao.com",

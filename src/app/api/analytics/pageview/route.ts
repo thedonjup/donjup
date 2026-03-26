@@ -15,19 +15,23 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    const { error } = await supabase.rpc("increment_page_view", {
-      p_page_path: pagePath,
-      p_page_type: pageType || null,
-      p_region_code: regionCode || null,
-      p_complex_id: complexId || null,
-      p_utm_source: utmSource || null,
-      p_utm_medium: utmMedium || null,
-      p_utm_campaign: utmCampaign || null,
-    });
+    const today = new Date().toISOString().split("T")[0];
+
+    const { error } = await supabase
+      .from("page_views")
+      .upsert(
+        {
+          page_path: pagePath,
+          page_type: pageType || null,
+          view_date: today,
+          view_count: 1,
+        },
+        { onConflict: "page_path,view_date" }
+      );
 
     if (error) {
-      logger.error("Failed to increment page view", { error, route: "/api/analytics/pageview" });
-      return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+      // page_views upsert 실패 시에도 200 반환 (분석은 best-effort)
+      logger.warn("Failed to track page view", { error: error.message, route: "/api/analytics/pageview" });
     }
 
     return NextResponse.json({ success: true });
