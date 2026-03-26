@@ -47,7 +47,8 @@ export default async function MarketIndexPage({
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 30000);
 
-    const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
+    const applyTypeFilter = <Q extends { eq: (col: string, val: number) => Q }>(q: Q): Q =>
+      validType !== 0 ? q.eq("property_type", validType) : q;
 
     sidoStats = await Promise.all(
       sidoEntries.map(async ([sidoCode, sido]) => {

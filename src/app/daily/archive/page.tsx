@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/db/server";
 import Link from "next/link";
 import type { Metadata } from "next";
+import type { DailyReport } from "@/types/db";
 
 export const metadata: Metadata = {
   title: "데일리 리포트 아카이브",
@@ -50,7 +51,7 @@ export default async function DailyArchivePage({
       <div className="mt-8">
         {reports && reports.length > 0 ? (
           <div className="space-y-2">
-            {reports.map((r: any) => (
+            {reports.map((r: DailyReport) => (
               <Link
                 key={r.id}
                 href={`/daily/${r.report_date}`}

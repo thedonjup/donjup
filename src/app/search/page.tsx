@@ -97,7 +97,7 @@ export default async function SearchPage({
         { next: { revalidate: 300 } }
       );
       const json = await res.json();
-      results = (json.results ?? []).map((d: any) => ({
+      results = (json.results ?? []).map((d: { id: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; slug: string }) => ({
         ...d,
         sido_name: null,
         sigungu_name: null,

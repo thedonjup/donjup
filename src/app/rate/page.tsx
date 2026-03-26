@@ -5,6 +5,7 @@ import AdSlot from "@/components/ads/AdSlot";
 import { RATE_LABELS, RATE_DESCRIPTIONS, RATE_ORDER } from "@/lib/format";
 import MiniAreaChart from "@/components/charts/MiniAreaChartWrapper";
 import { FaqJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import type { FinanceRate } from "@/types/db";
 
 export const metadata: Metadata = {
   title: "금리 현황",
@@ -37,8 +38,8 @@ const BANK_LABELS: Record<string, string> = {
 };
 
 export default async function RateDashboardPage() {
-  let allRates: any[] | null = null;
-  let bankRatesRaw: any[] | null = null;
+  let allRates: FinanceRate[] | null = null;
+  let bankRatesRaw: FinanceRate[] | null = null;
 
   try {
     const supabase = await createClient();
@@ -79,8 +80,7 @@ export default async function RateDashboardPage() {
   }>();
   for (const r of bankRatesRaw ?? []) {
     if (!bankRates.has(r.rate_type)) {
-      r.base_date = r.base_date instanceof Date ? r.base_date.toISOString().split("T")[0] : String(r.base_date ?? "");
-      bankRates.set(r.rate_type, r);
+      bankRates.set(r.rate_type, { ...r, base_date: String(r.base_date ?? "") });
     }
   }
   const sortedBankRates = Array.from(bankRates.values()).sort(
@@ -98,12 +98,12 @@ export default async function RateDashboardPage() {
   const historyByType = new Map<string, Array<{ date: string; value: number }>>();
 
   for (const r of allRates ?? []) {
-    r.base_date = r.base_date instanceof Date ? r.base_date.toISOString().split("T")[0] : String(r.base_date ?? "");
+    const baseDateStr = String(r.base_date ?? "");
     if (!latestByType.has(r.rate_type)) {
-      latestByType.set(r.rate_type, r);
+      latestByType.set(r.rate_type, { ...r, base_date: baseDateStr });
     }
     const history = historyByType.get(r.rate_type) ?? [];
-    history.push({ date: r.base_date, value: r.rate_value });
+    history.push({ date: baseDateStr, value: r.rate_value });
     historyByType.set(r.rate_type, history);
   }
 

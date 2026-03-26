@@ -96,7 +96,8 @@ export default async function MarketSigunguPage({
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 30000);
 
-    const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
+    const applyTypeFilter = <Q extends { eq: (col: string, val: number) => Q }>(q: Q): Q =>
+      validType !== 0 ? q.eq("property_type", validType) : q;
     const txFields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level";
 
     const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([

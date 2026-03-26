@@ -58,7 +58,13 @@ export default async function MarketSidoPage({
   const supabase = await createClient();
   const sigunguEntries = Object.entries(sido.sigungu);
 
-  let sigunguStats: { code: string; name: string; count: number; topDrop: any; topHigh: any }[] = [];
+  let sigunguStats: {
+    code: string;
+    name: string;
+    count: number;
+    topDrop: { apt_name: string; change_rate: number; trade_price: number } | null;
+    topHigh: { apt_name: string; trade_price: number } | null;
+  }[] = [];
 
   try {
     const ac = new AbortController();

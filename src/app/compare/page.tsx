@@ -71,7 +71,7 @@ export default function ComparePage() {
       const json = await res.json();
 
       const transactions = json.transactions ?? [];
-      const rents: any[] = [];
+      const rents: Array<{ deposit: number; monthly_rent: number; rent_type: string }> = [];
 
       const latestTrade = transactions.length > 0
         ? {
@@ -106,8 +106,8 @@ export default function ComparePage() {
           latestRent,
         },
       ]);
-    } catch (e: any) {
-      setError(e.message ?? "데이터를 불러올 수 없습니다");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "데이터를 불러올 수 없습니다");
       setSelected((prev) => [
         ...prev,
         {

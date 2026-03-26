@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
 import ShareButtons from "@/components/ShareButtons";
 import { formatPrice, RATE_LABELS } from "@/lib/format";
+import type { DailyReport } from "@/types/db";
 
 export const revalidate = 0;
 
@@ -56,7 +57,7 @@ export default async function DailyReportPage({
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 30000);
 
-  let report: any = null;
+  let report: DailyReport | null = null;
   try {
     const { data } = await supabase
       .from("daily_reports")
@@ -113,7 +114,7 @@ export default async function DailyReportPage({
           <ShareButtons
             url={`https://donjup.com/daily/${date}`}
             title={report.title}
-            description={report.summary}
+            description={report.summary ?? undefined}
           />
         </div>
         <p className="mt-2 text-sm t-text-secondary">{report.summary}</p>

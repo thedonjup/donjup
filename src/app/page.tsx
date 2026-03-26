@@ -14,6 +14,7 @@ import QuickLinks from "@/components/home/QuickLinks";
 import PopularComplexes from "@/components/home/PopularComplexes";
 import SidebarRateCard from "@/components/home/SidebarRateCard";
 import type { Metadata } from "next";
+import type { AptTransaction, FinanceRate } from "@/types/db";
 
 export const revalidate = 300;
 
@@ -40,10 +41,9 @@ const jsonLd = {
   },
 };
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function filterByType(rows: any[], validType: number): any[] {
+function filterByType<T extends { property_type: number }>(rows: T[], validType: number): T[] {
   if (validType === 0) return rows;
-  return rows.filter((r: any) => r.property_type === validType);
+  return rows.filter((r) => r.property_type === validType);
 }
 
 export default async function HomePage({
@@ -54,11 +54,11 @@ export default async function HomePage({
   const { type: typeParam } = await searchParams;
   const propertyType = typeof typeParam === "string" ? parseInt(typeParam, 10) : 1;
   const validType = [0, 1, 2, 3].includes(propertyType) ? propertyType : 1;
-  let drops: any[] = [];
-  let highs: any[] = [];
-  let volume: any[] = [];
-  let recent: any[] = [];
-  let rates: any[] = [];
+  let drops: AptTransaction[] = [];
+  let highs: AptTransaction[] = [];
+  let volume: AptTransaction[] = [];
+  let recent: AptTransaction[] = [];
+  let rates: FinanceRate[] = [];
   let totalTxns = 0;
   let totalComplexes = 0;
   let popularItems: { page_path: string; page_type: string | null; view_count: number }[] = [];
@@ -78,10 +78,10 @@ export default async function HomePage({
       const allVolume = typeof cache.volume === "string" ? JSON.parse(cache.volume) : cache.volume;
       const allRecent = typeof cache.recent === "string" ? JSON.parse(cache.recent) : cache.recent;
 
-      drops = filterByType(allDrops ?? [], validType).slice(0, 10);
-      highs = filterByType(allHighs ?? [], validType).slice(0, 10);
-      volume = filterByType(allVolume ?? [], validType).slice(0, 10);
-      recent = filterByType(allRecent ?? [], validType).slice(0, 10);
+      drops = filterByType((allDrops ?? []) as AptTransaction[], validType).slice(0, 10);
+      highs = filterByType((allHighs ?? []) as AptTransaction[], validType).slice(0, 10);
+      volume = filterByType((allVolume ?? []) as AptTransaction[], validType).slice(0, 10);
+      recent = filterByType((allRecent ?? []) as AptTransaction[], validType).slice(0, 10);
       rates = typeof cache.rates === "string" ? JSON.parse(cache.rates) : (cache.rates ?? []);
       totalTxns = Number(cache.total_transactions) || 0;
       totalComplexes = Number(cache.total_complexes) || 0;
@@ -90,7 +90,8 @@ export default async function HomePage({
       const timer = setTimeout(() => ac.abort(), 30000);
 
       const txFields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level,property_type";
-      const applyTypeFilter = (q: any) => validType !== 0 ? q.eq("property_type", validType) : q;
+      const applyTypeFilter = <Q extends { eq: (col: string, val: number) => Q }>(q: Q): Q =>
+        validType !== 0 ? q.eq("property_type", validType) : q;
 
       const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount] = await Promise.allSettled([
         applyTypeFilter(supabase.from("apt_transactions").select(txFields).not("change_rate", "is", null).lt("change_rate", 0)).order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
