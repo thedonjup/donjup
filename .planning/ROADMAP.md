@@ -9,7 +9,7 @@
 | # | Phase | Goal | Requirements | Risk |
 |---|-------|------|-------------|------|
 | 1 | SEO / 메타데이터 수정 | 2/2 | Complete   | 2026-03-25 |
-| 2 | 코드 정리 (패키지/네이밍) | 미사용 코드 제거, 네이밍 정리 | CLN-01~05 | Low |
+| 2 | 코드 정리 (패키지/네이밍) | 1/2 | In Progress|  |
 | 3 | 컴포넌트 분할 | 대형 파일 서브 컴포넌트로 분할 | CLN-06 | Medium |
 | 4 | 에러 핸들링 / 로깅 | 에러 바운더리 + 구조화 로깅 | ERR-01~04 | Low |
 | 5 | 성능 최적화 | DB 검색, 커넥션 풀, 크론잡 | PERF-01~04 | Medium |
@@ -50,11 +50,11 @@ Plans:
 
 **Requirements:** CLN-01, CLN-02, CLN-03, CLN-04, CLN-05
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 02-01-PLAN.md — formatPrice 중복 제거, Instagram 클라이언트 통합, 미사용 패키지 제거 (CLN-01, CLN-02, CLN-03)
-- [ ] 02-02-PLAN.md — supabase→db 리네이밍 + Storage stub 제거 (CLN-04, CLN-05)
+- [x] 02-02-PLAN.md — supabase→db 리네이밍 + Storage stub 제거 (CLN-04, CLN-05)
 
 **Scope:**
 - KakaoMap.tsx의 로컬 formatPrice 제거, src/lib/format.ts에서 import
