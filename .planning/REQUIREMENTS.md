@@ -30,8 +30,8 @@
 
 ### 성능
 
-- [ ] **PERF-01**: 검색 API가 pg_trgm GIN 인덱스를 활용한다
-- [ ] **PERF-02**: DB 커넥션 풀 설정이 크론잡 동시 실행에 대응한다
+- [x] **PERF-01**: 검색 API가 pg_trgm GIN 인덱스를 활용한다
+- [x] **PERF-02**: DB 커넥션 풀 설정이 크론잡 동시 실행에 대응한다
 - [ ] **PERF-03**: 크론잡 스케줄 겹침이 해소된다
 - [ ] **PERF-04**: 인메모리 rate limiter가 서버리스 환경에 맞게 개선된다
 
@@ -98,8 +98,8 @@
 | ERR-02 | Phase 4 | Pending |
 | ERR-03 | Phase 4 | Pending |
 | ERR-04 | Phase 4 | Pending |
-| PERF-01 | Phase 5 | Pending |
-| PERF-02 | Phase 5 | Pending |
+| PERF-01 | Phase 5 | Complete |
+| PERF-02 | Phase 5 | Complete |
 | PERF-03 | Phase 5 | Pending |
 | PERF-04 | Phase 5 | Pending |
 | TYPE-01 | Phase 6 | Pending |

@@ -2,25 +2,25 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 5
-status: planning
-last_updated: "2026-03-26T00:56:55.717Z"
+current_phase: 05
+status: executing
+last_updated: "2026-03-26T01:15:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 7
-  completed_plans: 9
+  total_plans: 9
+  completed_plans: 10
 ---
 
 # Project State: 돈줍 사이트 안정화
 
-**Current Phase:** 5
+**Current Phase:** 05
 **Milestone:** v1.0 — 사이트 안정화
-**Status:** Ready to plan
+**Status:** Executing Phase 05
 
 ## Active Phase
 
-Phase 04 — 에러 핸들링 (Plan 04-01 complete, Plan 04-02 complete)
+Phase 05 — 성능 (Plan 05-01 complete — awaiting DB migration checkpoint)
 
 ## Completed Phases
 
@@ -50,6 +50,9 @@ Phase 04 — 에러 핸들링 (Plan 04-01 complete, Plan 04-02 complete)
 | 2026-03-26 | global-error.tsx 인라인 스타일 | globals.css가 layout.tsx 밖에서 로드 불가 |
 | 2026-03-26 | 크론잡 응답에는 e.message 허용 | CRON_SECRET 보호 내부 엔드포인트이므로 운영 디버깅 우선 |
 | 2026-03-26 | generic 에러 메시지 한국어 통일 | "서버 오류가 발생했습니다" — 사용자 대면 일관성 |
+| 2026-03-26 | Pool max 5→10 | 22 cron jobs가 동시 실행될 수 있어 Neon free tier 범위 내에서 보수적 증가 |
+| 2026-03-26 | pg_trgm GIN index CONCURRENTLY | 라이브 프로덕션 테이블 잠금 방지 |
+| 2026-03-26 | Migration script as standalone SQL | 운영자가 프로덕션 적용 시점을 직접 제어 |
 
 ---
 *State initialized: 2026-03-26*

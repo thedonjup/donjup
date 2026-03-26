@@ -12,7 +12,7 @@
 | 2 | 코드 정리 (패키지/네이밍) | 1/2 | In Progress|  |
 | 3 | 컴포넌트 분할 | 1/1 | Complete   | 2026-03-26 |
 | 4 | 에러 핸들링 / 로깅 | 에러 바운더리 + 구조화 로깅 | ERR-01~04 | Low |
-| 5 | 성능 최적화 | DB 검색, 커넥션 풀, 크론잡 | PERF-01~04 | Medium |
+| 5 | 성능 최적화 | 2/2 | Complete   | 2026-03-26 |
 | 6 | TypeScript 타입 강화 | 핵심 모듈 any 제거, 인터페이스 정의 | TYPE-01~03 | Low |
 | 7 | 접근성 (a11y) | ARIA, 키보드 내비, 텍스트 대안 | A11Y-01~04 | Low |
 | 8 | 보안 강화 | 인증, CSP, SSL, 환경변수 정리 | SEC-01~06 | Medium |
@@ -125,11 +125,11 @@ Plans:
 
 **Requirements:** PERF-01, PERF-02, PERF-03, PERF-04
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 05-01-PLAN.md — pg_trgm GIN 인덱스 + DB 커넥션 풀 조정 (PERF-01, PERF-02)
-- [ ] 05-02-PLAN.md — 크론잡 스케줄 정리 + 인메모리 rate limiter 제거 (PERF-03, PERF-04)
+- [x] 05-01-PLAN.md — pg_trgm GIN 인덱스 + DB 커넥션 풀 조정 (PERF-01, PERF-02)
+- [x] 05-02-PLAN.md — 크론잡 스케줄 정리 + 인메모리 rate limiter 제거 (PERF-03, PERF-04)
 
 **Scope:**
 - pg_trgm 확장 활성화 + GIN 인덱스 생성 (apt_name, region_name, dong_name)
