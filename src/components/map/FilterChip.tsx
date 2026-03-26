@@ -16,6 +16,7 @@ export default function FilterChip({
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
       style={{
         background: active ? color : "var(--color-surface-elevated)",

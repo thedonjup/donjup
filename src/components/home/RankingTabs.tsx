@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import { PROPERTY_TYPE_LABELS } from "@/components/PropertyTypeFilter";
@@ -90,6 +90,36 @@ export default function RankingTabs({
   showTypeBadge?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("drops");
+  const tabRefs = useRef<Record<TabKey, HTMLButtonElement | null>>({
+    drops: null,
+    highs: null,
+    volume: null,
+    recent: null,
+  });
+
+  const handleTabKeyDown = useCallback(
+    (e: React.KeyboardEvent, currentKey: TabKey) => {
+      const keys = TABS.map((t) => t.key);
+      const idx = keys.indexOf(currentKey);
+      let nextIdx = idx;
+      if (e.key === "ArrowRight") {
+        nextIdx = (idx + 1) % keys.length;
+      } else if (e.key === "ArrowLeft") {
+        nextIdx = (idx - 1 + keys.length) % keys.length;
+      } else if (e.key === "Home") {
+        nextIdx = 0;
+      } else if (e.key === "End") {
+        nextIdx = keys.length - 1;
+      } else {
+        return;
+      }
+      e.preventDefault();
+      const nextKey = keys[nextIdx];
+      setActiveTab(nextKey);
+      tabRefs.current[nextKey]?.focus();
+    },
+    []
+  );
 
   const dataMap: Record<TabKey, Transaction[]> = {
     drops,
@@ -104,11 +134,22 @@ export default function RankingTabs({
   return (
     <div>
       {/* Tab Navigation */}
-      <div className="flex gap-1 rounded-xl tab-container-bg p-1">
+      <div
+        className="flex gap-1 rounded-xl tab-container-bg p-1"
+        role="tablist"
+        aria-label="거래 랭킹"
+      >
         {TABS.map((tab) => (
           <button
             key={tab.key}
+            ref={(el) => { tabRefs.current[tab.key] = el; }}
+            role="tab"
+            id={`tab-${tab.key}`}
+            aria-selected={activeTab === tab.key}
+            aria-controls={`tabpanel-${tab.key}`}
+            tabIndex={activeTab === tab.key ? 0 : -1}
             onClick={() => setActiveTab(tab.key)}
+            onKeyDown={(e) => handleTabKeyDown(e, tab.key)}
             className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-bold transition-all ${
               activeTab === tab.key
                 ? tab.activeColor + " shadow-sm"
@@ -121,7 +162,12 @@ export default function RankingTabs({
       </div>
 
       {/* Items List */}
-      <div className="mt-4 space-y-2">
+      <div
+        role="tabpanel"
+        id={`tabpanel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+        className="mt-4 space-y-2"
+      >
         {items.length > 0 ? (
           items.map((t, i) => {
             const isDrop = activeTab === "drops";

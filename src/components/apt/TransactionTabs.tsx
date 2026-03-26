@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 
 interface Transaction {
@@ -43,12 +43,28 @@ export default function TransactionTabs({
 }) {
   const [tab, setTab] = useState<"sale" | "rent">("sale");
 
+  const handleTabKeyDown = useCallback(
+    (e: React.KeyboardEvent, current: "sale" | "rent") => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        setTab(current === "sale" ? "rent" : "sale");
+      }
+    },
+    []
+  );
+
   return (
     <div>
       {/* Tab buttons */}
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex gap-2" role="tablist" aria-label="거래 이력">
         <button
+          role="tab"
+          id="tab-sale"
+          aria-selected={tab === "sale"}
+          aria-controls="tabpanel-sale"
+          tabIndex={tab === "sale" ? 0 : -1}
           onClick={() => setTab("sale")}
+          onKeyDown={(e) => handleTabKeyDown(e, "sale")}
           className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-colors"
           style={
             tab === "sale"
@@ -69,7 +85,13 @@ export default function TransactionTabs({
           </span>
         </button>
         <button
+          role="tab"
+          id="tab-rent"
+          aria-selected={tab === "rent"}
+          aria-controls="tabpanel-rent"
+          tabIndex={tab === "rent" ? 0 : -1}
           onClick={() => setTab("rent")}
+          onKeyDown={(e) => handleTabKeyDown(e, "rent")}
           className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-colors"
           style={
             tab === "rent"
@@ -92,9 +114,13 @@ export default function TransactionTabs({
       </div>
 
       {/* Sale table */}
-      {tab === "sale" && (
-        <>
-          {saleTxns.length > 0 ? (
+      <div
+        role="tabpanel"
+        id="tabpanel-sale"
+        aria-labelledby="tab-sale"
+        hidden={tab !== "sale"}
+      >
+        {saleTxns.length > 0 ? (
             <div
               className="overflow-x-auto rounded-2xl border t-card"
               style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
@@ -200,13 +226,16 @@ export default function TransactionTabs({
               거래 이력이 없습니다.
             </p>
           )}
-        </>
-      )}
+      </div>
 
       {/* Rent table */}
-      {tab === "rent" && (
-        <>
-          {rentTxns.length > 0 ? (
+      <div
+        role="tabpanel"
+        id="tabpanel-rent"
+        aria-labelledby="tab-rent"
+        hidden={tab !== "rent"}
+      >
+        {rentTxns.length > 0 ? (
             <div
               className="overflow-x-auto rounded-2xl border t-card"
               style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
@@ -290,8 +319,7 @@ export default function TransactionTabs({
               전월세 이력이 없습니다.
             </p>
           )}
-        </>
-      )}
+      </div>
     </div>
   );
 }
