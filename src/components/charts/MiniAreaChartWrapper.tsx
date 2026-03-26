@@ -11,6 +11,7 @@ export default function MiniAreaChartWrapper(props: {
   data: { value: number }[];
   color?: string;
   height?: number;
+  label?: string;
 }) {
   return <MiniAreaChart {...props} />;
 }

@@ -50,12 +50,21 @@ export default function PriceHistoryChart({
 
   if (data.length < 2) return null;
 
+  const minPrice = Math.min(...data.map((d) => d.price));
+  const maxPrice = Math.max(...data.map((d) => d.price));
+  const dateRange = `${data[0].fullDate} ~ ${data[data.length - 1].fullDate}`;
+
   return (
-    <div className="rounded-2xl border p-5 t-card" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
+    <div
+      role="figure"
+      aria-label="가격 추이 차트"
+      className="rounded-2xl border p-5 t-card"
+      style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
+    >
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold t-text">가격 추이</h2>
         {sizes.length > 1 && (
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1 flex-wrap" role="tablist" aria-label="면적 필터">
             <SizeTab
               label="전체"
               active={selectedSize === null}
@@ -72,6 +81,10 @@ export default function PriceHistoryChart({
           </div>
         )}
       </div>
+
+      <p className="sr-only">
+        {dateRange} 기간 중 최저 {formatPrice(minPrice)} ~ 최고 {formatPrice(maxPrice)}, 총 {data.length}건의 거래
+      </p>
 
       <ResponsiveContainer width="100%" height={240}>
         <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
@@ -144,6 +157,8 @@ function SizeTab({
 }) {
   return (
     <button
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
         active

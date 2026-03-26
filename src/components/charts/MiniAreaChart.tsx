@@ -6,14 +6,17 @@ export default function MiniAreaChart({
   data,
   color = "#059669",
   height = 48,
+  label = "가격 추이 미니 차트",
 }: {
   data: { value: number }[];
   color?: string;
   height?: number;
+  label?: string;
 }) {
   if (data.length < 2) return null;
 
   return (
+    <div role="img" aria-label={label}>
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
         <defs>
@@ -33,5 +36,6 @@ export default function MiniAreaChart({
         />
       </AreaChart>
     </ResponsiveContainer>
+    </div>
   );
 }
