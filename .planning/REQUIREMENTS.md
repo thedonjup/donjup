@@ -50,10 +50,10 @@
 
 ### 보안
 
-- [ ] **SEC-01**: ADMIN_EMAILS가 서버 전용 환경변수로 이동된다
-- [ ] **SEC-02**: DAM content 엔드포인트에 인증이 추가된다
-- [ ] **SEC-03**: push subscribe 엔드포인트에 보안이 강화된다
-- [ ] **SEC-04**: SSL rejectUnauthorized가 true로 설정된다
+- [x] **SEC-01**: ADMIN_EMAILS가 서버 전용 환경변수로 이동된다
+- [x] **SEC-02**: DAM content 엔드포인트에 인증이 추가된다
+- [x] **SEC-03**: push subscribe 엔드포인트에 보안이 강화된다
+- [x] **SEC-04**: SSL rejectUnauthorized가 true로 설정된다
 - [x] **SEC-05**: CSP 헤더가 추가된다 (Kakao SDK, GA, AdSense, Firebase 허용)
 - [ ] **SEC-06**: proxy.ts의 rate limiter가 서버리스 대응으로 교체되거나 제거된다
 
@@ -109,10 +109,10 @@
 | A11Y-02 | Phase 7 | Complete |
 | A11Y-03 | Phase 7 | Complete |
 | A11Y-04 | Phase 7 | Complete |
-| SEC-01 | Phase 8 | Pending |
-| SEC-02 | Phase 8 | Pending |
-| SEC-03 | Phase 8 | Pending |
-| SEC-04 | Phase 8 | Pending |
+| SEC-01 | Phase 8 | Complete |
+| SEC-02 | Phase 8 | Complete |
+| SEC-03 | Phase 8 | Complete |
+| SEC-04 | Phase 8 | Complete |
 | SEC-05 | Phase 8 | Complete |
 | SEC-06 | Phase 8 | Pending |
 
