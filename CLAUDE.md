@@ -27,6 +27,29 @@
 - 도메인: donjup.com, www.donjup.com
 - 배포 명령: `npx vercel --prod --yes`
 - git push 후 자동 배포도 동작하지만, CLI 배포가 도메인에 직접 연결됨
+- DB: CockroachDB (ssl: { rejectUnauthorized: false } 필수 — ssl: true로 바꾸면 연결 끊김)
+
+## 캐시/서비스 워커 필수 규칙
+
+**절대 위반 금지 — 위반 시 배포 후 사용자에게 이전 버전 보임**
+
+1. **서비스 워커(sw.js)에서 HTML/RSC/API를 절대 캐시하지 말 것**
+   - 캐시 가능: `_next/static/` (해시된 파일명), 이미지, 폰트
+   - 캐시 금지: HTML, RSC 페이로드, API 응답, sw.js 자체
+   - 이유: Next.js는 빌드마다 JS 번들 해시가 바뀜. HTML 캐시하면 이전 HTML이 존재하지 않는 JS를 참조 → 에러
+
+2. **HTML 응답에 `Cache-Control: no-cache, no-store, must-revalidate` 헤더 유지**
+   - next.config.ts에서 설정 중 (sw.js도 동일)
+
+3. **SW 등록 시 `updateViaCache: 'none'` 필수**
+   - layout.tsx 인라인 스크립트에서 `navigator.serviceWorker.register('/sw.js', {updateViaCache:'none'})` 사용 중
+
+4. **SW 버전 변경 시 activate에서 이전 캐시 전부 삭제**
+   - `caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))`
+
+5. **서버 컴포넌트에서 자기 자신 API를 fetch하지 말 것**
+   - `VERCEL_URL`은 preview URL이라 production과 다름
+   - 서버 컴포넌트에서는 직접 DB 쿼리 사용 (`getPool().query()`)
 
 ---
 
