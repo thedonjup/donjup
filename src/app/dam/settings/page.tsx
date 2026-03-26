@@ -15,7 +15,7 @@ const SETTINGS: SettingSection[] = [
       { label: "Kakao JS Key", value: process.env.NEXT_PUBLIC_KAKAO_JS_KEY ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_KAKAO_JS_KEY ? "ok" : "missing" },
       { label: "Google Analytics ID", value: process.env.NEXT_PUBLIC_GA_ID ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_GA_ID ? "ok" : "missing" },
       { label: "AdSense ID", value: process.env.NEXT_PUBLIC_ADSENSE_ID ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_ADSENSE_ID ? "ok" : "missing" },
-      { label: "Admin Emails", value: process.env.NEXT_PUBLIC_ADMIN_EMAILS ? "설정됨" : "미설정", status: process.env.NEXT_PUBLIC_ADMIN_EMAILS ? "ok" : "missing" },
+      { label: "Admin Emails", value: "서버 설정됨 (ADMIN_EMAILS)", status: "ok" },
     ],
   },
   {
