@@ -2,13 +2,35 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/db/server";
 import { logger } from "@/lib/logger";
 
-export async function POST(request: Request) {
-  try {
-    const { endpoint, keys } = await request.json();
+const ALLOWED_ORIGINS = [
+  "https://donjup.com",
+  "https://www.donjup.com",
+];
 
-    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+export async function POST(request: Request) {
+  // Origin validation
+  const origin = request.headers.get("origin");
+  const isDev = process.env.NODE_ENV === "development";
+
+  if (!isDev && origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const { endpoint, keys } = body as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } };
+
+    // Input validation
+    if (
+      typeof endpoint !== "string" ||
+      !endpoint.startsWith("https://") ||
+      typeof keys?.p256dh !== "string" ||
+      !keys.p256dh ||
+      typeof keys?.auth !== "string" ||
+      !keys.auth
+    ) {
       return NextResponse.json(
-        { error: "Missing subscription data" },
+        { error: "Invalid subscription data" },
         { status: 400 }
       );
     }
