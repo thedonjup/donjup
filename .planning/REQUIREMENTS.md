@@ -19,7 +19,7 @@
 - [x] **CLN-03**: 미사용 PostgreSQL 패키지(postgres, @neondatabase/serverless)가 제거된다
 - [x] **CLN-04**: src/lib/supabase/ 디렉토리가 실제 역할에 맞게 src/lib/db/로 리네이밍된다
 - [x] **CLN-05**: Storage stub이 제거되거나 적절한 구현으로 교체된다
-- [ ] **CLN-06**: 대형 컴포넌트(calculator 1101줄, KakaoMap 640줄)가 서브 컴포넌트로 분할된다
+- [x] **CLN-06**: 대형 컴포넌트(calculator 1101줄, KakaoMap 640줄)가 서브 컴포넌트로 분할된다
 
 ### 에러 핸들링 / 로깅
 
@@ -93,7 +93,7 @@
 | CLN-03 | Phase 2 | Complete |
 | CLN-04 | Phase 2 | Complete |
 | CLN-05 | Phase 2 | Complete |
-| CLN-06 | Phase 3 | Pending |
+| CLN-06 | Phase 3 | Complete |
 | ERR-01 | Phase 4 | Pending |
 | ERR-02 | Phase 4 | Pending |
 | ERR-03 | Phase 4 | Pending |
