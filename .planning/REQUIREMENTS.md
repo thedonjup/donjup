@@ -37,8 +37,8 @@
 
 ### TypeScript / 타입 안전성
 
-- [ ] **TYPE-01**: 핵심 DB 모델(apt_transactions, apt_complexes, finance_rates)에 타입 인터페이스가 정의된다
-- [ ] **TYPE-02**: API 라우트 응답에 타입이 적용된다
+- [x] **TYPE-01**: 핵심 DB 모델(apt_transactions, apt_complexes, finance_rates)에 타입 인터페이스가 정의된다
+- [x] **TYPE-02**: API 라우트 응답에 타입이 적용된다
 - [ ] **TYPE-03**: 주요 컴포넌트(page.tsx, KakaoMap)의 any 타입이 구체 타입으로 교체된다
 
 ### 접근성
@@ -102,8 +102,8 @@
 | PERF-02 | Phase 5 | Complete |
 | PERF-03 | Phase 5 | Complete |
 | PERF-04 | Phase 5 | Complete |
-| TYPE-01 | Phase 6 | Pending |
-| TYPE-02 | Phase 6 | Pending |
+| TYPE-01 | Phase 6 | Complete |
+| TYPE-02 | Phase 6 | Complete |
 | TYPE-03 | Phase 6 | Pending |
 | A11Y-01 | Phase 7 | Pending |
 | A11Y-02 | Phase 7 | Pending |

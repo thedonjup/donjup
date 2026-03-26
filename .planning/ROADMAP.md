@@ -154,7 +154,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — DB 모델 인터페이스 정의 + API 라우트 응답 타입 적용 (TYPE-01, TYPE-02)
+- [x] 06-01-PLAN.md — DB 모델 인터페이스 정의 + API 라우트 응답 타입 적용 (TYPE-01, TYPE-02)
 - [ ] 06-02-PLAN.md — 주요 컴포넌트/페이지 any 제거 + KakaoMap/client.ts 타입 강화 (TYPE-03)
 
 **Scope:**
