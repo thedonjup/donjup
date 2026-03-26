@@ -98,6 +98,12 @@ Plans:
 
 **Requirements:** ERR-01, ERR-02, ERR-03, ERR-04
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — 구조화 로깅 유틸 + 브랜드 에러 페이지 (ERR-01, ERR-03)
+- [ ] 04-02-PLAN.md — API 에러 응답 정리 + 크론잡 Slack 알림 (ERR-02, ERR-04)
+
 **Scope:**
 - src/app/error.tsx (브랜드 에러 페이지) 구현/개선
 - src/app/global-error.tsx 구현
@@ -219,4 +225,4 @@ Phase 5 (성능) ─────────────────────
 
 ---
 *Roadmap created: 2026-03-26*
-*Last updated: 2026-03-26 after Phase 2 planning*
+*Last updated: 2026-03-26 after Phase 4 planning*
