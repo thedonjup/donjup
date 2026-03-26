@@ -175,6 +175,12 @@ Plans:
 
 **Requirements:** A11Y-01, A11Y-02, A11Y-03, A11Y-04
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — ARIA 속성 + 키보드 내비게이션 + skip-to-content 검증 (A11Y-01, A11Y-02, A11Y-04)
+- [ ] 07-02-PLAN.md — 차트/지도 텍스트 대안 (A11Y-03)
+
 **Scope:**
 - 탭, 버튼, 링크에 role, aria-label, aria-selected 등 추가
 - 키보드 내비게이션 (Tab, Enter, Escape) 동작 확인 및 수정
@@ -237,4 +243,4 @@ Phase 5 (성능) ─────────────────────
 
 ---
 *Roadmap created: 2026-03-26*
-*Last updated: 2026-03-26 after Phase 6 planning*
+*Last updated: 2026-03-26 after Phase 7 planning*
