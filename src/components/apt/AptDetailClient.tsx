@@ -143,10 +143,13 @@ export default function AptDetailClient({
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div
+            className="flex gap-2 overflow-x-auto whitespace-nowrap pb-2 sm:flex-wrap sm:overflow-visible sm:whitespace-normal sm:pb-0"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+          >
             <button
               onClick={() => setSelectedSize(null)}
-              className="rounded-xl px-3 py-2 text-xs font-bold transition"
+              className="shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition"
               style={
                 selectedSize === null
                   ? { background: "var(--color-brand-600)", color: "#fff" }
@@ -161,7 +164,7 @@ export default function AptDetailClient({
                 <button
                   key={size}
                   onClick={() => setSelectedSize(size)}
-                  className="rounded-xl px-3 py-2 text-left transition"
+                  className="shrink-0 rounded-xl px-3 py-2 text-left transition"
                   style={
                     selectedSize === size
                       ? { background: "var(--color-brand-600)", color: "#fff" }
@@ -169,11 +172,11 @@ export default function AptDetailClient({
                   }
                 >
                   <div className="text-xs font-bold">{formatSizeLabel(size)}</div>
-                  <div className="text-[10px] mt-0.5" style={{ opacity: 0.8 }}>
+                  <div className="hidden sm:block text-[10px] mt-0.5" style={{ opacity: 0.8 }}>
                     {formatSizeDetail(size)}
                   </div>
                   {(prices?.highFloorSale || prices?.lowFloorSale || prices?.latestJeonse) && (
-                    <div className="text-[10px] mt-0.5 tabular-nums" style={{ opacity: 0.7 }}>
+                    <div className="hidden sm:block text-[10px] mt-0.5 tabular-nums" style={{ opacity: 0.7 }}>
                       {prices.highFloorSale ? `고층 ${formatPriceShort(prices.highFloorSale)}` : ""}
                       {prices.lowFloorSale ? ` / 저층 ${formatPriceShort(prices.lowFloorSale)}` : ""}
                       {prices.latestJeonse ? ` / 전세 ${formatPriceShort(prices.latestJeonse)}` : ""}

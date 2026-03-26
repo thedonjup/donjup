@@ -35,6 +35,7 @@ const BANK_LABELS: Record<string, string> = {
   BANK_GYEONGNAM: "경남은행",
   BANK_JEJU: "제주은행",
   BANK_SUHYUP: "수협은행",
+  BANK_UNKNOWN: "기타",
 };
 
 export default async function RateDashboardPage() {
@@ -170,7 +171,34 @@ export default async function RateDashboardPage() {
               <p className="mb-3 text-xs t-text-tertiary">
                 금융감독원 금융상품한눈에 기준 | {sortedBankRates[0]?.base_date}
               </p>
-              <div className="rounded-2xl border t-border t-card overflow-x-auto">
+              {/* Mobile: Card layout */}
+              <div className="space-y-2 sm:hidden">
+                {sortedBankRates.map((bank) => (
+                  <div key={bank.rate_type} className="rounded-xl border t-border t-card px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium t-text text-sm">
+                        {BANK_LABELS[bank.rate_type] ?? bank.rate_type.replace(/^BANK_/, "").replace(/_/g, " ")}
+                      </p>
+                      <p className="text-sm font-bold tabular-nums t-text shrink-0">{bank.rate_value}%</p>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-xs t-text-tertiary">
+                      <span>기준일 {bank.base_date}</span>
+                      {bank.change_bp !== null && bank.change_bp !== 0 && (
+                        <span
+                          className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                            bank.change_bp > 0 ? "t-drop-bg t-drop" : "t-rise-bg t-rise"
+                          }`}
+                        >
+                          {bank.change_bp > 0 ? "+" : ""}{bank.change_bp}bp
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table layout */}
+              <div className="hidden sm:block rounded-2xl border t-border t-card overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b t-elevated text-left text-xs t-text-secondary">
@@ -184,7 +212,7 @@ export default async function RateDashboardPage() {
                     {sortedBankRates.map((bank) => (
                       <tr key={bank.rate_type} className="border-b t-border last:border-0">
                         <td className="px-4 py-3 font-medium t-text">
-                          {BANK_LABELS[bank.rate_type] ?? bank.rate_type.replace("BANK_", "")}
+                          {BANK_LABELS[bank.rate_type] ?? bank.rate_type.replace(/^BANK_/, "").replace(/_/g, " ")}
                         </td>
                         <td className="px-4 py-3 text-right font-bold tabular-nums t-text">
                           {bank.rate_value}%

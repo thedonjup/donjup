@@ -18,7 +18,7 @@ interface HeroSectionProps {
 export default function HeroSection({ heroTx, heroHigh, today }: HeroSectionProps) {
   return (
     <section className="hero-gradient text-white">
-      <div className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:py-20">
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <span className="live-dot inline-block h-2 w-2 rounded-full bg-brand-400" />
           <span>실시간 업데이트</span>
@@ -26,14 +26,14 @@ export default function HeroSection({ heroTx, heroHigh, today }: HeroSectionProp
           <span>{today}</span>
         </div>
 
-        <h1 className="mt-6 text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+        <h1 className="mt-6 text-2xl font-black leading-tight tracking-tight sm:text-4xl lg:text-6xl">
           {heroTx ? (
             <>
               <span className="text-red-400">{heroTx.apt_name}</span>
               <br />
               <span>최고가 대비 </span>
               <span
-                className="inline-block rounded-lg px-3 py-1"
+                className="inline-block rounded-lg px-2 py-0.5 sm:px-3 sm:py-1"
                 style={{
                   backgroundColor:
                     heroTx.drop_level === "severe"
@@ -65,7 +65,7 @@ export default function HeroSection({ heroTx, heroHigh, today }: HeroSectionProp
               <span className="text-brand-400">{heroHigh.apt_name}</span>
               <br />
               <span>신고가 </span>
-              <span className="inline-block rounded-lg bg-brand-500/20 px-3 py-1 text-brand-400">
+              <span className="inline-block rounded-lg bg-brand-500/20 px-2 py-0.5 sm:px-3 sm:py-1 text-brand-400">
                 {formatPrice(heroHigh.trade_price)}
               </span>
               <span> 경신</span>
@@ -79,7 +79,7 @@ export default function HeroSection({ heroTx, heroHigh, today }: HeroSectionProp
           )}
         </h1>
 
-        <p className="mt-4 max-w-2xl text-lg text-gray-400 sm:text-xl">
+        <p className="mt-4 max-w-2xl text-base text-gray-400 sm:text-lg">
           {heroTx
             ? `${formatPrice(heroTx.highest_price!)} → ${formatPrice(heroTx.trade_price)} | ${heroTx.region_name} · 국토교통부 실거래가 기반`
             : heroHigh

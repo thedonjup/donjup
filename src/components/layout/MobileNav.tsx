@@ -111,8 +111,12 @@ export default function MobileNav() {
             zIndex: 9990,
             backgroundColor: "rgba(0,0,0,0.5)",
             backdropFilter: "blur(4px)",
+            touchAction: "none",
+            WebkitTapHighlightColor: "transparent",
+            pointerEvents: "auto",
           }}
           onClick={() => setOpen(false)}
+          onTouchStart={(e) => e.preventDefault()}
         />
       )}
 

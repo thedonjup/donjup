@@ -102,7 +102,46 @@ export default async function NewHighsPage({
         </section>
 
         {transactions.length > 0 ? (
-          <div className="overflow-x-auto rounded-2xl border t-border t-card">
+          <>
+            {/* Mobile: Card layout */}
+            <div className="space-y-2 sm:hidden">
+              {transactions.map((tx, i) => {
+                const slug = makeSlug(tx.region_code, tx.apt_name);
+                return (
+                  <Link
+                    key={tx.id}
+                    href={`/apt/${tx.region_code}/${slug}`}
+                    className="card-hover block rounded-xl border t-border t-card px-4 py-3.5"
+                    style={{ WebkitTapHighlightColor: "transparent", minHeight: 64 }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1 flex items-center gap-2">
+                        <span className="rank-badge rank-badge-rise text-[11px] shrink-0">{i + 1}</span>
+                        <p className="truncate text-sm font-semibold t-text" style={{ lineHeight: "1.4" }}>
+                          {tx.apt_name}
+                        </p>
+                      </div>
+                      <p className="text-sm font-bold tabular-nums t-rise shrink-0">
+                        {formatPrice(tx.trade_price)}
+                      </p>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2 pl-7">
+                      <span className="text-xs t-text-tertiary">
+                        {tx.region_name} · {sqmToPyeong(tx.size_sqm)}평 · {tx.trade_date}
+                      </span>
+                      {tx.deal_type === "직거래" && (
+                        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--color-semantic-warn-bg)", color: "var(--color-semantic-warn)" }}>
+                          직거래
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Desktop: Table layout */}
+            <div className="hidden sm:block overflow-x-auto rounded-2xl border t-border t-card">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -159,7 +198,8 @@ export default async function NewHighsPage({
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         ) : (
           <div className="rounded-2xl border-2 border-dashed t-border p-10 text-center">
             <p className="text-sm t-text-secondary">신고가 데이터가 없습니다</p>

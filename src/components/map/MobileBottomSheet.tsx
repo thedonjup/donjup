@@ -25,12 +25,13 @@ export default function MobileBottomSheet({
   return (
     <div
       className={`fixed bottom-0 left-0 right-0 z-30 rounded-t-2xl border-t transition-all duration-300 md:hidden ${
-        expanded ? "h-[60vh]" : "h-[140px]"
+        expanded ? "h-[60vh]" : "h-[160px]"
       }`}
       style={{
         borderColor: "var(--color-border)",
         background: "var(--color-surface-card)",
         boxShadow: "0 -4px 20px rgba(0,0,0,0.1)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
       {/* Drag handle */}

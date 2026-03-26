@@ -104,7 +104,8 @@ export default function PriceHistoryChart({
         {dateRange} 기간 중 최저 {formatPrice(minPrice)} ~ 최고 {formatPrice(maxPrice)}, 총 {data.length}건의 거래
       </p>
 
-      <ResponsiveContainer width="100%" height={240}>
+      <div className="h-[280px] sm:h-[240px]">
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
           <defs>
             <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
@@ -113,11 +114,12 @@ export default function PriceHistoryChart({
             </linearGradient>
           </defs>
           <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--color-text-tertiary)" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 11, fill: "var(--color-text-tertiary)" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatPrice(v)} width={70} domain={["dataMin", "dataMax"]} />
+          <YAxis tick={{ fontSize: 11, fill: "var(--color-text-tertiary)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 10000 ? `${(v / 10000).toFixed(v % 10000 === 0 ? 0 : 1)}억` : `${v.toLocaleString()}만`} width={60} domain={["dataMin", "dataMax"]} />
           <Tooltip content={<CustomTooltip sizeUnit={sizeUnit} />} />
           <Area type="monotone" dataKey="price" stroke="#059669" strokeWidth={2} fill="url(#priceGrad)" dot={{ r: 3, fill: "#059669", strokeWidth: 0 }} activeDot={{ r: 5, fill: "#059669", strokeWidth: 2, stroke: "#fff" }} />
         </AreaChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

@@ -168,7 +168,7 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
   );
 
   return (
-    <div className="flex h-[calc(100vh-64px)] w-full">
+    <div className="flex h-[calc(100dvh-64px)] w-full">
       <MapSidePanel
         transactions={filteredTransactions}
         activeId={activeId}
@@ -211,7 +211,7 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
             style={{ background: "var(--color-surface-page)" }}
           >
             <div
-              className="text-sm"
+              className="text-sm whitespace-nowrap"
               style={{ color: "var(--color-text-tertiary)" }}
             >
               지도를 불러오는 중...
