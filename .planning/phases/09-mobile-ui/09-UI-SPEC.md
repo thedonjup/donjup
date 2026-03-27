@@ -43,6 +43,7 @@ Declared values (must be multiples of 4):
 | 3xl | 64px | Desktop hero py-20 |
 
 Exceptions:
+- Chip horizontal padding: 12px (`px-3`) — multiple of 4, used for compact chip inner padding in area selector
 - Mobile touch targets: minimum 44px height on all interactive elements (enforced via `globals.css` `@media (max-width: 640px)` rule — already in codebase)
 - Card minimum height: 64px (`minHeight: 64` on mobile transaction cards — existing pattern to preserve)
 - Rank badge: 28px × 28px fixed (existing `.rank-badge` class — do not change)
@@ -136,7 +137,7 @@ Components modified or created in this phase:
 
 ### Area Chip Selector
 - **Layout:** single horizontal row, `overflow-x-auto`, `whitespace-nowrap`, `-mx-4 px-4` to extend to viewport edges
-- **Chip size:** `px-3 py-1.5` (12px × 6px), `text-sm` (14px), `rounded-full`
+- **Chip size:** `px-3 py-2` (12px × 8px), `text-sm` (14px), `rounded-full`
 - **Active state:** `bg-brand-500 text-white border-brand-500`; inactive: `t-card t-border t-text-secondary`
 - **Scroll behavior:** momentum scroll (`-webkit-overflow-scrolling: touch`); no scrollbar visible on mobile
 - **No wrapping.** If chips overflow, user scrolls horizontally.
