@@ -245,7 +245,37 @@ export default async function RateDashboardPage() {
 
           <section className="mt-10">
             <h2 className="mb-4 text-lg font-bold t-text">최근 금리 변동 이력</h2>
-            <div className="rounded-2xl border t-border t-card overflow-x-auto">
+            {/* Mobile: Card layout */}
+            <div className="space-y-2 sm:hidden">
+              {RATE_ORDER.map((type) => {
+                const rate = latestByType.get(type);
+                if (!rate) return null;
+                return (
+                  <div key={type} className="rounded-xl border t-border t-card px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium t-text text-sm">{RATE_LABELS[type]}</p>
+                      <p className="text-sm font-bold tabular-nums t-text shrink-0">{rate.rate_value}%</p>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-xs t-text-tertiary">
+                      <span>이전 {rate.prev_value !== null ? `${rate.prev_value}%` : "-"}</span>
+                      {rate.change_bp !== null && rate.change_bp !== 0 && (
+                        <span
+                          className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                            rate.change_bp > 0 ? "t-drop-bg t-drop" : "t-rise-bg t-rise"
+                          }`}
+                        >
+                          {rate.change_bp > 0 ? "▲" : "▼"} {Math.abs(rate.change_bp)}bp
+                        </span>
+                      )}
+                      <span className="ml-auto">{rate.base_date}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop: Table layout */}
+            <div className="hidden sm:block rounded-2xl border t-border t-card overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b t-elevated text-left text-xs t-text-secondary">

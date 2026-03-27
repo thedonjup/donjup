@@ -62,7 +62,6 @@ export function ThemeToggle() {
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false);
-  const { theme } = useTheme();
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const openButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -90,12 +89,11 @@ export default function MobileNav() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open]);
 
-  const isDark = theme === "dark";
-  const bg = isDark ? "#141b2d" : "#ffffff";
-  const textPrimary = isDark ? "#f1f5f9" : "#0f172a";
-  const textSecondary = isDark ? "#94a3b8" : "#475569";
-  const borderColor = isDark ? "#1e293b" : "#e2e8f0";
-  const hoverBg = isDark ? "#1e293b" : "#f1f5f9";
+  const bg = "var(--color-surface-card)";
+  const textPrimary = "var(--color-text-primary)";
+  const textSecondary = "var(--color-text-secondary)";
+  const borderColor = "var(--color-border)";
+  const hoverBg = "var(--color-surface-elevated)";
 
   return (
     <>

@@ -202,9 +202,9 @@ export default async function NewHighsPage({
           </>
         ) : (
           <div className="rounded-2xl border-2 border-dashed t-border p-10 text-center">
-            <p className="text-sm t-text-secondary">신고가 데이터가 없습니다</p>
+            <p className="text-sm t-text-secondary">오늘의 신고가가 없습니다</p>
             <p className="mt-1 text-xs t-text-tertiary">
-              매일 자동으로 업데이트됩니다
+              아직 집계된 신고가 거래가 없어요. 내일 다시 확인해보세요.
             </p>
           </div>
         )}
