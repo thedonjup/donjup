@@ -1,270 +1,210 @@
 # External Integrations
 
-**Analysis Date:** 2026-03-26
+**Analysis Date:** 2026-03-27
 
 ## APIs & External Services
 
-### Real Estate Data (Korean Government)
+**Real Estate Data:**
+- MOLIT (국토교통부 아파트매매 실거래가) - Apartment transaction data
+  - SDK/Client: Native fetch via `src/lib/api/molit.ts` and `src/lib/api/molit-multi.ts`
+  - Auth: `MOLIT_API_KEY` (environment variable)
+  - Endpoint: `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev`
+  - Routes: `/api/cron/fetch-transactions`
 
-**MOLIT (Ministry of Land, Infrastructure & Transport) - Apartment Sales:**
-- Purpose: Fetch real-time apartment transaction data (sales)
-- SDK/Client: Custom HTTP/XML wrapper in `src/lib/api/molit.ts`
-- Auth: `MOLIT_API_KEY`
-- Endpoint: `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev`
-- Response format: XML (parsed with regex-based `extractTag()` helper)
-- Used in: Cron `/api/cron/fetch-transactions` (5 batches, staggered 10-min apart daily at 20:00-20:40 UTC)
-- Key function: `fetchTransactions(regionCode, dealYearMonth)` returns `ParsedTransaction[]`
+- MOLIT Rent (전월세 데이터) - Rental market data
+  - SDK/Client: Native fetch via `src/lib/api/molit-rent.ts`
+  - Auth: `MOLIT_API_KEY`
+  - Routes: `/api/cron/fetch-rents`
 
-**MOLIT - Apartment Rentals:**
-- Purpose: Fetch apartment rent/lease transaction data
-- SDK/Client: `src/lib/api/molit-rent.ts`
-- Auth: Same `MOLIT_API_KEY`
-- Endpoint: `https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent`
-- Used in: Cron `/api/cron/fetch-rents` (5 batches, staggered daily at 20:05-20:45 UTC)
+- REB (부동산원 지수) - Real estate index data
+  - SDK/Client: Native fetch via `src/lib/api/reb.ts`
+  - Auth: `REB_API_KEY`
+  - Routes: `/api/cron/fetch-reb-index`
 
-**MOLIT - Multi-property Types:**
-- Purpose: Fetch transactions for non-apartment property types (row houses, officetels, land, commercial)
-- SDK/Client: `src/lib/api/molit-multi.ts`
-- Auth: Same `MOLIT_API_KEY`
-- Used in: Cron `/api/cron/fetch-transactions?type=2` and `type=3`
+- Building Ledger (건축물대장) - Property details and characteristics
+  - SDK/Client: Native fetch via `src/lib/api/building-ledger.ts`
+  - Auth: `MOLIT_API_KEY`
 
-**MOLIT - Building Ledger:**
-- Purpose: Fetch building registry data (unit count, parking, heating, FAR, coverage ratio, elevator count)
-- SDK/Client: `src/lib/api/building-ledger.ts`
-- Auth: Same `MOLIT_API_KEY`
-- Endpoint: `https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo`
-- Used in: Cron `/api/cron/enrich-complexes`
+**Financial Data:**
+- ECOS (한국은행 경제통계) - Bank economic statistics
+  - SDK/Client: Native fetch via `src/lib/api/ecos.ts`
+  - Auth: `ECOS_API_KEY`
 
-**REB (Korea Real Estate Board) - Price Index:**
-- Purpose: Apartment trade/jeonse price indices by city/province
-- SDK/Client: `src/lib/api/reb.ts`
-- Auth: `REB_API_KEY`
-- Endpoint: `https://www.reb.or.kr/r-one/openapi/getSidoAptTradeIndex` and `getSidoAptJeonseIndex`
-- Response format: XML
-- Used in: Cron `/api/cron/fetch-reb-index` (weekly, Monday 10:00 UTC)
-- Key functions: `fetchAptTradeIndex()`, `fetchAptJeonseIndex()`, `fetchAllIndices()`
+- Finlife (금융감독원) - Bank interest rate data
+  - SDK/Client: Native fetch via `src/lib/api/finlife.ts`
+  - Auth: `FINLIFE_API_KEY`
+  - Routes: `/api/cron/fetch-bank-rates`, `/api/bank-rates`
 
-### Financial & Economic Data
+**News & Content:**
+- Naver Search API - News search with fallback to Google News RSS
+  - SDK/Client: Native fetch via `src/lib/api/naver-news.ts`
+  - Auth: `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`
+  - Fallback: Google News RSS (no auth required)
+  - Routes: `/api/cron/news`
 
-**ECOS (Bank of Korea Economic Statistics System) - Interest Rates:**
-- Purpose: Base rate, CD 91-day, Treasury 3-year, COFIX rates
-- SDK/Client: `src/lib/api/ecos.ts`
-- Auth: `ECOS_API_KEY`
-- Endpoint: `https://ecos.bok.or.kr/api/StatisticSearch/{apiKey}/json/kr/...`
-- Response format: JSON
-- Used in: Cron `/api/cron/fetch-rates` (daily at 22:00 UTC)
-- Stat codes: `722Y001` (base rate), `817Y002` (market rates: CD91, Treasury3Y, COFIX)
-- Key function: `fetchAllRates()` returns `EcosRateItem[]` -- parallel fetches with current+previous month fallback
+**Social & Marketing:**
+- Coupang Affiliate API - Product search and affiliate links
+  - SDK/Client: Native fetch via `src/lib/api/coupang.ts`
+  - Auth: `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`, `COUPANG_AF_CODE`
+  - HMAC-SHA256 signature authentication
+  - Endpoint: `https://api.coupangcorp.com/v2/providers/affiliate_open_api`
+  - Routes: `/api/coupang/products`, `/api/cron/coupang`
 
-**FinLife (Financial Supervisory Service - Financial Products) - Bank Loan Rates:**
-- Purpose: Mortgage loan product rates by bank
-- SDK/Client: `src/lib/api/finlife.ts`
-- Auth: `FINLIFE_API_KEY`
-- Endpoint: `https://finlife.fss.or.kr/finlifeapi/mortgageLoanProductsSearch.json`
-- Response format: JSON
-- Used in: Cron `/api/cron/fetch-bank-rates` (weekly, Monday 10:00 UTC)
-- Key function: `fetchAllMortgageProducts()` with pagination (max 5 pages)
-- Helper: `bankNameToRateType()` maps Korean bank names to internal rate type codes
+- Instagram Graph API - Social media publishing
+  - SDK/Client: Native fetch via `src/lib/instagram/client.ts`
+  - Auth: `INSTAGRAM_ACCESS_TOKEN` (long-lived page token), `INSTAGRAM_USER_ID`
+  - Endpoint: `https://graph.facebook.com/v21.0`
+  - Rate Limit: 25 published posts per 24-hour rolling window
+  - Capabilities: Single photo publish, carousel/album publish (2-10 items)
+  - Routes: `/api/cron/post-instagram`
 
-**DART (Financial Supervisory Service - Electronic Disclosure):**
-- Purpose: Corporate financial disclosures
-- Auth: `DART_API_KEY`
-- Status: Key configured in `.env.local.example` but no implementation file found
+- Kakao Developers - Maps and share functionality
+  - SDK/Client: Kakao SDK loaded via script tag, initialized in `src/lib/kakao-share.ts`
+  - Auth: `NEXT_PUBLIC_KAKAO_JS_KEY` (public key for JavaScript SDK)
+  - CSP: Allows `https://dapi.kakao.com`, `https://kapi.kakao.com`, `https://t1.kakaocdn.net`, `https://t1.daumcdn.net`
+  - Components: `src/components/map/KakaoMap.tsx` for map display, `src/lib/kakao-share.ts` for Kakao Talk sharing
+  - Routes: `/map`, `/api/cron/geocode-complexes` (geolocation via Kakao)
 
-### Maps & Geocoding
+- Google Analytics 4 - Analytics and traffic tracking
+  - SDK/Client: Google Tag Manager integration (implied via CSP and analytics routes)
+  - Auth: `GA4_PROPERTY_ID` (environment variable)
+  - CSP: Allows `https://www.googletagmanager.com`, `https://www.google-analytics.com`, `https://stats.g.doubleclick.net`
+  - Routes: `/api/analytics/pageview`, `/api/analytics/popular`
 
-**Kakao Maps:**
-- Purpose: Map display and geocoding for apartment complexes
-- JavaScript SDK: Loaded client-side in `src/app/layout.tsx`
-  - URL: `https://dapi.kakao.com/v2/maps/sdk.js?appkey={key}&autoload=false&libraries=services,clusterer`
-  - Auth: `NEXT_PUBLIC_KAKAO_JS_KEY`
-- REST API: Server-side geocoding
-  - Auth: `KAKAO_REST_KEY`
-  - Used in: Cron `/api/cron/geocode-complexes` (daily at 17:00 UTC)
-
-**Kakao Share:**
-- Purpose: KakaoTalk feed sharing
-- SDK: `https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js` (loaded in layout)
-- Implementation: `src/lib/kakao-share.ts`
-- Key function: `shareViaKakao({ title, description, imageUrl, url })` with UTM tracking
-- Fallback: Opens Kakao Story share URL if SDK not loaded
-
-### News & Media
-
-**Naver Search API - News:**
-- Purpose: Korean news search for real estate topics
-- SDK/Client: `src/lib/api/naver-news.ts`
-- Auth: `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`
-- Endpoint: `https://openapi.naver.com/v1/search/news.json`
-- Fallback: Google News RSS (`https://news.google.com/rss/search`) when Naver keys unavailable
-- Caching: In-memory, 6-hour TTL, max 200 entries
-- Used in: Cron `/api/cron/news` and API `/api/news`
-
-### Social Media Publishing
-
-**Instagram Business (via Facebook Graph API):**
-- Purpose: Automated card news posting to Instagram
-- Two implementations:
-  1. `src/lib/api/instagram.ts` - Simple photo posting (Graph API v25.0)
-  2. `src/lib/instagram/client.ts` - Full-featured client with carousel support, rate limiting, container polling (Graph API v21.0)
-- Auth: `FACEBOOK_PAGE_ACCESS_TOKEN`, `INSTAGRAM_BUSINESS_ACCOUNT_ID` (or `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID`)
-- Features:
-  - Single photo publishing
-  - Carousel (2-10 images) publishing
-  - Rate limit checking (25 posts/24h window)
-  - Container status polling with configurable retries
-- Used in: Cron `/api/cron/post-instagram` (daily at 19:30 UTC)
-- Also configured: `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `FACEBOOK_PAGE_ID`
-
-### E-commerce & Affiliate
-
-**Coupang Partners Affiliate API:**
-- Purpose: Product search and affiliate deep links for monetization
-- SDK/Client: `src/lib/api/coupang.ts`
-- Auth: `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`, `COUPANG_AF_CODE`
-- Endpoint: `https://api-gateway.coupang.com/v2/providers/affiliate_open_api/apis/openapi/products/search`
-- Auth method: HMAC-SHA256 signature
-- Key functions: `searchProducts(keyword, limit)`, `generateDeepLink(url)`
-- Used in: Cron `/api/cron/coupang`, API `/api/coupang/products`
-- Caching: `next: { revalidate: 3600 }` on fetch calls
+- Google AdSense - Ad monetization
+  - SDK/Client: AdSlot component in `src/components/ads/AdSlot.tsx`
+  - Auth: `NEXT_PUBLIC_ADSENSE_ID`
+  - CSP: Allows `https://pagead2.googlesyndication.com`, `https://adservice.google.com`, `https://adservice.google.co.kr`
 
 ## Data Storage
 
-**Databases:**
-- CockroachDB (PostgreSQL-compatible)
-  - Connection: `DATABASE_URL`
-  - Client: `pg` Pool with custom QueryBuilder (`src/lib/db/client.ts`)
-  - Pool: max 5 connections, 30s idle, 10s connect timeout, SSL enabled
-  - QueryBuilder mimics Supabase PostgREST API for migration compatibility
+**Primary Database:**
+- PostgreSQL / CockroachDB
+  - Connection: `DATABASE_URL` environment variable (connection string)
+  - Client: `pg` v8.20.0 (native Node.js PostgreSQL driver)
+  - Wrapper: Custom `QueryBuilder` in `src/lib/db/client.ts` (Supabase PostgREST API emulation)
+  - Config: `src/lib/db/client.ts` with connection pooling (max 10 connections)
+  - Important: `ssl: { rejectUnauthorized: false }` is REQUIRED for CockroachDB (ssl: true breaks connection)
+  - Server Client: `src/lib/db/server.ts` exports `createServiceClient()` for server components and API routes
+
+**Authentication & User Data:**
+- Firebase Authentication
+  - Provider: Google Firebase
+  - Client SDK: `firebase` v12.11.0
+  - Admin SDK: `firebase-admin` v13.7.0
+  - Config: `src/lib/firebase/config.ts` (public keys)
+  - Admin: `src/lib/firebase/admin.ts` (service account initialization)
+  - Auth Variables:
+    - Public: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`
+    - Server: `FIREBASE_ADMIN_SERVICE_ACCOUNT` or `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON string)
+
+- Firestore (optional for comments/user data)
+  - Initialized via Firebase config
+  - Used in: `src/components/apt/Comments.tsx`, `src/app/dam/comments/page.tsx`
 
 **File Storage:**
-- Supabase Storage (images/assets only -- no Supabase DB usage)
-  - URL: `NEXT_PUBLIC_SUPABASE_URL`
-  - Public URL pattern: `{url}/storage/v1/object/public/{bucket}/{path}`
-  - Upload: Stub exists in QueryBuilder but warns "requires Supabase client"
+- Local filesystem only (no explicit external file storage detected)
+- Generated images uploaded to Instagram/social platforms via URL
 
 **Caching:**
-- In-memory: News search results (6h TTL) in `src/lib/api/naver-news.ts`
-- Next.js ISR: `fetch` with `revalidate` option
-- Cron-based refresh: `/api/cron/refresh-cache`
-- No external cache service (Redis, Memcached, etc.)
+- Memory cache: In-app cache for news searches (6-hour TTL in `src/lib/api/naver-news.ts`)
+- Service Worker: Client-side static asset caching with selective cache invalidation
+- API response caching: `/api/cron/refresh-cache` for database-driven content
 
 ## Authentication & Identity
 
 **Auth Provider:**
 - Firebase Authentication (primary)
-  - Client SDK: `src/lib/firebase/config.ts` -- exports `auth` (Auth) and `db` (Firestore)
-  - Admin SDK: `src/lib/firebase/admin.ts` -- exports `getAdminAuth()` for server-side token verification
-  - Service account: `FIREBASE_ADMIN_SERVICE_ACCOUNT` or `FIREBASE_SERVICE_ACCOUNT_KEY` env var (JSON)
-  - Graceful degradation: Both client and admin SDKs handle missing config without crashing
-  - UI: `src/components/auth/UserMenu.tsx`, `src/components/providers/AuthProvider.tsx`
-  - Firestore: Used for real-time comments/user-generated content
+  - Implementation: OAuth2 via Firebase SDK
+  - Used for: User login, token management
+  - Provider: `src/components/providers/AuthProvider.tsx`
 
-**Authorization:**
-- Admin check: `src/lib/admin/auth.ts` -- `isAdmin(email)` checks against `NEXT_PUBLIC_ADMIN_EMAILS` comma-separated list
-- Cron protection: `CRON_SECRET` token in request headers
-- Admin dashboard: `/dam/*` routes behind Firebase auth + admin email check
+**Admin Authentication:**
+- Email whitelist
+  - Implementation: `src/lib/admin/auth.ts`
+  - Config: `ADMIN_EMAILS` environment variable (comma-separated list)
+
+**Cron Job Authentication:**
+- Bearer token validation
+  - Implementation: Check `Authorization` header against `CRON_SECRET`
+  - Used in: All `/api/cron/*` routes
+  - Routes: `/api/cron/analytics`, `/api/cron/fetch-transactions`, `/api/cron/send-push`, etc.
 
 ## Monitoring & Observability
 
-**Error Tracking:**
-- Slack Webhooks: `src/lib/alert.ts` -- `sendSlackAlert(message)` sends to `SLACK_WEBHOOK_URL`
-  - Prefix: `[donjup]` prepended to all messages
-  - Graceful: Silently fails if webhook URL not configured
+**Error Tracking & Alerts:**
+- Slack alerts
+  - Implementation: `src/lib/alert.ts`
+  - Auth: `SLACK_WEBHOOK_URL` (incoming webhook)
+  - Usage: Error notifications from cron jobs and failed API calls
 
-**Analytics:**
-- Google Analytics 4 (GA4)
-  - ID: `NEXT_PUBLIC_GA_ID`
-  - Client: gtag.js loaded in `src/app/layout.tsx` via `afterInteractive` strategy
-  - Custom events: `src/lib/analytics/events.ts` -- `trackEvent()`, `trackSearch()`, etc.
-  - UTM tracking: `src/lib/analytics/utm.ts`, `src/components/analytics/UTMTracker.tsx`
-- Google AdSense: `NEXT_PUBLIC_ADSENSE_ID` -- ad script loaded in layout head
-
-**Logs:**
-- Console-based (`console.log`, `console.error`, `console.warn`)
-- DB errors enriched with SQL + params in `src/lib/db/client.ts`
-- No structured logging framework
+**Logging:**
+- Custom logger in `src/lib/logger.ts`
+  - Approach: Development mode logs to console, production logs to stderr
+  - Level control: `NODE_ENV`
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Primary: Vercel
-  - Project: `arbadas-projects-fdc12d41/donjup`
-  - Domains: `donjup.com`, `www.donjup.com`
-  - Deploy: `npx vercel --prod --yes` (CLI) or auto-deploy on push to main
+- Vercel (primary)
+  - Project: arbadas-projects-fdc12d41/donjup
+  - Domains: donjup.com, www.donjup.com
+  - Deployment: `npx vercel --prod --yes` (manual CLI deployment)
+  - Preview: Auto-deployed on git push
 
-**Cron Jobs (Vercel Cron via `vercel.json`):**
+- Netlify (secondary/fallback)
+  - Plugin: `@netlify/plugin-nextjs` v5.15.9
 
-| Schedule (UTC) | Endpoint | Purpose |
-|---|---|---|
-| Daily 20:00-20:40 (5 batches) | `/api/cron/fetch-transactions?batch=0-4` | Apartment sales data (MOLIT) |
-| Daily 15:00, 16:00 | `/api/cron/fetch-transactions?type=2,3` | Non-apartment property types |
-| Daily 20:05-20:45 (5 batches) | `/api/cron/fetch-rents?batch=0-4` | Rent/lease data |
-| Daily 21:50 | `/api/cron/enrich-complexes` | Building ledger enrichment |
-| Weekly Mon 10:00 | `/api/cron/fetch-reb-index` | REB price index |
-| Weekly Mon 10:00 | `/api/cron/fetch-bank-rates` | Bank mortgage rates (FinLife) |
-| Daily 22:00 | `/api/cron/fetch-rates` | Interest rates (ECOS) |
-| Daily 22:50 | `/api/cron/validate-data` | Data validation |
-| Daily 23:00 | `/api/cron/generate-report` | Daily report generation |
-| Daily 19:00 | `/api/cron/generate-cardnews` | Card news image generation |
-| Daily 23:05 | `/api/cron/send-push` | Push notifications |
-| Daily 23:30 | `/api/cron/generate-seeding` | Seeding data generation |
-| Daily 19:30 | `/api/cron/post-instagram` | Instagram auto-posting |
-| Daily 17:00 | `/api/cron/geocode-complexes` | Batch geocoding (Kakao) |
+**CI Pipeline:**
+- Git push triggers automatic Vercel deployment
+- Manual CLI deployment available
+
+**Cron Jobs (Vercel Cron):**
+- Implementation: API routes with `maxDuration` configured (e.g., 300s for long-running jobs)
+- Protected by: `CRON_SECRET` bearer token
+- Routes: `/api/cron/*` for scheduled batch jobs
 
 ## Environment Configuration
 
-**Required env vars (from `.env.local.example`):**
-
-| Variable | Purpose |
-|---|---|
-| `DATABASE_URL` | CockroachDB PostgreSQL connection string |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase storage endpoint |
-| `MOLIT_API_KEY` | Ministry of Land API |
-| `ECOS_API_KEY` | Bank of Korea statistics |
-| `REB_API_KEY` | Korea Real Estate Board |
-| `DART_API_KEY` | Financial disclosure (DART) |
-| `FINLIFE_API_KEY` | Financial product rates |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase client |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase client |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase client |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase client |
-| `NEXT_PUBLIC_KAKAO_JS_KEY` | Kakao Maps JS SDK |
-| `KAKAO_REST_KEY` | Kakao REST API (geocoding) |
-| `CRON_SECRET` | Vercel Cron authentication |
-| `NEXT_PUBLIC_GA_ID` | Google Analytics 4 |
-| `NEXT_PUBLIC_ADSENSE_ID` | Google AdSense |
-| `COUPANG_ACCESS_KEY` | Coupang affiliate |
-| `COUPANG_SECRET_KEY` | Coupang affiliate |
-| `COUPANG_AF_CODE` | Coupang affiliate code |
-| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Web Push (public) |
-| `VAPID_PRIVATE_KEY` | Web Push (private) |
-| `NAVER_CLIENT_ID` | Naver search API |
-| `NAVER_CLIENT_SECRET` | Naver search API |
-| `SLACK_WEBHOOK_URL` | Error notifications |
-| `FACEBOOK_APP_ID` | Facebook app |
-| `FACEBOOK_APP_SECRET` | Facebook app |
-| `FACEBOOK_PAGE_ID` | Facebook page |
-| `FACEBOOK_PAGE_ACCESS_TOKEN` | Facebook/Instagram posting |
-| `INSTAGRAM_BUSINESS_ACCOUNT_ID` | Instagram account |
+**Required env vars (production):**
+- `DATABASE_URL` - CockroachDB or PostgreSQL connection string
+- `MOLIT_API_KEY` - Real estate transaction data
+- `REB_API_KEY` - Real estate index
+- `ECOS_API_KEY` - Bank economic statistics
+- `FINLIFE_API_KEY` - Bank interest rates
+- `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`, `COUPANG_AF_CODE` - Product affiliate
+- `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID` - Social posting
+- `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` - News search
+- `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID` - Authentication
+- `FIREBASE_ADMIN_SERVICE_ACCOUNT` or `FIREBASE_SERVICE_ACCOUNT_KEY` - Server-side auth
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` - Web push notifications
+- `NEXT_PUBLIC_KAKAO_JS_KEY` - Kakao Maps & Share
+- `NEXT_PUBLIC_ADSENSE_ID` - Google AdSense
+- `GA4_PROPERTY_ID` - Google Analytics 4
+- `CRON_SECRET` - Cron job authentication
+- `SLACK_WEBHOOK_URL` - Error alerts
+- `ADMIN_EMAILS` - Comma-separated admin email list
+- `NODE_ENV` - "production" or "development"
 
 **Secrets location:**
-- Production: Vercel project environment variables
-- Development: `.env.local` (git-ignored)
-- Template: `.env.local.example` (committed)
+- Vercel: Environment variables in project settings
+- Local development: `.env.local` (not committed)
+- Never commit `.env` files with real secrets
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- `/api/cron/*` (23 endpoints) - Vercel Cron scheduler triggers
-- `/api/push/subscribe` - PWA push subscription registration
-- `/api/analytics/pageview` - Custom pageview tracking
+- `/api/push/subscribe` - Web Push subscription endpoint
+- `/api/dam/content` - DAM (Digital Asset Management) content endpoint
+- `/api/dam/data` - DAM data endpoint
 
 **Outgoing:**
-- Instagram Graph API - Photo/carousel publishing
-- Slack Webhook - Error/status alerts
-- Web Push Protocol - Browser push notifications to subscribers
+- Firebase Cloud Messaging - Push notifications via web-push library
+- Instagram Graph API - Media publishing callbacks/status checks
+- Slack webhooks - Error and alert notifications
+- Google Analytics - Pageview and event tracking
+- Coupang Affiliate API - Product search and link generation
 
 ---
 
-*Integration audit: 2026-03-26*
+*Integration audit: 2026-03-27*

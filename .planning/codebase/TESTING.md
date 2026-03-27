@@ -1,128 +1,116 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-03-26
+**Analysis Date:** 2026-03-27
 
 ## Test Framework
 
-**Runner:** Not configured
+**Status:** Not detected
 
-No test framework is installed or configured. The project has:
-- No `jest.config.*` or `vitest.config.*` files
-- No test runner in `package.json` dependencies (no jest, vitest, mocha, etc.)
-- No `test` script in `package.json` scripts
-- No `.test.ts`, `.test.tsx`, `.spec.ts`, or `.spec.tsx` files anywhere in the codebase
-- No `__tests__` directories
+**Current State:**
+- No test runner (Jest, Vitest, etc.) configured
+- No test files in `src/` directory (`.test.ts`, `.spec.ts` patterns absent)
+- No test configuration files (`jest.config.*`, `vitest.config.*`) present
+- No testing libraries as dev dependencies (`@testing-library/*`, `jest`, `vitest`)
 
-## Test File Organization
+**Type Checking Only:**
+- TypeScript strict mode (`strict: true`) used for compile-time verification
+- ESLint with Next.js rules enforces code quality
+- Build-time type checking catches many errors
 
-**Location:** No test files exist.
+## Codebase Testing Approach
 
-**If tests were to be added, follow these conventions based on the codebase structure:**
+**Current Pattern:**
+All testing appears to be manual or handled at runtime rather than through unit/integration tests.
 
-**Recommended co-location pattern:**
+**Quality Assurance Mechanisms:**
+1. **Type Safety:** Strict TypeScript with full type annotations prevents runtime type errors
+2. **ESLint:** Core-web-vitals and TypeScript rules catch common issues
+3. **Manual Testing:** Likely done in development environment and staging/production
+4. **API Testing:** Cron jobs and API endpoints have logging that indicates testing during deployment (`logger.error`, `logger.info`)
+
+## Test-Like Code Patterns
+
+**Validation Functions:**
+- Input validation at API route level (e.g., query parameter parsing with `parseInt()` and defaults)
+- Data type assertions: `const complexes: AptComplex[] = (data ?? []) as AptComplex[]`
+- Null coalescing and optional chaining used to prevent runtime errors
+
+**Error Boundaries:**
+- Try-catch at system boundaries (Firebase, external APIs)
+- Explicit error handling in route handlers with logging
+- Example from `src/components/ads/AdSlot.tsx`:
+  ```typescript
+  try {
+    // ad slot initialization
+  } catch {
+    // silent failure
+  }
+  ```
+
+## Logging as Testing Output
+
+**Pattern:**
+Logging is used to verify behavior in production/staging:
+
+- `logger.error()` called when operations fail with context
+- API routes log success/failure metrics (total inserted, new highs, drops)
+- Analytics functions log with try-catch for non-critical operations
+
+Example from fetch-transactions route:
+```typescript
+logger.error("Failed to fetch...", { error, route: "/api/apt" });
+```
+
+## Recommendations for Adding Tests
+
+**Framework Suggestion:**
+- Vitest: Lighter than Jest, works with Next.js, minimal config
+- Or Jest with `@testing-library/react` for component testing
+
+**High-Priority Areas to Test:**
+1. **Utility Functions** (`src/lib/`):
+   - `formatPrice()` and `formatKrw()` - currency formatting edge cases
+   - `calcEqualPayment()` - loan calculation correctness
+   - `sqmToPyeong()` - area conversion accuracy
+
+2. **Type/Data Validation:**
+   - UUID validation pattern in `src/app/api/apt/[id]/route.ts`
+   - Region code lookups in cron jobs
+
+3. **Critical API Routes:**
+   - `/api/apt/` and `/api/apt/[id]/` - base queries
+   - `/api/cron/fetch-transactions` - complex batch logic
+   - `/api/cron/validate-data` - data integrity checks
+
+4. **Component Integration:**
+   - `AptDetailClient.tsx` - complex state management with context
+   - `TransactionTabs.tsx` - filtering and unit conversion logic
+
+**Test File Organization (if implemented):**
 ```
 src/
-  lib/
-    format.ts
-    format.test.ts         # Unit tests for utilities
-  components/
-    home/
-      RankingTabs.tsx
-      RankingTabs.test.tsx  # Component tests
-  app/
-    api/
-      search/
-        route.ts
-        route.test.ts       # API route tests
+├── lib/
+│   ├── format.ts
+│   ├── format.test.ts          # Unit tests
+│   ├── calculator.ts
+│   └── calculator.test.ts
+├── components/
+│   ├── apt/
+│   │   ├── AptDetailClient.tsx
+│   │   └── AptDetailClient.test.tsx
+└── app/
+    └── api/
+        └── apt/
+            ├── route.ts
+            └── route.test.ts
 ```
 
-## Run Commands
-
-```bash
-# No test commands configured
-# package.json only has: dev, build, start, lint
-```
-
-## Mocking
-
-**Framework:** Not applicable (no tests)
-
-**What would need mocking if tests are added:**
-- `@/lib/db/client` — the `pg` Pool and `QueryBuilder` class
-- `@/lib/supabase/server` — `createClient()` / `createServiceClient()`
-- `firebase/auth` — Firebase authentication (used in `AuthProvider`)
-- External APIs: MOLIT (`src/lib/api/molit.ts`), ECOS (`src/lib/api/ecos.ts`), Naver News, etc.
-- `fetch` — used extensively in cron routes and external API calls
-- `process.env` — environment variables for API keys, CRON_SECRET, etc.
-
-## Coverage
-
-**Requirements:** None enforced
-
-**No coverage tooling configured.**
-
-## Test Types
-
-**Unit Tests:** Not present
-- High-value targets for unit tests:
-  - `src/lib/format.ts` — `formatPrice()`, `formatKrw()`, `sqmToPyeong()` (pure functions)
-  - `src/lib/calculator.ts` — loan calculation logic
-  - `src/lib/db/client.ts` — QueryBuilder SQL generation
-  - `src/lib/constants/region-codes.ts` — region code mappings
-
-**Integration Tests:** Not present
-- High-value targets:
-  - API routes in `src/app/api/` — search, apt queries, rate endpoints
-  - Cron job handlers in `src/app/api/cron/` — data fetching and processing
-
-**E2E Tests:** Not present
-- No Playwright, Cypress, or similar framework installed
-
-## CI/CD Test Pipeline
-
-**No CI test pipeline configured.**
-
-- No `.github/workflows/` directory
-- Deployment is via Vercel CLI: `npx vercel --prod --yes`
-- Vercel runs `next build` on deploy (type-checking + compilation), which provides build-time validation
-- Linting runs via `pnpm lint` but is not enforced in CI
-
-## Quality Assurance
-
-**Current safeguards (in lieu of tests):**
-1. TypeScript strict mode catches type errors at build time
-2. ESLint with Next.js core-web-vitals rules catches common issues
-3. `next build` validates all server/client component boundaries
-4. Vercel preview deployments for manual verification
-5. Cron route authentication via `CRON_SECRET` header check
-
-**Recommended test framework if adding tests:**
-- **Vitest** — recommended for Next.js projects (fast, ESM-native, compatible with React Testing Library)
-- Configuration would go in `vitest.config.ts` at project root
-- Use `@testing-library/react` for component tests
-- Use `msw` (Mock Service Worker) for API mocking
-
-## Priority Test Targets
-
-If tests are to be introduced, prioritize in this order:
-
-1. **Pure utility functions** (easiest, highest ROI):
-   - `src/lib/format.ts` — price formatting, size conversion
-   - `src/lib/calculator.ts` — loan calculations
-   - `src/lib/constants/region-codes.ts` — data integrity
-
-2. **Database query builder** (complex, critical):
-   - `src/lib/db/client.ts` — SQL generation, parameter binding, edge cases
-
-3. **API routes** (integration-level):
-   - `src/app/api/search/route.ts` — search with filters
-   - `src/app/api/apt/route.ts` — pagination logic
-   - `src/app/api/rate/calculate/route.ts` — calculation endpoints
-
-4. **Cron jobs** (high-impact):
-   - `src/app/api/cron/fetch-transactions/route.ts` — data ingestion
-   - `src/app/api/cron/refresh-cache/route.ts` — cache invalidation
+**Missing Test Infrastructure:**
+- No test data fixtures or factories
+- No mock definitions for database/Firebase
+- No test utilities or helpers
+- No CI/CD integration for test runs
 
 ---
 
-*Testing analysis: 2026-03-26*
+*Testing analysis: 2026-03-27*

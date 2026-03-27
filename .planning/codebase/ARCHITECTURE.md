@@ -1,205 +1,235 @@
 # Architecture
 
-**Analysis Date:** 2026-03-26
+**Analysis Date:** 2026-03-27
 
 ## Pattern Overview
 
-**Overall:** Next.js 16 App Router monolith with server-side rendering, cron-based data pipeline, and CockroachDB (via custom Supabase-compatible query builder)
+**Overall:** Next.js 16 with SSR (Server-Side Rendering) and Server Components, integrated with PostgreSQL backend and Firebase authentication.
 
 **Key Characteristics:**
-- Server Components as default rendering strategy; client components only for interactivity (auth, theme, charts, maps)
-- Custom `QueryBuilder` in `src/lib/db/client.ts` that mimics the Supabase PostgREST API but executes raw SQL against a `pg` Pool (CockroachDB)
-- Scheduled cron jobs (Vercel Cron) fetch data from government APIs, process it, and store in CockroachDB
-- Firebase Auth for user authentication (Google sign-in); Firestore for client-side features (comments, favorites)
-- ISR (Incremental Static Regeneration) via `revalidate` exports on page components
-- No separate backend service; all API logic lives in Next.js API routes
+- Full-stack React with async server components for data fetching
+- Hybrid client/server component model with clear separation
+- Cron job system for scheduled data ingestion (fetching transactions, rates, enrichment)
+- Custom QueryBuilder abstraction over PostgreSQL client library (`pg`)
+- Firebase for real-time authentication and Firestore for user data
+- Service-oriented API layer with content generation pipelines
 
 ## Layers
 
-**Presentation Layer (Pages + Components):**
-- Purpose: Render UI using React Server Components and Client Components
-- Location: `src/app/` (pages), `src/components/` (shared components)
-- Contains: Page routes, layouts, loading states, error boundaries, opengraph images
-- Depends on: `src/lib/supabase/server.ts` for data, `src/lib/format.ts` for formatting
-- Used by: End users via browser
+**Presentation Layer (Frontend):**
+- Purpose: Render React components to HTML/interactive UI
+- Location: `src/app/` (pages, layouts) and `src/components/` (reusable components)
+- Contains: Server components for initial data fetch + Client components for interactivity
+- Depends on: API routes (`src/app/api/`), client libraries (Firebase, Recharts, Kakao Maps SDK)
+- Used by: End users accessing web pages
 
-**API Layer (Route Handlers):**
-- Purpose: Serve JSON data for client components and external integrations
-- Location: `src/app/api/`
-- Contains: REST endpoints for apt data, search, rates, analytics, push notifications
-- Depends on: `src/lib/db/client.ts`, `src/lib/supabase/server.ts`
-- Used by: Client components (fetch), Vercel Cron scheduler
+**API/Route Layer:**
+- Purpose: Handle HTTP requests, orchestrate business logic, validate inputs
+- Location: `src/app/api/` (RESTful endpoints and cron jobs)
+- Contains: Route handlers (`route.ts` files) organized by feature (apt, analytics, cron)
+- Depends on: Database client, business logic, external APIs (MOLiT, Kakao, Bank rates)
+- Used by: Frontend pages, client-side fetches, external cron triggers
 
-**Cron/Pipeline Layer:**
-- Purpose: Scheduled data ingestion from external government APIs
-- Location: `src/app/api/cron/`
-- Contains: 17 cron route handlers for fetching transactions, rates, rents, geocoding, report generation, social media posting
-- Depends on: `src/lib/api/` (external API wrappers), `src/lib/db/client.ts`
-- Used by: Vercel Cron scheduler (configured in `vercel.json`)
+**Business Logic Layer:**
+- Purpose: Core processing logic for data transformation, calculations, and pipelines
+- Location: `src/lib/` (utilities, API wrappers, calculations)
+- Contains:
+  - `lib/api/` — Wrappers for external APIs (MOLiT transactions, Kakao geocoding)
+  - `lib/analytics/` — Page view tracking and analytics
+  - `lib/cardnews/` — Card news generation templates
+  - `lib/admin/` — Admin operations
+  - `lib/calculator.ts` — Loan and financial calculations
+  - Utilities: `format.ts`, `alert.ts`, `logger.ts`
+- Depends on: Database client, external service SDKs
+- Used by: API routes, scheduled cron jobs
 
 **Data Access Layer:**
-- Purpose: Abstract database access with a Supabase-compatible query builder API
-- Location: `src/lib/db/client.ts` (core), `src/lib/supabase/server.ts` (server wrapper), `src/lib/supabase/client.ts` (browser stub)
-- Contains: `QueryBuilder` class, `RpcCaller`, `StorageApi` stub, connection pool management
-- Depends on: `pg` package, `DATABASE_URL` env var
-- Used by: All server-side code (pages, API routes, cron jobs)
+- Purpose: Abstract database operations with query builder pattern
+- Location: `src/lib/db/` (`client.ts`, `server.ts`)
+- Contains: QueryBuilder class mimicking Supabase PostgREST API
+- Depends on: PostgreSQL client (`pg` library), DATABASE_URL environment variable
+- Used by: API routes and server components for data queries
 
-**External API Wrappers:**
-- Purpose: Fetch and parse data from Korean government and financial APIs
-- Location: `src/lib/api/`
-- Contains: MOLIT (apartment trades), ECOS (interest rates), building ledger, Naver news, REB index, Coupang, Instagram
-- Depends on: External API keys via env vars
-- Used by: Cron pipeline layer
+**Configuration & Constants:**
+- Purpose: Centralized configuration, type definitions, constants
+- Location: `src/lib/constants/`, `src/types/`
+- Contains:
+  - Region hierarchies and property type definitions (`region-codes.ts`, `property-types.ts`)
+  - Database type interfaces (`db.ts`, `api.ts`)
+  - Format utilities and display labels
+- Used by: Throughout application
 
-**Shared Utilities:**
-- Purpose: Formatting, constants, calculations
-- Location: `src/lib/format.ts`, `src/lib/constants/`, `src/lib/calculator.ts`
-- Contains: Price formatting (Korean won), region codes, rate type labels, loan calculator
-- Used by: Pages, components, API routes
+**External Integrations:**
+- Firebase Authentication (`src/lib/firebase/` — Google Sign-in)
+- PostgreSQL (CockroachDB) — Real estate transaction data, user subscriptions
+- MOLiT API (국토교통부 실거래가) — Official transaction data
+- Kakao Maps/Geocoding API — Map display and address conversion
+- Bank Rate APIs — Mortgage interest rates
+- Coupang Affiliate — Product recommendations
+- Instagram API — Post scheduling and publishing
+- Google Analytics/AdSense — Metrics and monetization
+- Slack Webhooks — Error/alert notifications
 
 ## Data Flow
 
-**Daily Transaction Ingestion:**
+**Homepage/Listing Page Flow:**
 
-1. Vercel Cron triggers `GET /api/cron/fetch-transactions?batch=N` (5 batches, staggered 10min apart starting 20:00 KST)
-2. Route handler calls `fetchTransactions()` from `src/lib/api/molit.ts` for each region in the batch
-3. Parsed transactions are upserted into `apt_transactions` table; new complexes inserted into `apt_complexes`
-4. After all batches complete, `/api/cron/enrich-complexes` adds building details via building ledger API (21:50)
-5. `/api/cron/validate-data` runs data quality checks (22:50)
-6. `/api/cron/generate-report` creates daily summary in `daily_reports` (23:00)
-7. `/api/cron/refresh-cache` updates `homepage_cache` (single-row denormalized cache)
-8. `/api/cron/send-push` sends web push notifications to subscribers (23:05)
+1. User requests page (e.g., `/today`)
+2. Server component in `src/app/today/page.tsx` calls `createClient()` → `getPool()` (lazy-initialized PostgreSQL connection)
+3. QueryBuilder chains queries: `.from("apt_transactions").select(...).eq(...).order(...).limit(...)`
+4. Results marshaled into TypeScript interfaces (`AptTransaction`, `FinanceRate`)
+5. Server component renders initial HTML with data
+6. Client-side hydration adds interactivity (filters, sorting, modal dialogs)
+7. Optional client-side fetching via `fetch()` (e.g., search autocomplete) to API routes
 
-**Page Rendering (Homepage Example):**
+**Cron Job Flow:**
 
-1. User requests `/` -> Next.js renders `src/app/page.tsx` as Server Component
-2. Page calls `createClient()` from `src/lib/supabase/server.ts` (returns `DbClient`)
-3. First tries `homepage_cache` table (single query vs 7+ queries)
-4. Falls back to parallel queries on `apt_transactions`, `finance_rates`, `page_views`
-5. Server Component renders HTML with data; `revalidate = 300` (5 min ISR)
-6. Client components (`RankingTabs`, `PropertyTypeFilter`) hydrate for interactivity
-
-**Search Flow:**
-
-1. User enters query in search form (GET `/search?q=...`)
-2. `src/app/search/page.tsx` renders search UI (client component for interactivity)
-3. API call to `GET /api/search?q=...` -> `src/app/api/search/route.ts`
-4. Route handler uses raw `getPool().query()` with parameterized SQL (not QueryBuilder)
-5. Searches `apt_complexes` with ILIKE, region code matching, and optional filters (price, size, built year)
+1. External trigger (e.g., Vercel Cron) calls `/api/cron/fetch-transactions?batch=0&date=2026-03-27`
+2. Route handler validates `Authorization: Bearer CRON_SECRET` header
+3. Fetches from MOLiT API (region by region to avoid rate limits, with `delay()`)
+4. Parses raw transaction data, calculates `highest_price`, `change_rate`, `is_new_high`, `is_significant_drop`
+5. Upserts into `apt_transactions` table (on duplicate, update changed fields)
+6. Updates related cache tables (e.g., `homepage_cache`)
+7. Queues generated content (CardNews, Seeding) in `content_queue` / `seeding_queue`
+8. On error, sends Slack alert via `sendSlackAlert()`
 
 **State Management:**
-- Server state: ISR with `revalidate` exports (300s for listings, 3600s for detail pages)
-- Client state: React `useState`/`useContext` for theme, auth, UI interactions
-- Auth state: Firebase `onAuthStateChanged` via `AuthProvider` context
-- Theme state: `ThemeProvider` context with `localStorage` persistence + `data-theme` attribute on `<html>`
-- No global state management library (no Redux, Zustand, etc.)
-- Homepage uses `homepage_cache` DB table as server-side cache (refreshed by cron)
+
+- **Server-side:** No global state. Data fetched per-request, cached via HTTP `Cache-Control` headers and Next.js `revalidate` option
+- **Client-side:** React Context for theme (ThemeProvider), authentication (AuthProvider), and local filters
+- **Database:** Single source of truth; homepage aggregates pre-computed summaries in `homepage_cache` table for performance
 
 ## Key Abstractions
 
-**DbClient (Supabase-compatible Query Builder):**
-- Purpose: Drop-in replacement for Supabase client, executes against CockroachDB via `pg` Pool
-- Location: `src/lib/db/client.ts`
-- Pattern: Fluent builder pattern with thenable (`.from("table").select("*").eq("col", val)`)
-- Supports: select, insert, upsert, update, delete, order, limit, range, single, rpc, abortSignal
-- All server code imports via `src/lib/supabase/server.ts` which wraps `createDbClient()`
+**QueryBuilder (Custom ORM-like):**
+- Purpose: Provide Supabase PostgREST-like query chaining interface without external dependency
+- Examples: `src/lib/db/client.ts`
+- Pattern: Method chaining — `.from().select().eq().order().limit().single()`
+- Transforms to parameterized SQL — `$1, $2` placeholders prevent SQL injection
 
-**Region Hierarchy:**
-- Purpose: Map Korean administrative region codes to names and slugs
-- Location: `src/lib/constants/region-codes.ts`
-- Pattern: Static const object `REGION_HIERARCHY` keyed by 2-digit sido code, containing sigungu details
-- Used for: URL routing, search, data aggregation, cron batch grouping
+**Server Component + Client Component Split:**
+- Purpose: Render static content on server (fast, no JS), interactivity on client (hydrated React)
+- Examples:
+  - Server: `src/app/today/page.tsx` fetches transaction list
+  - Client: `src/components/PropertyTypeFilter` lets user filter by property type
+- Pattern: "use client" boundary — components marked `"use client"` run in browser; unmarked run on server
 
-**Property Types:**
-- Purpose: Distinguish apartment, officetel, row house types
-- Location: `src/lib/constants/property-types.ts`
-- Pattern: Numeric enum (1=apartment, 2=officetel, 3=row house)
+**API Module Pattern (External APIs):**
+- Purpose: Wrap third-party APIs with typed responses and retry logic
+- Examples:
+  - `src/lib/api/molit.ts` — Fetches official transaction data, parses XML
+  - `src/lib/api/kakao.ts` — Reverse geocoding, coordinates to address
+- Pattern: Export async functions that handle auth, rate limits, error handling
+
+**Cron Job Routing:**
+- Purpose: Batch long-running tasks into parallel chunks (5 geographic batches)
+- Examples: `/api/cron/fetch-transactions?batch=0` (Seoul, Busan, Daegu only)
+- Pattern: Query parameter `batch` selects predefined region group to avoid 5-minute timeout
+
+**Firebase Auth Provider (React Context):**
+- Purpose: Manage user authentication state across app
+- Location: `src/components/providers/AuthProvider.tsx`
+- Pattern: Wraps `onAuthStateChanged()` listener, exposes `useAuth()` hook
+- Integrates: Google Sign-in with `signInWithPopup(GoogleAuthProvider)`
+
+**Theme Provider (CSS Variables):**
+- Purpose: Switch dark/light mode without page reload
+- Location: `src/components/providers/ThemeProvider.tsx`
+- Pattern: Sets `data-theme` attribute on `<html>`, CSS uses `var(--color-*)` custom properties
+- Persistence: Stored in `localStorage` with fallback to system preference
 
 ## Entry Points
 
-**Root Layout:**
-- Location: `src/app/layout.tsx`
-- Triggers: Every page request
-- Responsibilities: HTML structure, `ThemeProvider`, `AuthProvider`, header nav, footer, Kakao/GA/AdSense script loading, PWA manifest
+**Web Application:**
+- Location: `src/app/layout.tsx` (root layout)
+- Triggers: HTTP request to any URL path
+- Responsibilities:
+  - Wrap app with ThemeProvider and AuthProvider
+  - Load analytics scripts (Google Analytics, Kakao Maps SDK)
+  - Register service worker for PWA caching
+  - Render header, footer, main content
+  - Apply global metadata (SEO, viewport)
 
-**Homepage:**
-- Location: `src/app/page.tsx`
-- Triggers: GET `/`
-- Responsibilities: Hero section with dramatic transaction, stats bar, rate bar, ranking tabs, popular complexes sidebar
+**API Routes:**
+- Location: `src/app/api/[feature]/route.ts`
+- Triggers: HTTP GET/POST to `/api/*` paths
+- Responsibilities:
+  - Validate request (headers, query params, body)
+  - Call business logic (database queries, external API calls)
+  - Return JSON response with appropriate status codes
+  - Log errors and alert on critical failures
 
-**Cron Entry Points:**
-- Location: `src/app/api/cron/*/route.ts` (17 handlers)
-- Triggers: Vercel Cron scheduler per `vercel.json`
-- Responsibilities: All authenticated via `CRON_SECRET` Bearer token; data ingestion, processing, content generation
+**Cron Jobs:**
+- Location: `src/app/api/cron/*/route.ts`
+- Triggers: Scheduled HTTP GET requests (e.g., every 6 hours)
+- Responsibilities:
+  - Auth validation via `CRON_SECRET` environment variable
+  - Fetch and process data from external sources
+  - Upsert results into database
+  - Update derived caches (e.g., `homepage_cache`)
+  - Queue content generation tasks (CardNews, Instagram)
 
-**Admin Dashboard:**
-- Location: `src/app/dam/` (pages: dashboard, data, content, cron, comments, users, settings)
-- Triggers: Authenticated admin users (email allowlist)
-- Responsibilities: Data management, cron monitoring, content queue, user management
+**Dynamic Pages:**
+- Location: `src/app/[route]/page.tsx` or `src/app/[id]/[subroute]/page.tsx`
+- Triggers: Navigation to path matching file structure
+- Responsibilities:
+  - Fetch data server-side (via `createClient()`)
+  - Render initial HTML with data
+  - Hydrate client-side interactivity
+  - Set page-specific metadata (title, description, OpenGraph)
 
 ## Error Handling
 
-**Strategy:** Graceful degradation with empty state fallbacks
+**Strategy:** Three-tier error handling — catch at API boundary, log, notify, return user-friendly JSON/HTML
 
 **Patterns:**
-- Server Components wrap DB queries in try/catch, return empty arrays on failure: `src/app/page.tsx` lines 55-124
-- Global error boundary: `src/app/error.tsx` (client component with reset button)
-- Global not-found: `src/app/not-found.tsx`
-- Per-page loading states: `src/app/*/loading.tsx` for Suspense boundaries
-- API routes return `NextResponse.json({ error: message }, { status: 500 })` on failure
-- Cron routes send Slack alerts on failure via `sendSlackAlert()` from `src/lib/alert.ts`
-- Firebase config uses graceful fallback with dummy values if env vars missing: `src/lib/firebase/config.ts`
-- DB pool auto-recreates on connection error: `src/lib/db/client.ts` lines 23-26
-- `Promise.allSettled` used for parallel queries to prevent single failure from blocking all: `src/app/page.tsx` line 88
+
+- **API Routes:** Wrap business logic in try-catch, return `NextResponse.json({ error: "..." }, { status: 500 })`
+  - Example: `src/app/api/apt/route.ts` catches database errors and logs with context
+
+- **Server Components:** Let errors bubble to `src/app/error.tsx` (Error Boundary)
+  - User sees "일시적인 오류가 발생했습니다" (temporary error) with "retry" button
+
+- **Client Components:** No automatic error boundary — handle Promise rejections in event handlers
+  - Log to console in dev, silently fail (or show toast) in production
+
+- **Logging:** Structured JSON logs via `src/lib/logger.ts`
+  - In development: Pretty-print to console
+  - In production: Write JSON to stdout (Vercel captures as logs)
+
+- **Alerting:** Critical errors trigger Slack webhook via `src/lib/alert.ts`
+  - Example: Cron job failure sends alert to #alerts channel
 
 ## Cross-Cutting Concerns
 
-**Logging:** `console.error` / `console.warn` with prefixed tags (e.g., `[Homepage]`, `[db]`, `[Search API]`)
+**Logging:**
+- Implementation: `src/lib/logger.ts` exports `logger.error()`, `logger.warn()`, `logger.info()`, `logger.debug()`
+- Usage: Pass contextual data as second argument — `logger.error("Failed to fetch", { route: "/api/apt", error })`
+- Structured: Includes timestamp, level, message, and custom fields
 
-**Validation:** Minimal input validation in API routes; `searchParams` parsed with fallback defaults; no schema validation library (no Zod/Yup)
+**Validation:**
+- Request parameters: Manual parsing in route handlers
+  - Example: `parseInt(searchParams.get("page") ?? "1", 10)` with fallback
+  - Database constraints enforced at schema level (e.g., NOT NULL, UNIQUE indexes)
+- No centralized validation middleware; each route validates its own inputs
 
 **Authentication:**
-- Client-side: Firebase Auth (Google provider) via `AuthProvider` in `src/components/providers/AuthProvider.tsx`
-- Admin check: Email-based allowlist in `src/lib/admin/auth.ts` using `NEXT_PUBLIC_ADMIN_EMAILS` env var
-- Cron auth: Bearer token matching `CRON_SECRET` env var
-- Server-side Firebase Admin for token verification: `src/lib/firebase/admin.ts`
+- Firebase Auth for user login (Google Sign-in)
+- Session managed via Firebase ID token (client-side only)
+- Protected routes: Client-side redirect if `user === null` in page component
+- Admin routes: Check user email against allowlist in `src/lib/admin/`
 
-**SEO:**
-- JSON-LD structured data via `src/components/seo/JsonLd.tsx` (FAQ, BreadcrumbList, ItemList schemas)
-- Per-page `Metadata` exports with title templates, descriptions, canonical URLs
-- Dynamic OG images via `opengraph-image.tsx` files using `@vercel/og`
-- `sitemap.ts` and `robots.ts` at app root
-- Separate apt sitemap: `src/app/apt/sitemap.ts`
+**Caching:**
+- **HTTP:** `Cache-Control: no-cache, no-store, must-revalidate` on HTML (prevents stale UI after deploy)
+- **Next.js:** `revalidate = 300` (seconds) on page components — ISR (Incremental Static Regeneration)
+- **Service Worker:** Caches `_next/static/` (JS bundles, images) but NOT HTML or API responses
+- **Database:** Pre-computed summary tables (`homepage_cache`, etc.) reduce query load
 
-**Theming:** CSS custom properties with `data-theme` attribute; no CSS-in-JS; Tailwind v4 with `@tailwindcss/postcss`
-
-**Monetization:** Google AdSense (`AdSlot` component at `src/components/ads/AdSlot.tsx`), Coupang affiliate (`CoupangBanner` at `src/components/CoupangBanner.tsx`)
-
-**Push Notifications:** Web Push via `web-push` package; service worker at `public/sw.js`; subscription endpoint at `/api/push/subscribe`
-
-**Analytics:** Custom page view tracking to `page_views` table via `/api/analytics/pageview`; Google Analytics 4; UTM tracking component at `src/components/analytics/UTMTracker.tsx`
-
-## Database Schema (CockroachDB)
-
-**Core Tables:**
-- `apt_complexes` - Apartment complex master data (region, name, slug, coords, building info)
-- `apt_transactions` - Individual trade records (price, date, size, floor, change_rate, drop_level)
-- `finance_rates` - Interest rate snapshots (BASE_RATE, COFIX, CD_91, TREASURY_3Y)
-- `daily_reports` - Generated daily summaries with top drops/highs (JSONB)
-- `page_views` - Analytics tracking per page per day
-- `homepage_cache` - Single-row denormalized cache for homepage data
-- `content_queue` - Social media content pipeline (card news images)
-- `seeding_queue` - Community seeding content pipeline
-- `push_subscriptions` - Web push notification endpoints
-
-**Schema location:** `scripts/cockroach-schema.sql`
-
-**Key indexes:**
-- Composite on `(region_code, trade_date)` for regional queries
-- On `change_rate ASC WHERE change_rate IS NOT NULL` for drop rankings
-- Unique on `(apt_name, size_sqm, floor, trade_date, trade_price)` for deduplication
-- On `(latitude, longitude) WHERE latitude IS NOT NULL` for map queries
+**Analytics:**
+- Page views: Client-side tracking via `src/components/analytics/UTMTracker.tsx`
+- Events: Google Analytics (`gtag`) on search, apt view, filter clicks
+- Stored in: `page_views` table for internal dashboard
 
 ---
 
-*Architecture analysis: 2026-03-26*
+*Architecture analysis: 2026-03-27*

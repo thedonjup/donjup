@@ -1,266 +1,183 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-03-26
+**Analysis Date:** 2026-03-27
 
 ## Naming Patterns
 
 **Files:**
-- Pages: `page.tsx` (Next.js App Router convention)
-- Layouts: `layout.tsx`
-- API routes: `route.ts`
-- Components: PascalCase — `KakaoMap.tsx`, `RankingTabs.tsx`, `AuthProvider.tsx`
-- Library modules: kebab-case — `region-codes.ts`, `rate-types.ts`, `molit-rent.ts`
-- Utility modules: kebab-case single-word — `format.ts`, `calculator.ts`, `alert.ts`
+- React components: PascalCase with `.tsx` extension, e.g., `AptDetailClient.tsx`, `TransactionTabs.tsx`
+- Utility/library modules: kebab-case with `.ts` extension, e.g., `molit-multi.ts`, `calc-utils.ts`
+- API route files: `route.ts` in directory-based structure following Next.js App Router pattern
+- Type definition files: any `.ts` or `.tsx` file containing interfaces/types
 
 **Functions:**
-- camelCase for all functions: `formatPrice()`, `createClient()`, `sendSlackAlert()`
-- React components: PascalCase — `ThemeProvider`, `MobileBottomSheet`, `FilterChip`
-- Inline sub-components within pages use PascalCase: `Header()`, `Footer()`, `NavLink()`, `StatBarItem()`, `QuickLinkCard()`
-- Hooks: `useTheme()`, `useAuth()` (standard React `use` prefix)
+- Exported functions: camelCase, e.g., `createServiceClient()`, `formatPrice()`, `calcEqualPayment()`
+- Private/internal functions: camelCase with underscore prefix uncommon (use closure/module scope instead), e.g., `log()`, `buildScheduleEqualPayment()`
+- React component functions: PascalCase (same as file name), e.g., `AptDetailClient()`, `TransactionTabs()`
+- Hook functions: camelCase with `use` prefix, e.g., `useSizeUnit()`, `useAuth()`
 
 **Variables:**
-- camelCase: `heroTx`, `sortedRates`, `filteredTransactions`
-- Constants: UPPER_SNAKE_CASE — `RATE_LABELS`, `RATE_ORDER`, `BATCH_GROUPS`, `PROPERTY_TYPES`
-- Config objects: UPPER_SNAKE_CASE — `DROP_LEVEL_CONFIG`, `SIDO_SEARCH_MAP`
+- Local variables: camelCase, e.g., `selectedSize`, `monthlyPayment`, `isCronBatch`
+- Constants (module-level): UPPER_SNAKE_CASE, e.g., `LOW_FLOOR_MAX`, `GRAPH_API`, `BATCH_GROUPS`
+- Component props interfaces: PascalCase + `Props` suffix, e.g., `AdSlotProps`, `SearchTrackerProps`
+- Context/state variables: camelCase, e.g., `sizeUnit`, `tab`, `selectedSize`
 
-**Types/Interfaces:**
-- PascalCase: `Transaction`, `MapTransaction`, `AuthContextValue`, `DbClient`
-- Inline prop types using object literals for simple components (no separate interface)
-- Exported interfaces for shared data shapes
+**Types:**
+- Interfaces: PascalCase, e.g., `AptComplex`, `AptTransaction`, `LoanInput`, `SizeUnitContextType`
+- Union/conditional types: PascalCase, e.g., `DropLevel = "normal" | "decline" | "crash" | "severe"`
+- Type aliases: PascalCase, e.g., `type PropertyType = 1 | 2 | 3`
+- Props interfaces: ComponentName + `Props`, e.g., `AdSlotProps`, `SearchTrackerProps`, `ViewDetailTrackerProps`
 
 ## Code Style
 
 **Formatting:**
-- No Prettier config detected — relies on ESLint + editor defaults
-- Double quotes for strings (consistent across codebase)
-- Semicolons: always used
-- Trailing commas: used in multi-line constructs
-- 2-space indentation
+- No explicit formatter configured (not using Prettier or Biome)
+- Manual enforcement via ESLint rules
+- Indentation: 2 spaces (inferred from actual code)
+- Line length: No hard limit observed
+- Semicolons: Always used
 
 **Linting:**
-- ESLint with `eslint-config-next` (core-web-vitals + TypeScript)
-- Config at `eslint.config.mjs`
-- Common ESLint disable: `/* eslint-disable @typescript-eslint/no-explicit-any */` used in several files
-- Run: `pnpm lint`
+- Tool: ESLint 9 with Next.js configuration
+- Config file: `eslint.config.mjs` (flat config format)
+- Applied rulesets:
+  - `eslint-config-next/core-web-vitals`: Web Vitals best practices
+  - `eslint-config-next/typescript`: TypeScript-specific rules
+- Custom ignores: `.next/`, `out/`, `build/`, `next-env.d.ts`
+
+**TypeScript:**
+- Version: 5.x
+- `strict: true` enabled (strictest type checking)
+- `noEmit: true` (type checking only, no runtime compilation)
+- Path aliases: `@/*` → `./src/*`
+- Target: ES2017
 
 ## Import Organization
 
-**Order (observed pattern):**
-1. React/Next.js framework imports (`next/server`, `next/link`, `next/navigation`)
-2. Third-party library imports (`firebase/auth`, `recharts`, `pg`)
-3. Internal absolute imports using `@/` alias (`@/lib/...`, `@/components/...`)
-4. Relative imports (rare — mostly within same directory)
-5. Type-only imports: `import type { Metadata } from "next"`
+**Order:**
+1. React and framework imports (`import React`, `import { useState }`, `import { NextResponse }`)
+2. Internal library imports (`import { createServiceClient }`, `import { logger }`)
+3. Component imports (`import AptDetailClient`, `import TransactionTabs`)
+4. Type imports (`import type { AptComplex }`, `import type { AptTransaction }`)
 
 **Path Aliases:**
-- `@/*` maps to `./src/*` (configured in `tsconfig.json`)
-- Use `@/lib/...` for utilities, `@/components/...` for components
-- Never use relative paths like `../../lib/` — always use `@/`
+- Consistent use of `@/` prefix for all imports from `src/`
+- Example: `@/lib/db/server`, `@/components/apt/AptDetailClient`, `@/types/db`
+- Never use relative paths like `../` or `../../` in actual codebase (always use `@/`)
 
-**Examples:**
-```typescript
-// Framework first
-import { NextResponse } from "next/server";
-import Link from "next/link";
-import type { Metadata } from "next";
-
-// Internal imports
-import { createClient } from "@/lib/supabase/server";
-import { formatPrice, RATE_LABELS } from "@/lib/format";
-import RankingTabs from "@/components/home/RankingTabs";
-```
-
-## Component Patterns
-
-**Server Components (default):**
-- All `page.tsx` files are async server components by default
-- Fetch data directly using `createClient()` from `@/lib/supabase/server`
-- Use `export const revalidate = N` for ISR (e.g., `revalidate = 300` for homepage, `revalidate = 3600` for detail pages)
-- Export `generateMetadata()` for dynamic SEO metadata
-- Example: `src/app/page.tsx`, `src/app/apt/[region]/[slug]/page.tsx`
-
-**Client Components:**
-- Marked with `"use client"` directive at top of file
-- Used for: interactivity (tabs, filters, maps), browser APIs (localStorage, Kakao SDK), auth state
-- Located in `src/components/` directory
-- Examples: `src/components/map/KakaoMap.tsx`, `src/components/home/RankingTabs.tsx`, `src/components/providers/ThemeProvider.tsx`
-
-**Provider Pattern:**
-- Context providers wrap the app in `src/app/layout.tsx`
-- Nesting order: `ThemeProvider` > `AuthProvider` > children
-- Each provider exports both the provider component (default export) and a hook (named export)
-- Pattern in `src/components/providers/AuthProvider.tsx`:
-  ```typescript
-  const AuthContext = createContext<AuthContextValue>({...});
-  export function useAuth() { return useContext(AuthContext); }
-  export default function AuthProvider({ children }) { ... }
-  ```
-
-**Inline Sub-Components:**
-- Small presentational components are defined as regular functions in the same file
-- Not exported — used only within the parent component
-- Example: `StatBarItem()`, `QuickLinkCard()`, `FilterChip()` in `src/app/page.tsx`
-- Props typed inline: `{ label: string; value: number; suffix: string; accent: string }`
-
-**Component Composition:**
-- Wrapper components for client/server boundary: `PriceHistoryChartWrapper.tsx` wraps `PriceHistoryChart.tsx`
-- Skeleton components in `src/components/skeleton/` for loading states
+**Barrel Files:**
+- Not systematically used; direct imports from specific modules preferred
+- Example: `import { createServiceClient } from "@/lib/db/server"` not `import { createServiceClient } from "@/lib/db"`
 
 ## Error Handling
 
-**API Routes:**
-- Try/catch at the top level of handler functions
-- Return `NextResponse.json({ error: error.message }, { status: 500 })` on failure
-- Log errors with context prefix: `console.error("[Search API] Query failed:", e.message)`
-- Cron routes authenticate via `Authorization: Bearer ${CRON_SECRET}` header
-
-**Server Components (pages):**
-- Wrap data fetching in try/catch, fall back to empty arrays on failure
-- Use `Promise.allSettled()` for parallel queries, check `.status === "fulfilled"`
-- Pattern from `src/app/page.tsx`:
+**Patterns:**
+- Explicit error checking in API routes: verify `error` field from database queries
+  ```typescript
+  const { data, error } = await query;
+  if (error) {
+    logger.error("Failed to fetch...", { error, route: "/api/apt" });
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+  }
+  ```
+- Throw errors for external APIs with context
+  ```typescript
+  if (!accessToken || !userId) {
+    throw new Error("Missing INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_USER_ID environment variable");
+  }
+  ```
+- Try-catch at system boundaries (Firebase reads, analytics)
   ```typescript
   try {
-    const [dropsRes, highsRes, ...] = await Promise.allSettled([...]);
-    drops = dropsRes.status === "fulfilled" ? dropsRes.value.data ?? [] : [];
-  } catch (e) {
-    console.error("[Homepage] DB query failed:", e instanceof Error ? e.message : e);
+    // operation
+  } catch {
+    // silent failure or fallback
   }
   ```
+- Client-side: Try-catch blocks in effect hooks or event handlers for DOM/browser APIs
 
-**Database Layer:**
-- `src/lib/db/client.ts` QueryBuilder returns `{ data, error }` shaped like Supabase responses
-- Errors enriched with SQL and params in dev mode
-- Connection pool auto-recreates on error (`pool = null` in error handler)
+## Logging
 
-**Alerts:**
-- `src/lib/alert.ts` — `sendSlackAlert()` for critical cron job notifications
-- Silently fails if webhook URL not configured (`.catch(() => {})`)
+**Framework:** Custom `logger` module at `@/lib/logger.ts`
 
-## Styling Approach
-
-**Primary: Tailwind CSS v4 + CSS Custom Properties**
-- Tailwind v4 via `@tailwindcss/postcss` plugin
-- PostCSS config: `postcss.config.mjs`
-- Global styles: `src/app/globals.css` (378 lines)
-
-**Theming System (Dark Mode):**
-- CSS custom properties for all colors: `--color-surface-page`, `--color-text-primary`, etc.
-- Theme toggled via `data-theme="dark"` attribute on `<html>`
-- Theme persisted in `localStorage` key `donjup-theme`
-- Custom utility classes for theme-aware colors:
-  - `.t-text` → `color: var(--color-text-primary)`
-  - `.t-card` → `background: var(--color-surface-card)`
-  - `.t-drop` → `color: var(--color-semantic-drop)`
-  - `.t-rise` → `color: var(--color-semantic-rise)`
-  - `.t-border` → `border-color: var(--color-border)`
-
-**Brand Colors:**
-- Brand: emerald/green palette (`--color-brand-50` through `--color-brand-900`)
-- Semantic: drop=red (`#ef4444`), rise=green (`#10b981`), warn=amber (`#f59e0b`)
-- Gold accent: `--color-gold-*`
-
-**Inline Styles:**
-- Used for dynamic theme-aware styling where Tailwind classes are insufficient
-- Pattern: `style={{ color: "var(--color-text-secondary)" }}`
-- Common in map components and complex UI elements
-
-**Font:**
-- Pretendard Variable (Korean web font) loaded via CDN in `globals.css`
-- Fallback chain: system fonts including "Apple SD Gothic Neo", "Noto Sans KR"
-
-**No CSS Modules or styled-components** — all styling is Tailwind utilities + CSS custom properties + inline styles.
-
-## TypeScript Usage
-
-**Strict Mode:** Enabled in `tsconfig.json`
-
-**Type Patterns:**
-- Interfaces for data shapes: `interface Transaction { ... }`
-- `type` for unions and simple aliases: `type Theme = "light" | "dark"`, `type TabKey = "drops" | "highs" | ...`
-- `Record<string, string>` for maps/dictionaries
-- Inline prop types for single-use components
-- `any` used liberally in database layer (with eslint-disable) — the QueryBuilder and several API routes use `any`
-
-**Common Patterns:**
-- `Promise<{ [key: string]: string | string[] | undefined }>` for `searchParams` (Next.js 16 async params)
-- `Readonly<{ children: React.ReactNode }>` for layout props
-- Non-null assertion `!` used on known-present values: `heroTx.change_rate!`
-- Type casting: `(drops as Transaction[])` for data from Supabase
-
-## API Route Patterns
-
-**Structure:**
-- All routes export named HTTP method handlers: `export async function GET(request: Request)`
-- Use `NextResponse.json()` for responses
-- Parse query params from `new URL(request.url).searchParams`
-
-**Cron Routes (in `src/app/api/cron/`):**
-- Authenticate via `Authorization: Bearer ${CRON_SECRET}`
-- Set `export const maxDuration = 300` for long-running jobs
-- Scheduled via Vercel Cron in `vercel.json`
-- Use batch parameters for parallel execution: `?batch=0`, `?batch=1`, etc.
-- Pattern:
+**Patterns:**
+- Four log levels available: `debug`, `info`, `warn`, `error`
+- Usage: `logger.error(message, context)` where context is optional Record
+- Development: Output to console with color-coded level
+- Production: Output as JSON to stdout for structured logging
+- Error objects automatically formatted and nested under `error` key
+- Example:
   ```typescript
-  export async function GET(request: Request) {
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    // ... business logic
-  }
+  logger.error("Failed to fetch apt complexes", { error, route: "/api/apt" });
   ```
-
-**Data Access in Routes:**
-- Server-side: `createServiceClient()` from `@/lib/supabase/server` (sync, returns `DbClient`)
-- Some routes use `getPool()` directly from `@/lib/db/client` for raw SQL
-- The Supabase client is actually a custom `DbClient` wrapping `pg` Pool with a Supabase-compatible query builder API
-
-**Response Format:**
-- Success: `NextResponse.json({ data, pagination? })`
-- Error: `NextResponse.json({ error: message }, { status: code })`
-- Pagination: `{ page, limit, total, totalPages }`
-
-## SEO Patterns
-
-**Metadata:**
-- Root layout exports `metadata` and `viewport` objects
-- Dynamic pages export `generateMetadata()` async function
-- Title template: `%s | 돈줍` (set in root layout)
-- OpenGraph images configured for each section
-
-**Structured Data:**
-- JSON-LD components in `src/components/seo/JsonLd.tsx`
-- Reusable: `JsonLd`, `BreadcrumbJsonLd`, `FaqJsonLd`, `ItemListJsonLd`
-- Inline `<script type="application/ld+json">` in page components
-
-**ISR (Incremental Static Regeneration):**
-- `export const revalidate = 300` (5 min) for high-traffic pages
-- `export const revalidate = 3600` (1 hr) for detail pages
 
 ## Comments
 
 **When to Comment:**
-- Section dividers in large page files: `{/* ============ */}` blocks
-- Korean comments for business logic explanation
-- JSDoc only on utility functions: `/** 만원 단위 가격을 한글 표기로 변환 */`
-- No excessive documentation — code is mostly self-documenting
+- JSDoc comments for exported functions/modules that need explanation of purpose and environment variables
+- Inline comments (using `//`) for non-obvious logic, especially in:
+  - Mathematical calculations (e.g., area conversion ratios)
+  - Data transformation logic
+  - Batch processing or loop logic
+- Comments in Korean (same as codebase language)
 
-**ESLint Disables:**
-- `/* eslint-disable @typescript-eslint/no-explicit-any */` at file level for DB-heavy files
+**JSDoc/TSDoc:**
+- Block comments only for module-level or public function documentation
+- Example from `instagram/client.ts`:
+  ```typescript
+  /**
+   * Instagram Graph API client for publishing photos and carousels.
+   *
+   * Required environment variables:
+   *   INSTAGRAM_ACCESS_TOKEN  – Long-lived page access token
+   *   INSTAGRAM_USER_ID       – Instagram Business Account ID
+   */
+  ```
+- Parameter/return documentation uncommon (rely on TypeScript types instead)
+- No automatic doc generation tool in use
+
+## Function Design
+
+**Size:**
+- Small functions preferred; most utility functions 10-40 lines
+- Larger functions (100+ lines) used for route handlers with multiple sequential operations
+- Complex operations broken into smaller private functions, e.g., `buildScheduleEqualPayment()` helper for loan calculation
+
+**Parameters:**
+- Prefer object parameters for functions with >2 arguments
+- Example: `calcEqualPayment({ principal, rate, years })`
+- Type parameters always annotated, even for simple cases
+- Destructuring in function signature common for React components
+
+**Return Values:**
+- Explicit return types always specified in function declarations
+- No implicit `any` returns
+- API routes always return `NextResponse.json()` with typed data
+- Utility functions may return `void` for logging operations
 
 ## Module Design
 
 **Exports:**
-- Components: default export for the main component, named exports for hooks/utilities
-- Lib modules: named exports only — `export function formatPrice()`, `export const RATE_LABELS`
-- No barrel files (`index.ts`) — import directly from the module file
+- Named exports preferred for utilities, functions, and types
+- Default export for React components (one per file)
+- Mix of named and default exports in some files (e.g., `AptDetailClient.tsx` exports hook + interface + component)
+- Example:
+  ```typescript
+  // utilities
+  export function formatPrice(priceInManWon: number): string { ... }
+  export const RATE_LABELS: Record<string, string> = { ... }
 
-**Database Access Pattern:**
-- `src/lib/supabase/server.ts` — `createClient()` (async) and `createServiceClient()` (sync), both return `DbClient`
-- `src/lib/supabase/client.ts` — throws error, enforcing server-only DB access
-- `src/lib/db/client.ts` — actual `pg` Pool + custom QueryBuilder mimicking Supabase PostgREST API
-- Pattern: code written to Supabase API shape, but backed by raw PostgreSQL via `pg`
+  // components
+  export default function AptDetailClient({ ... }) { ... }
+  export function useSizeUnit() { ... }
+  ```
+
+**Module Scope:**
+- Heavy use of closure and module-level private state
+- Constants defined at module top (e.g., `BATCH_GROUPS`, `DROP_LEVEL_CONFIG`)
+- Helper functions defined after exports in logical order
+- Related utilities grouped in same file (e.g., `format.ts` contains `formatPrice`, `formatKrw`, `sqmToPyeong`, and constants)
 
 ---
 
-*Convention analysis: 2026-03-26*
+*Convention analysis: 2026-03-27*

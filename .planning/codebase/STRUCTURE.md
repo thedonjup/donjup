@@ -1,361 +1,256 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-26
+**Analysis Date:** 2026-03-27
 
 ## Directory Layout
 
 ```
 donjup/
-├── src/
-│   ├── app/                    # Next.js App Router pages and API routes
-│   │   ├── layout.tsx          # Root layout (header, footer, providers)
-│   │   ├── page.tsx            # Homepage
-│   │   ├── error.tsx           # Global error boundary
-│   │   ├── not-found.tsx       # 404 page
-│   │   ├── loading.tsx         # Global loading state
-│   │   ├── globals.css         # Global styles + CSS custom properties
-│   │   ├── sitemap.ts          # Dynamic sitemap generator
-│   │   ├── robots.ts           # robots.txt generator
-│   │   ├── opengraph-image.tsx # Root OG image
-│   │   ├── about/              # /about - Service introduction
-│   │   ├── apt/                # /apt/[region]/[slug] - Apartment detail
-│   │   ├── compare/            # /compare - Complex comparison (client)
-│   │   ├── daily/              # /daily, /daily/[date], /daily/archive
-│   │   ├── dam/                # /dam - Admin dashboard (noindex)
-│   │   ├── map/                # /map - Kakao map view
-│   │   ├── market/             # /market, /market/[sido], /market/[sido]/[sigungu]
-│   │   ├── new-highs/          # /new-highs - New high price listings
-│   │   ├── privacy/            # /privacy - Privacy policy
-│   │   ├── profile/            # /profile - User profile
-│   │   ├── rate/               # /rate, /rate/calculator
-│   │   ├── rent/               # /rent - Rent/lease listings
-│   │   ├── search/             # /search - Apartment search
-│   │   ├── themes/             # /themes, /themes/[slug] - Themed collections
-│   │   ├── today/              # /today - Today's transactions
-│   │   ├── trend/              # /trend - Market trends
-│   │   └── api/                # API route handlers
-│   │       ├── admin/          # Admin API (user management)
-│   │       ├── analytics/      # Page view tracking, popular items
-│   │       ├── apt/            # Apartment data endpoints
-│   │       ├── bank-rates/     # Bank mortgage rate comparison
-│   │       ├── coupang/        # Coupang affiliate product API
-│   │       ├── cron/           # 17 scheduled cron handlers
-│   │       ├── daily/          # Daily report endpoints
-│   │       ├── dam/            # Admin data management
-│   │       ├── geocode/        # Geocoding endpoint
-│   │       ├── news/           # News feed
-│   │       ├── push/           # Push notification subscription
-│   │       ├── rate/           # Rate calculation, history
-│   │       ├── search/         # Apartment search
-│   │       ├── seeding/        # Content seeding data
-│   │       └── test-db/        # DB connection test
-│   ├── components/             # Shared React components
-│   │   ├── ads/                # AdSlot.tsx, InfeedAd.tsx
-│   │   ├── analytics/          # SearchTracker, UTMTracker, ViewDetailTracker
-│   │   ├── apt/                # AptNews, Comments, FavoriteButton, MiniLoanCalculator, NotifyButton, TransactionTabs
-│   │   ├── auth/               # LoginModal.tsx, UserMenu.tsx
-│   │   ├── charts/             # PriceHistoryChart, MiniAreaChart (+ Wrapper variants)
-│   │   ├── home/               # RankingTabs.tsx
-│   │   ├── layout/             # BackToTop.tsx, MobileNav.tsx
-│   │   ├── map/                # KakaoMap.tsx
-│   │   ├── onboarding/         # RegionSelector.tsx
-│   │   ├── providers/          # AuthProvider.tsx, ThemeProvider.tsx
-│   │   ├── seo/                # JsonLd.tsx
-│   │   ├── skeleton/           # RankingCardSkeleton, RateCardSkeleton, TransactionTableSkeleton
-│   │   ├── CoupangBanner.tsx   # Coupang affiliate banner
-│   │   ├── PropertyTypeFilter.tsx # Property type tabs (apt/officetel/rowhouse)
-│   │   ├── PushPrompt.tsx      # Push notification opt-in prompt
-│   │   └── ShareButtons.tsx    # Social share buttons (Kakao, etc.)
-│   ├── lib/                    # Shared libraries and utilities
-│   │   ├── admin/              # auth.ts (admin email check)
-│   │   ├── analytics/          # events.ts, utm.ts
-│   │   ├── api/                # External API wrappers
-│   │   │   ├── molit.ts        # MOLIT apartment trade API
-│   │   │   ├── molit-multi.ts  # MOLIT multi-housing API
-│   │   │   ├── molit-rent.ts   # MOLIT rent/lease API
-│   │   │   ├── ecos.ts         # Bank of Korea ECOS API
-│   │   │   ├── finlife.ts      # Financial Supervisory Service API
-│   │   │   ├── reb.ts          # Real Estate Board index API
-│   │   │   ├── building-ledger.ts # Building ledger API
-│   │   │   ├── naver-news.ts   # Naver news search API
-│   │   │   ├── coupang.ts      # Coupang affiliate API
-│   │   │   └── instagram.ts    # Instagram Graph API
-│   │   ├── cardnews/           # Card news image generation
-│   │   │   ├── generator.ts    # Orchestrates card news creation
-│   │   │   ├── render.ts       # Renders JSX to image
-│   │   │   ├── colors.ts       # Color palette
-│   │   │   ├── types.ts        # Type definitions
-│   │   │   └── templates/      # cover.tsx, cta.tsx, rank-item.tsx
-│   │   ├── constants/          # Static data
-│   │   │   ├── region-codes.ts # REGION_HIERARCHY (sido/sigungu codes)
-│   │   │   ├── property-types.ts # Property type enum
-│   │   │   └── rate-types.ts   # Rate type definitions
-│   │   ├── db/                 # Database layer
-│   │   │   └── client.ts       # QueryBuilder + Pool (CockroachDB)
-│   │   ├── firebase/           # Firebase configuration
-│   │   │   ├── config.ts       # Client-side Firebase init
-│   │   │   └── admin.ts        # Server-side Firebase Admin
-│   │   ├── instagram/          # Instagram posting client
-│   │   │   └── client.ts
-│   │   ├── supabase/           # Supabase-compatible wrappers
-│   │   │   ├── server.ts       # createClient() / createServiceClient()
-│   │   │   ├── client.ts       # Browser stub (throws error)
-│   │   │   └── rent-client.ts  # Rent data client (same DB)
-│   │   ├── alert.ts            # Slack webhook alerts
-│   │   ├── calculator.ts       # Loan/mortgage calculator
-│   │   ├── format.ts           # Price/size formatting utilities
-│   │   └── kakao-share.ts      # Kakao share SDK wrapper
-│   └── proxy.ts                # Proxy utility
-├── public/                     # Static assets
-│   ├── favicon.svg
-│   ├── logo.svg
-│   ├── manifest.json           # PWA manifest
-│   ├── sw.js                   # Service worker (push notifications)
-│   └── ads.txt                 # Google AdSense ads.txt
-├── scripts/                    # Database scripts and utilities
-│   ├── cockroach-schema.sql    # Main CockroachDB schema
-│   ├── migrate.sql             # Migration scripts
-│   ├── migrate-rent.sql        # Rent table migrations
-│   ├── migrate-v3.sql          # V3 migrations
-│   ├── recalculate-all.sql     # Price recalculation
-│   ├── recalculate-batch.sql   # Batch recalculation
-│   ├── recalculate-prices.ts   # TS price recalculator
-│   ├── backfill-transactions.ts # Historical data backfill
-│   ├── backfill-nationwide-3yr.ts # 3-year nationwide backfill
-│   ├── seed-transactions.ts    # Test data seeding
-│   └── *.sql                   # Various diagnostic queries
-├── supabase/                   # Legacy Supabase config
-│   ├── schema.sql              # Original Supabase schema
-│   └── migrations/             # Supabase migrations
-├── docs/                       # Documentation
-│   └── marketing/              # Marketing materials
-├── next.config.ts              # Next.js configuration
-├── vercel.json                 # Vercel config (cron schedules)
-├── tsconfig.json               # TypeScript configuration
-├── eslint.config.mjs           # ESLint configuration
-├── postcss.config.mjs          # PostCSS (Tailwind) config
-├── package.json                # Dependencies
-├── pnpm-lock.yaml              # Lock file
-└── pnpm-workspace.yaml         # PNPM workspace config
+├── src/                          # Source code (TypeScript)
+│   ├── app/                      # Next.js App Router (pages, routes, layouts)
+│   ├── components/               # Reusable React components
+│   ├── lib/                      # Shared business logic, utilities, integrations
+│   └── types/                    # Centralized TypeScript interfaces
+├── public/                       # Static assets (favicons, manifest, robots.txt)
+├── .planning/                    # GSD phase planning and analysis
+├── next.config.ts                # Next.js configuration (CSP, cache headers)
+├── tsconfig.json                 # TypeScript compiler settings
+├── package.json                  # Node.js dependencies and scripts
+├── pnpm-lock.yaml               # Dependency lock file (pnpm package manager)
+└── [config files]               # ESLint, PostCSS, Tailwind, environment
 ```
 
 ## Directory Purposes
 
-**`src/app/`:**
-- Purpose: Next.js App Router file-based routing
-- Contains: Pages (page.tsx), layouts (layout.tsx), loading states (loading.tsx), OG images (opengraph-image.tsx), API routes (route.ts)
-- Key files: `layout.tsx` (root layout with all providers), `page.tsx` (homepage)
+**src/app/**
+- Purpose: Next.js App Router file structure (routes, pages, API endpoints)
+- Structure: File-based routing — `[route]/page.tsx` = HTTP route, `[id]/layout.tsx` = nested layout
+- Contains:
+  - `page.tsx` — Page component (renders at route)
+  - `layout.tsx` — Shared layout for route and children
+  - `error.tsx` — Error boundary (caught via React Error Boundary)
+  - `route.ts` — API endpoint handler (GET, POST, PUT, DELETE)
+  - `globals.css` — Global styles (Tailwind @apply, custom properties)
+- Key subdirectories:
+  - `app/` — Root layout and homepage
+  - `app/api/` — All API endpoints (RESTful routes)
+  - `app/apt/[id]/` — Apartment detail page with dynamic ID
+  - `app/today/` — Daily transaction listing
+  - `app/market/[sido]/[sigungu]/` — Region-specific market data
+  - `app/rate/` — Interest rates dashboard
+  - `app/search/` — Search page
+  - `app/profile/` — User profile (protected route)
+  - `app/dam/` — Admin dashboard (DAM = 돈줍 Admin Manager)
 
-**`src/app/api/cron/`:**
-- Purpose: Scheduled data pipeline handlers
-- Contains: 17 cron job route handlers, each in its own directory
-- Key files: `fetch-transactions/route.ts` (main data ingestion), `refresh-cache/route.ts` (homepage cache update)
-- Note: All require `Authorization: Bearer {CRON_SECRET}` header
+**src/components/**
+- Purpose: Reusable, composable React components
+- Structure: Feature-based subdirectories, each containing related components
+- Contains: Both server components (fetch-wrapper) and client components ("use client")
+- Key subdirectories:
+  - `components/apt/` — Apartment detail views (AptDetailClient, TransactionTabs, FavoriteButton)
+  - `components/charts/` — Data visualization (Recharts wrappers — price history, mini charts)
+  - `components/home/` — Homepage sections (HeroSection, RankingTabs, StatsBar, RateBar)
+  - `components/layout/` — Global layout (Header, Footer, MobileNav, BackToTop)
+  - `components/auth/` — Authentication UI (LoginModal, UserMenu, FavoriteButton with auth check)
+  - `components/map/` — Kakao Maps integration (KakaoMap, MobileBottomSheet)
+  - `components/search/` — Search UI and logic (SearchTracker, SearchForm)
+  - `components/providers/` — React Context providers (ThemeProvider, AuthProvider)
+  - `components/analytics/` — Tracking and telemetry (ViewDetailTracker, UTMTracker, SearchTracker)
+  - `components/ads/` — Advertisement slots (AdSlot, InfeedAd)
+  - `components/onboarding/` — First-time user flow
+  - `components/skeleton/` — Loading placeholders
+  - `components/seo/` — SEO helpers (JsonLd, metadata)
 
-**`src/app/dam/`:**
-- Purpose: Admin dashboard (DAM = Data Admin Manager)
-- Contains: Dashboard, data browser, content queue, cron manager, comments, users, settings pages
-- Key files: `layout.tsx` (admin layout with noindex), `AdminLayout.tsx` (client-side admin nav)
+**src/lib/**
+- Purpose: Business logic, utilities, external integrations, database access
+- Structure: Feature/domain-based subdirectories + standalone utility files
+- Key subdirectories and files:
+  - `lib/db/` — Database layer
+    - `client.ts` — QueryBuilder class, connection pool initialization, parameterized SQL builder
+    - `server.ts` — Service client factory (thin wrapper)
+    - `rent-client.ts` — Alternative client for rental market data
+  - `lib/api/` — External API wrappers
+    - `molit.ts` — Official transaction data (MOLiT API), XML parsing, calculation of `change_rate`, `is_new_high`
+    - `molit-multi.ts` — Bulk transaction fetch with multi-API support
+    - `kakao.ts` — Geocoding (address ↔ coordinates), reverse geocoding
+    - `[others]` — Bank rates, Instagram Graph API, Coupang Affiliate API
+  - `lib/analytics/` — Page view and event tracking
+  - `lib/firebase/` — Firebase SDK initialization and auth helpers
+  - `lib/cardnews/` — Card news/social media content generation
+    - `templates/` — Template strings for different content types
+  - `lib/admin/` — Admin utilities and role checks
+  - `lib/constants/` — Application constants
+    - `region-codes.ts` — Hierarchical region structure (시/도 → 시군구 → 읍면동)
+    - `property-types.ts` — Property type enum and labels (1=apt, 2=villa, 3=townhouse, etc.)
+  - `lib/instagram/` — Instagram post scheduling and publishing
+  - `logger.ts` — Structured logging (JSON in prod, pretty-print in dev)
+  - `format.ts` — Display formatting (currency, area sqm↔pyeong, date)
+  - `calculator.ts` — Financial calculations (loan simulator, mortgage payoff)
+  - `kakao-share.ts` — Kakao Share Button SDK wrapper
+  - `alert.ts` — Slack webhook for error notifications
 
-**`src/components/`:**
-- Purpose: Shared React components organized by domain
-- Contains: Both server and client components; client components marked with `"use client"`
-- Key files: `providers/AuthProvider.tsx`, `providers/ThemeProvider.tsx`, `map/KakaoMap.tsx`
+**src/types/**
+- Purpose: Centralized TypeScript type definitions
+- Contains:
+  - `db.ts` — Database entity interfaces (AptComplex, AptTransaction, FinanceRate, PageView, etc.)
+  - `api.ts` — API request/response types
+  - `kakao.d.ts` — Kakao SDK type declarations (augmenting `window` object)
 
-**`src/lib/`:**
-- Purpose: Core business logic, data access, utilities
-- Contains: Database client, external API wrappers, constants, formatting
-- Key files: `db/client.ts` (query builder), `format.ts` (price formatting), `constants/region-codes.ts`
-
-**`src/lib/api/`:**
-- Purpose: External API integration wrappers
-- Contains: One file per external API source
-- Key files: `molit.ts` (apartment trades), `ecos.ts` (interest rates), `molit-rent.ts` (rent data)
-
-**`scripts/`:**
-- Purpose: Database management, migrations, data backfill utilities
-- Contains: SQL schema files, TypeScript migration/backfill scripts
-- Key files: `cockroach-schema.sql` (canonical schema), `backfill-transactions.ts`
-- Run with: `tsx scripts/filename.ts` (dev dependency)
+**src/app/api/**
+- Purpose: RESTful and RPC endpoints
+- Structure: Nested routes matching URL paths
+- Key routes:
+  - `api/apt/` → GET list apartments with filters/pagination
+  - `api/apt/[id]/` → GET apartment detail
+  - `api/apt/extremes/` → GET price highs/lows for ranking
+  - `api/cron/fetch-transactions/` → POST/GET triggered cron job
+  - `api/cron/fetch-rates/` → GET latest mortgage rates
+  - `api/cron/generate-cardnews/` → POST generate social media content
+  - `api/cron/analytics/` → POST update page view cache
+  - `api/analytics/pageview/` → POST log page view
+  - `api/admin/users/` → GET admin user list (protected)
+  - `api/bank-rates/` → GET current rates
+  - `api/coupang/products/` → GET product recommendations
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/app/layout.tsx`: Root layout (providers, header, footer, scripts)
-- `src/app/page.tsx`: Homepage (server component, ISR 300s)
-- `src/app/api/cron/fetch-transactions/route.ts`: Main data pipeline entry
+- `src/app/layout.tsx` — Root layout (providers, header, footer, analytics setup, service worker registration)
+- `src/app/page.tsx` — Homepage (homepage_cache aggregation, ranking tabs)
+- `src/app/api/[feature]/route.ts` — API endpoint handlers
 
 **Configuration:**
-- `next.config.ts`: Next.js config (server external packages, security headers)
-- `vercel.json`: Vercel cron schedules (17+ scheduled jobs)
-- `tsconfig.json`: TypeScript config (strict mode, `@/*` path alias)
-- `eslint.config.mjs`: ESLint config
-- `postcss.config.mjs`: PostCSS/Tailwind config
+- `next.config.ts` — Cache headers, CSP security policy, serverExternalPackages for pg
+- `tsconfig.json` — Path aliases (`@/` → `src/`), strict mode
+- `postcss.config.mjs` — Tailwind CSS integration
+- `tailwind.config.ts` — Custom theme colors (brand-600, t-text, etc.)
+- `.env.local`, `.env.vercel` — Environment variables (DATABASE_URL, API keys)
 
 **Core Logic:**
-- `src/lib/db/client.ts`: Database query builder (845 lines, most critical file)
-- `src/lib/supabase/server.ts`: Server-side DB client factory
-- `src/lib/format.ts`: Korean price/size formatting
-- `src/lib/constants/region-codes.ts`: Region code hierarchy
-- `src/lib/alert.ts`: Slack webhook alerts
+- `src/lib/db/client.ts` — QueryBuilder (SQL builder, connection pooling)
+- `src/lib/api/molit.ts` — Official transaction data fetching and parsing
+- `src/lib/calculator.ts` — Loan payment calculations
+- `src/lib/format.ts` — Display formatting utilities
+- `src/components/providers/AuthProvider.tsx` — Firebase authentication context
 
 **Testing:**
-- No test files exist in the codebase
-- No test framework configured
+- No `__tests__` or `.test.ts` files found (testing framework not present)
+
+**Special Directories:**
+- `.planning/` — GSD phase documents and context (created by orchestrator)
+- `public/` — Static files served at root (favicon.svg, manifest.json, robots.txt, sw.js)
+- `.netlify/` — Netlify build artifacts (generated)
+- `.vercel/` — Vercel build artifacts (gitignored)
 
 ## Naming Conventions
 
 **Files:**
-- Page components: `page.tsx` (Next.js convention)
-- Layouts: `layout.tsx` (Next.js convention)
-- Loading states: `loading.tsx` (Next.js convention)
-- API routes: `route.ts` (Next.js convention)
-- OG images: `opengraph-image.tsx` (Next.js convention)
-- Components: `PascalCase.tsx` (e.g., `KakaoMap.tsx`, `AuthProvider.tsx`)
-- Utilities/libs: `kebab-case.ts` (e.g., `region-codes.ts`, `molit-rent.ts`)
-- SQL scripts: `kebab-case.sql` (e.g., `cockroach-schema.sql`)
+- Pages: `page.tsx` (not `index.tsx`)
+- Layouts: `layout.tsx`
+- API handlers: `route.ts` (GET, POST, etc. exported as functions)
+- Components: PascalCase with `.tsx` extension (e.g., `AptDetailClient.tsx`)
+- Utils/lib: camelCase (e.g., `format.ts`, `logger.ts`)
+- Type files: `db.ts`, `api.ts` (not `index.ts`)
 
 **Directories:**
-- Route segments: `kebab-case` (e.g., `new-highs/`, `bank-rates/`)
-- Dynamic segments: `[param]` (e.g., `[region]/`, `[slug]/`, `[date]/`)
-- Component groups: `kebab-case` (e.g., `auth/`, `charts/`, `layout/`)
+- Feature-based (e.g., `components/apt/`, `components/charts/`)
+- Kebab-case for multi-word (e.g., `src/app/new-highs/`)
+- Dynamic routes in brackets (e.g., `[id]/`, `[sido]/[sigungu]/`)
 
-## Routing Structure
+**React Components:**
+- Function components: PascalCase (e.g., `HeroSection`, `AptDetailClient`)
+- Context/hooks: `create*` for context factories, `use*` for hooks (e.g., `AuthProvider`, `useAuth`, `useSizeUnit`)
+- Props interfaces: Component name + "Props" suffix (e.g., `AptDetailClientProps`)
 
-**Public Pages:**
-| Route | File | Rendering | Revalidate |
-|-------|------|-----------|------------|
-| `/` | `src/app/page.tsx` | SSR (Server Component) | 300s |
-| `/today` | `src/app/today/page.tsx` | SSR | 300s |
-| `/new-highs` | `src/app/new-highs/page.tsx` | SSR | - |
-| `/market` | `src/app/market/page.tsx` | SSR | 3600s |
-| `/market/[sido]` | `src/app/market/[sido]/page.tsx` | SSR | - |
-| `/market/[sido]/[sigungu]` | `src/app/market/[sido]/[sigungu]/page.tsx` | SSR | - |
-| `/rent` | `src/app/rent/page.tsx` | SSR | - |
-| `/rate` | `src/app/rate/page.tsx` | SSR | - |
-| `/rate/calculator` | `src/app/rate/calculator/page.tsx` | Client | - |
-| `/map` | `src/app/map/page.tsx` | SSR + Client | - |
-| `/search` | `src/app/search/page.tsx` | SSR + Client | - |
-| `/apt/[region]/[slug]` | `src/app/apt/[region]/[slug]/page.tsx` | SSR | 3600s |
-| `/compare` | `src/app/compare/page.tsx` | Client | - |
-| `/daily/[date]` | `src/app/daily/[date]/page.tsx` | SSR | - |
-| `/daily/archive` | `src/app/daily/archive/page.tsx` | SSR | - |
-| `/themes` | `src/app/themes/page.tsx` | SSR | - |
-| `/themes/[slug]` | `src/app/themes/[slug]/page.tsx` | SSR | - |
-| `/trend` | `src/app/trend/page.tsx` | SSR | - |
-| `/about` | `src/app/about/page.tsx` | SSR | - |
-| `/privacy` | `src/app/privacy/page.tsx` | SSR | - |
-| `/profile` | `src/app/profile/page.tsx` | Client | - |
-
-**Admin Pages (under `/dam`):**
-| Route | Purpose |
-|-------|---------|
-| `/dam` | Dashboard overview |
-| `/dam/data` | Data browser |
-| `/dam/content` | Content queue management |
-| `/dam/cron` | Cron job management |
-| `/dam/comments` | Comment moderation |
-| `/dam/users` | User management |
-| `/dam/settings` | Settings |
-
-**API Routes:**
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/apt` | GET | List complexes (paginated) |
-| `/api/apt/[id]` | GET | Complex detail |
-| `/api/apt/extremes` | GET | Top drops/highs |
-| `/api/search` | GET | Apartment search |
-| `/api/rate/calculate` | GET | Loan calculation |
-| `/api/rate/history` | GET | Rate history |
-| `/api/bank-rates` | GET | Bank mortgage rates |
-| `/api/news` | GET | Real estate news |
-| `/api/daily` | GET | Latest daily report |
-| `/api/daily/[date]` | GET | Specific daily report |
-| `/api/analytics/pageview` | POST | Track page view |
-| `/api/analytics/popular` | GET | Popular pages |
-| `/api/push/subscribe` | POST | Push subscription |
-| `/api/geocode` | GET | Geocode address |
-| `/api/coupang/products` | GET | Affiliate products |
+**Functions/Variables:**
+- camelCase (e.g., `createClient()`, `getPool()`, `sqmToPyeong()`)
+- Constants: UPPER_SNAKE_CASE (e.g., `BATCH_GROUPS`, `LOW_FLOOR_MAX`)
 
 ## Where to Add New Code
 
-**New Public Page:**
-- Create directory: `src/app/{page-name}/`
-- Add `page.tsx` (server component by default)
-- Add `loading.tsx` for skeleton loading state
-- Add `opengraph-image.tsx` for social sharing image
-- Export `metadata` for SEO
-- Export `revalidate` for ISR timing
+**New Feature (Page + API + Business Logic):**
+1. **Page component:** `src/app/[feature]/page.tsx`
+   - Import `createClient()` for SSR data fetching
+   - Use `async` to call database queries
+   - Export `metadata` for SEO
+   - Set `revalidate = 300` for ISR caching
+2. **Client interactivity:** `src/components/[feature]/[ComponentName].tsx`
+   - Start with `"use client"` directive
+   - Use Context or state for client-side state
+3. **API endpoint:** `src/app/api/[feature]/route.ts`
+   - Define `export async function GET(request)` for GET requests
+   - Validate `request.headers`, `searchParams`, request body
+   - Return `NextResponse.json(...)`
+4. **Business logic:** `src/lib/[feature]/[logic].ts`
+   - Export pure functions or classes
+   - Handle external API calls, data transformation
+   - Use try-catch with proper error logging
 
-**New API Route:**
-- Create directory: `src/app/api/{endpoint-name}/`
-- Add `route.ts` with exported HTTP method handlers (GET, POST, etc.)
-- Use `createServiceClient()` from `src/lib/supabase/server.ts` for DB access
-- Return `NextResponse.json()`
+**New Component/Module:**
+- If displaying data: `src/components/[feature]/[ComponentName].tsx`
+- If pure logic: `src/lib/[feature]/[utility].ts`
+- If external API: `src/lib/api/[service].ts`
+- Organize by feature, not by function type (prefer `components/apt/` over `components/UI/Apt/`)
 
-**New Cron Job:**
-- Create directory: `src/app/api/cron/{job-name}/`
-- Add `route.ts` with GET handler
-- Add Bearer token auth check: `request.headers.get("Authorization") === \`Bearer \${process.env.CRON_SECRET}\``
-- Add entry to `vercel.json` crons array
-- Set `maxDuration` export if needed (up to 300s on Vercel Pro)
+**Utilities:**
+- General utilities (formatting, math): `src/lib/[name].ts`
+- Feature-specific utilities: `src/lib/[feature]/[utility].ts`
+- Constants: `src/lib/constants/[domain].ts`
+- Shared types: `src/types/[domain].ts`
 
-**New Shared Component:**
-- Place in `src/components/{domain}/ComponentName.tsx`
-- Add `"use client"` directive if it needs interactivity
-- Domain directories: `ads/`, `analytics/`, `apt/`, `auth/`, `charts/`, `home/`, `layout/`, `map/`, `onboarding/`, `providers/`, `seo/`, `skeleton/`
-- Standalone components go directly in `src/components/`
+## Special Files Explained
 
-**New External API Wrapper:**
-- Add file: `src/lib/api/{service-name}.ts`
-- Export interface for parsed response
-- Export async fetch function
-- Add env var for API key
+**src/app/layout.tsx**
+- Root HTML structure (`<html>`, `<body>`)
+- Wraps entire app with providers (ThemeProvider, AuthProvider)
+- Loads external scripts (Google Analytics, Kakao Maps SDK, Adsense)
+- Registers service worker for offline caching
+- Sets global metadata (viewport, manifest, icons)
 
-**New Utility Function:**
-- General formatting: `src/lib/format.ts`
-- Constants/enums: `src/lib/constants/{name}.ts`
-- Domain-specific logic: `src/lib/calculator.ts` or new file in `src/lib/`
+**src/app/error.tsx**
+- React Error Boundary — catches errors in child components
+- Shows user-friendly error message with "retry" button
+- Component-level error handling (not API-level)
 
-**New Database Table:**
-- Add CREATE TABLE to `scripts/cockroach-schema.sql`
-- Create migration script if needed
-- No ORM; use QueryBuilder API or raw SQL via `getPool().query()`
+**src/app/global-error.tsx**
+- Error boundary for root layout itself (catches errors in layout.tsx)
+- More minimal fallback than error.tsx
 
-## Special Directories
+**src/lib/db/client.ts**
+- Custom QueryBuilder class (not using Supabase SDK)
+- Mimics PostgREST API: `.select()`, `.eq()`, `.order()`, `.limit()`
+- Builds parameterized SQL to prevent injection
+- Lazy-initializes PostgreSQL connection pool on first `getPool()` call
 
-**`.planning/`:**
-- Purpose: GSD planning and codebase analysis documents
-- Generated: Yes (by Claude agents)
-- Committed: No (in .gitignore conceptually, but tracked in working tree)
+**next.config.ts**
+- Configures `Cache-Control` headers to prevent stale HTML after deploy
+- Sets up CSP (Content Security Policy) for security
+- Marks `pg` as serverExternalPackage (no bundling in serverless)
 
-**`.netlify/`:**
-- Purpose: Netlify build artifacts (legacy deployment)
-- Generated: Yes
-- Committed: Partially
+## File Examples
 
-**`.next/`:**
-- Purpose: Next.js build output
-- Generated: Yes
-- Committed: No
+**Typical Page Component:**
+- `src/app/today/page.tsx` — Fetches transactions, renders list, supports filters
+- Server component by default (no "use client")
+- Calls `createClient()` → queryBuilder chains → returns data to component
+- Client component (PropertyTypeFilter) handles user filter selections
 
-**`.vercel/`:**
-- Purpose: Vercel project config
-- Generated: Yes
-- Committed: No (contains project linking info)
+**Typical API Route:**
+- `src/app/api/apt/route.ts` — GET handler with region/page filtering
+- Validates query params, calls database, returns paginated JSON
+- Includes error handling and logging
 
-**`supabase/`:**
-- Purpose: Legacy Supabase schema and migrations (project migrated to CockroachDB)
-- Generated: No
-- Committed: Yes (historical reference)
-- Note: Active schema is in `scripts/cockroach-schema.sql`
+**Typical Client Component:**
+- `src/components/apt/AptDetailClient.tsx` — Manages local state (sizeUnit, selectedSize)
+- Provides context to child components via `SizeUnitContext`
+- Renders tabs, charts, transaction lists (server-fetched, client-filtered)
 
-## Path Alias
-
-**`@/*` maps to `./src/*`** (configured in `tsconfig.json`)
-
-Use `@/lib/...`, `@/components/...`, `@/app/...` for all imports within the `src/` directory.
+**Typical Cron Job:**
+- `src/app/api/cron/fetch-transactions/route.ts` — Scheduled data import
+- Validates `CRON_SECRET`, fetches from MOLiT API in batches
+- Upserts to `apt_transactions`, updates `homepage_cache`
+- Alerts on error via Slack
 
 ---
 
-*Structure analysis: 2026-03-26*
+*Structure analysis: 2026-03-27*
