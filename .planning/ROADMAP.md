@@ -1,288 +1,187 @@
-# Roadmap: 돈줍 사이트 안정화
+# Roadmap: 돈줍
 
-**Created:** 2026-03-26
-**Milestone:** v1.0 — 사이트 안정화
-**Phases:** 9
+## Milestones
 
-## Phase Overview
+- ✅ **v1.0 사이트 안정화** - Phases 1-9 (shipped 2026-03-28)
+- 🚧 **v1.1 데이터 분석 고도화** - Phases 10-15 (in progress)
 
-| # | Phase | Goal | Requirements | Risk |
-|---|-------|------|-------------|------|
-| 1 | SEO / 메타데이터 수정 | 2/2 | Complete   | 2026-03-25 |
-| 2 | 코드 정리 (패키지/네이밍) | 1/2 | In Progress|  |
-| 3 | 컴포넌트 분할 | 1/1 | Complete   | 2026-03-26 |
-| 4 | 에러 핸들링 / 로깅 | 에러 바운더리 + 구조화 로깅 | ERR-01~04 | Low |
-| 5 | 성능 최적화 | 2/2 | Complete   | 2026-03-26 |
-| 6 | TypeScript 타입 강화 | 핵심 모듈 any 제거, 인터페이스 정의 | TYPE-01~03 | Low |
-| 7 | 접근성 (a11y) | 2/2 | Complete   | 2026-03-26 |
-| 8 | 보안 강화 | 1/1 | Complete   | 2026-03-26 |
-| 9 | 모바일 UI 전면 개편 | 모바일 읽기/터치/탐색 최적화 | MOBILE-01~09 | Low |
+## Phases
 
-## Phase Details
+<details>
+<summary>✅ v1.0 사이트 안정화 (Phases 1-9) - SHIPPED 2026-03-28</summary>
 
 ### Phase 1: SEO / 메타데이터 수정
-**Goal:** 검색엔진이 모든 페이지를 개별적으로 인식하고 적절한 미리보기를 생성한다
-
-**Requirements:** SEO-01, SEO-02, SEO-03, SEO-04
-
-**Plans:** 2/2 plans complete
+**Goal**: 검색엔진이 모든 페이지를 개별적으로 인식하고 적절한 미리보기를 생성한다
+**Plans**: 2/2 plans complete
 
 Plans:
 - [x] 01-01-PLAN.md — Canonical URL 수정 및 고유 title 설정 (SEO-01, SEO-02)
 - [x] 01-02-PLAN.md — 지도 SSR 콘텐츠 추가 및 OG Image 확인 (SEO-03, SEO-04)
 
-**Scope:**
-- canonical URL을 모든 페이지에서 해당 페이지 URL로 수정
-- compare, profile, dam 페이지에 고유 title 설정
-- 지도 페이지 SSR에서 초기 데이터 포함 또는 의미 있는 콘텐츠 렌더링
-- 주요 서브 페이지에 전용 OG Image 생성
-
-**Dependencies:** 없음 (독립적)
-
-**Success Criteria:**
-- 모든 페이지의 canonical URL이 자기 자신을 가리킴
-- curl로 확인 시 각 페이지 고유 title 존재
-- /map SSR HTML에 "데이터가 없습니다" 메시지 없음
-
----
-
 ### Phase 2: 코드 정리 (패키지/네이밍)
-**Goal:** 미사용 코드와 혼란스러운 네이밍이 정리되어 유지보수성이 향상된다
-
-**Requirements:** CLN-01, CLN-02, CLN-03, CLN-04, CLN-05
-
-**Plans:** 1/2 plans executed
+**Goal**: 미사용 코드와 혼란스러운 네이밍이 정리되어 유지보수성이 향상된다
+**Plans**: 2/2 plans complete
 
 Plans:
-- [x] 02-01-PLAN.md — formatPrice 중복 제거, Instagram 클라이언트 통합, 미사용 패키지 제거 (CLN-01, CLN-02, CLN-03)
-- [x] 02-02-PLAN.md — supabase→db 리네이밍 + Storage stub 제거 (CLN-04, CLN-05)
-
-**Scope:**
-- KakaoMap.tsx의 로컬 formatPrice 제거, src/lib/format.ts에서 import
-- Instagram 클라이언트 통합 (src/lib/api/instagram.ts + src/lib/instagram/client.ts → 하나로)
-- 미사용 DB 패키지 제거 (postgres, @neondatabase/serverless)
-- src/lib/supabase/ → src/lib/db/로 리네이밍 + 전체 import 경로 업데이트
-- Storage stub 제거 또는 적절한 처리
-
-**Dependencies:** 없음
-
-**Success Criteria:**
-- `pnpm build` 성공
-- grep으로 중복 formatPrice 없음
-- package.json에서 미사용 패키지 제거됨
-- import '@/lib/supabase' 경로 0건
-
----
+- [x] 02-01-PLAN.md — formatPrice 중복 제거, Instagram 클라이언트 통합, 미사용 패키지 제거
+- [x] 02-02-PLAN.md — supabase→db 리네이밍 + Storage stub 제거
 
 ### Phase 3: 컴포넌트 분할
-**Goal:** 대형 단일 파일 컴포넌트가 관리 가능한 크기로 분할된다
+**Goal**: 대형 단일 파일 컴포넌트가 관리 가능한 크기로 분할된다
+**Plans**: 1/1 plans complete
 
-**Requirements:** CLN-06
-
-**Scope:**
-- src/app/rate/calculator/page.tsx (1101줄) → 서브 컴포넌트 분리
-- src/components/map/KakaoMap.tsx (640줄) → 서브 컴포넌트 + 유틸 분리
-- src/app/page.tsx (658줄) → 섹션별 서브 컴포넌트 분리
-- src/app/apt/[region]/[slug]/page.tsx (551줄) → 서브 컴포넌트 분리
-
-**Dependencies:** Phase 2 (CLN-01 formatPrice 정리 후)
-
-**Success Criteria:**
-- 분할 후 모든 파일 300줄 이하
-- `pnpm build` 성공
-- 기능 동작 변경 없음
-
----
+Plans:
+- [x] 03-01-PLAN.md — 대형 컴포넌트 분할
 
 ### Phase 4: 에러 핸들링 / 로깅
-**Goal:** 에러가 사용자에게 친절하게 표시되고, 서버에서 구조화 로깅으로 추적 가능하다
-
-**Requirements:** ERR-01, ERR-02, ERR-03, ERR-04
-
-**Plans:** 2 plans
+**Goal**: 에러가 사용자에게 친절하게 표시되고, 서버에서 구조화 로깅으로 추적 가능하다
+**Plans**: 2/2 plans complete
 
 Plans:
-- [x] 04-01-PLAN.md — 구조화 로깅 유틸 + 브랜드 에러 페이지 (ERR-01, ERR-03)
-- [x] 04-02-PLAN.md — API 에러 응답 정리 + 크론잡 Slack 알림 (ERR-02, ERR-04)
-
-**Scope:**
-- src/app/error.tsx (브랜드 에러 페이지) 구현/개선
-- src/app/global-error.tsx 구현
-- API 라우트에서 e.message 직접 반환 제거 → 일반 에러 메시지로 교체
-- 구조화 로깅 유틸 구현 (src/lib/logger.ts)
-- 크론잡 에러 시 Slack 알림 일관성 확인
-
-**Dependencies:** 없음
-
-**Success Criteria:**
-- error.tsx, global-error.tsx 파일 존재 및 브랜드 UI 적용
-- grep으로 API 라우트에서 e.message 직접 반환 0건
-- 로깅 유틸이 모든 API 라우트에서 사용됨
-
----
+- [x] 04-01-PLAN.md — 구조화 로깅 유틸 + 브랜드 에러 페이지
+- [x] 04-02-PLAN.md — API 에러 응답 정리 + 크론잡 Slack 알림
 
 ### Phase 5: 성능 최적화
-**Goal:** 검색 응답 속도 개선, DB 안정성 확보, 크론잡 충돌 해소
-
-**Requirements:** PERF-01, PERF-02, PERF-03, PERF-04
-
-**Plans:** 2/2 plans complete
+**Goal**: 검색 응답 속도 개선, DB 안정성 확보, 크론잡 충돌 해소
+**Plans**: 2/2 plans complete
 
 Plans:
-- [x] 05-01-PLAN.md — pg_trgm GIN 인덱스 + DB 커넥션 풀 조정 (PERF-01, PERF-02)
-- [x] 05-02-PLAN.md — 크론잡 스케줄 정리 + 인메모리 rate limiter 제거 (PERF-03, PERF-04)
-
-**Scope:**
-- pg_trgm 확장 활성화 + GIN 인덱스 생성 (apt_name, region_name, dong_name)
-- DB 커넥션 풀 max 조정 또는 Neon pooler 활용
-- vercel.json 크론잡 스케줄 겹침 정리 (시간 간격 확보)
-- rate limiter 개선 (서버리스 대응)
-
-**Dependencies:** Phase 2 (패키지 정리 후 DB 설정 변경)
-
-**Success Criteria:**
-- EXPLAIN으로 검색 쿼리가 인덱스 사용 확인
-- 크론잡 동시 실행 시 커넥션 에러 없음
-- 크론잡 스케줄 간 최소 10분 간격
-
----
+- [x] 05-01-PLAN.md — pg_trgm GIN 인덱스 + DB 커넥션 풀 조정
+- [x] 05-02-PLAN.md — 크론잡 스케줄 정리 + 인메모리 rate limiter 제거
 
 ### Phase 6: TypeScript 타입 강화
-**Goal:** 핵심 모듈의 타입 안전성이 확보되어 런타임 에러 가능성이 줄어든다
-
-**Requirements:** TYPE-01, TYPE-02, TYPE-03
-
-**Plans:** 2 plans
+**Goal**: 핵심 모듈의 타입 안전성이 확보되어 런타임 에러 가능성이 줄어든다
+**Plans**: 2/2 plans complete
 
 Plans:
-- [x] 06-01-PLAN.md — DB 모델 인터페이스 정의 + API 라우트 응답 타입 적용 (TYPE-01, TYPE-02)
-- [x] 06-02-PLAN.md — 주요 컴포넌트/페이지 any 제거 + KakaoMap/client.ts 타입 강화 (TYPE-03)
-
-**Scope:**
-- src/types/ 또는 src/lib/types.ts에 DB 모델 인터페이스 정의
-- API 라우트 응답 타입 적용
-- page.tsx, KakaoMap.tsx 등 주요 컴포넌트의 any → 구체 타입
-
-**Dependencies:** Phase 3 (컴포넌트 분할 후)
-
-**Success Criteria:**
-- 핵심 3개 테이블(apt_transactions, apt_complexes, finance_rates)에 타입 존재
-- grep 'any' 결과에서 핵심 파일 any 사용 50% 이상 감소
-
----
+- [x] 06-01-PLAN.md — DB 모델 인터페이스 정의 + API 라우트 응답 타입 적용
+- [x] 06-02-PLAN.md — 주요 컴포넌트/페이지 any 제거 + KakaoMap/client.ts 타입 강화
 
 ### Phase 7: 접근성 (a11y)
-**Goal:** 보조 기술 사용자가 주요 기능을 이용할 수 있다
-
-**Requirements:** A11Y-01, A11Y-02, A11Y-03, A11Y-04
-
-**Plans:** 2/2 plans complete
+**Goal**: 보조 기술 사용자가 주요 기능을 이용할 수 있다
+**Plans**: 2/2 plans complete
 
 Plans:
-- [x] 07-01-PLAN.md — ARIA 속성 + 키보드 내비게이션 + skip-to-content 검증 (A11Y-01, A11Y-02, A11Y-04)
-- [x] 07-02-PLAN.md — 차트/지도 텍스트 대안 (A11Y-03)
-
-**Scope:**
-- 탭, 버튼, 링크에 role, aria-label, aria-selected 등 추가
-- 키보드 내비게이션 (Tab, Enter, Escape) 동작 확인 및 수정
-- 차트에 aria-label + 텍스트 요약, 지도에 대안 텍스트
-- layout.tsx에 skip-to-content 링크 추가
-
-**Dependencies:** Phase 3 (컴포넌트 분할 후)
-
-**Success Criteria:**
-- 주요 인터랙티브 요소에 ARIA 속성 존재
-- Tab 키로 주요 페이지 내비게이션 가능
-- skip navigation 동작 확인
-
----
+- [x] 07-01-PLAN.md — ARIA 속성 + 키보드 내비게이션 + skip-to-content
+- [x] 07-02-PLAN.md — 차트/지도 텍스트 대안
 
 ### Phase 8: 보안 강화
-**Goal:** 알려진 보안 취약점이 모두 해소된다
-
-**Requirements:** SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06
-
-**Plans:** 2/2 plans complete
+**Goal**: 알려진 보안 취약점이 모두 해소된다
+**Plans**: 2/2 plans complete
 
 Plans:
-- [x] 08-01-PLAN.md — ADMIN_EMAILS 서버 전용 이동 + SSL 설정 수정 + rate limiter 확인 (SEC-01, SEC-03, SEC-05)
-- [x] 08-02-PLAN.md — DAM content API 인증 + push subscribe 보안 + ADMIN_EMAILS + SSL + CSP (SEC-01~05)
-
-**Scope:**
-- NEXT_PUBLIC_ADMIN_EMAILS → ADMIN_EMAILS (서버 전용)
-- DAM content API에 CRON_SECRET 또는 Firebase 인증 추가
-- push subscribe에 인증 또는 강화된 rate limit 추가
-- SSL rejectUnauthorized: true + CA 인증서 설정
-- CSP 헤더 추가 (Kakao SDK, GA, AdSense, Firebase 도메인 허용)
-- proxy.ts rate limiter 서버리스 대응 교체
-
-**Dependencies:** Phase 1~7 완료 후 (다른 수정에서 발생한 보안 이슈까지 통합 처리)
-
-**Success Criteria:**
-- NEXT_PUBLIC_ADMIN_EMAILS 환경변수 0건
-- DAM API 비인증 접근 시 401/403 반환
-- curl 응답에 CSP 헤더 존재
-- SSL 설정에 rejectUnauthorized: false 0건
-
----
+- [x] 08-01-PLAN.md — ADMIN_EMAILS 서버 전용 이동 + SSL 설정 수정
+- [x] 08-02-PLAN.md — DAM content API 인증 + push subscribe 보안 + CSP
 
 ### Phase 9: 모바일 UI 전면 개편
-**Goal:** 모바일(width < 768px)에서 모든 페이지가 읽기/터치/탐색에 최적화된다
-
-**Requirements:** MOBILE-01, MOBILE-02, MOBILE-03, MOBILE-04, MOBILE-05, MOBILE-06, MOBILE-07, MOBILE-08, MOBILE-09
-
-**Plans:** 3 plans
+**Goal**: 모바일(width < 768px)에서 모든 페이지가 읽기/터치/탐색에 최적화된다
+**Plans**: 3/3 plans complete
 
 Plans:
-- [x] 09-01-PLAN.md — 신고가 모바일 카드 + 금리 은행명 한국어화 + 홈 히어로 모바일 타이포그래피 (MOBILE-06, MOBILE-07, MOBILE-09)
-- [x] 09-02-PLAN.md — MobileNav 터치 차단 수정 + 면적 선택 수평 칩 + 차트 모바일 최적화 (MOBILE-02, MOBILE-03, MOBILE-04)
-- [x] 09-03-PLAN.md — 거래 테이블 모바일 카드 전환 + 지도 페이지 모바일 레이아웃 수정 (MOBILE-01, MOBILE-05, MOBILE-08)
+- [x] 09-01-PLAN.md — 신고가 모바일 카드 + 금리 은행명 한국어화 + 홈 히어로 타이포그래피
+- [x] 09-02-PLAN.md — MobileNav 터치 차단 + 면적 선택 수평 칩 + 차트 모바일 최적화
+- [x] 09-03-PLAN.md — 거래 테이블 모바일 카드 전환 + 지도 페이지 모바일 레이아웃
 
-**Scope:**
-- 신고가/오늘거래 테이블 → 모바일 카드 레이아웃
-- 사이드 메뉴 backdrop 터치 차단 수정
-- 면적 선택 UI → 수평 스크롤 칩
-- 차트 모바일 높이 280px + Y축 레이블 간소화
-- 거래 테이블 → 모바일 카드 전환
-- 홈 히어로 모바일 타이포그래피
-- 금리 은행명 코드 → 한국어 fallback 강화
-- 지도 페이지 로딩 텍스트 + 바텀시트 safe area
-
-**Dependencies:** 없음 (독립적, 기존 기능 유지하며 모바일 UI만 개선)
-
-**Success Criteria:**
-- 모든 테이블이 모바일에서 카드 형태로 표시 (`sm:hidden` + `hidden sm:block` 패턴)
-- 사이드 메뉴 backdrop에 `touchAction: none` 존재
-- 면적 칩이 `overflow-x-auto` 수평 스크롤
-- 차트 모바일 280px 높이
-- `pnpm build` 성공
+</details>
 
 ---
 
-## Dependency Graph
+### 🚧 v1.1 데이터 분석 고도화 (In Progress)
 
-```
-Phase 1 (SEO) ──────────────────────────────────────┐
-Phase 2 (코드정리) ─── Phase 3 (컴포넌트분할) ──┐   │
-Phase 4 (에러핸들링) ───────────────────────────┤   │
-Phase 5 (성능) ─────────────────────────────────┤   │
-                    Phase 6 (타입) ─────────────┤   │
-                    Phase 7 (접근성) ────────────┤   │
-                                                └───┴── Phase 8 (보안)
-Phase 9 (모바일UI) ─── 독립적 (병렬 실행 가능)
-```
+**Milestone Goal:** 가격 노이즈 제거 + 일관된 추이/지수 제공 + 업계 기본 지표 추가로 사용자가 시장을 정확히 읽게 한다
 
-## Risk Register
+## Phase Details
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| supabase → db 리네이밍 시 import 누락 | Build 실패 | 자동 검색+치환, 빌드 검증 |
-| 컴포넌트 분할 시 상태/props 누락 | 기능 깨짐 | 분할 후 각 페이지 수동 확인 |
-| CSP 헤더로 외부 스크립트 차단 | GA/AdSense/Kakao 동작 중단 | 도메인별 허용 규칙 사전 정의 |
-| pg_trgm 인덱스 추가 시 Neon 제한 | 인덱스 생성 실패 | Neon free tier 제약 확인 |
-| 크론잡 스케줄 변경 시 데이터 수집 누락 | 일일 데이터 빈틈 | 변경 전후 데이터 검증 |
-| 모바일 카드 전환 시 데스크탑 UI 깨짐 | UX 퇴화 | sm: breakpoint 분기 + 빌드 검증 |
+### Phase 10: 가격 정규화 엔진
+**Goal**: 차트가 노이즈 없는 정확한 가격 추이를 보여준다 — 저층 거래 보정, 이상거래 자동 제거, 3개월 이동중위가 기반
+**Depends on**: Phase 9 (v1.0 완료)
+**Requirements**: NORM-01, NORM-02, NORM-03, NORM-04, NORM-05
+**Success Criteria** (what must be TRUE):
+  1. 차트에서 "전체 면적" 탭이 사라지고 면적별 탭만 표시된다
+  2. 저층 거래는 기본적으로 고층 환산가로 보정되어 차트에 반영된다
+  3. "저층 포함/제외" 토글로 저층 거래 원가를 다시 볼 수 있다
+  4. 차트 추이선이 원 거래가 점이 아닌 3개월 이동중위가 기반 선으로 표시된다
+  5. 직거래 + 시세 대비 30% 이상 저가 거래는 차트에서 자동으로 제외된다
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 11: 전세가율·갭 분석
+**Goal**: 아파트 상세 페이지에서 투자자가 갭 리스크를 즉시 파악할 수 있다
+**Depends on**: Phase 9 (v1.0 완료, 독립적)
+**Requirements**: GAP-01, GAP-02, GAP-03
+**Success Criteria** (what must be TRUE):
+  1. 아파트 상세 페이지에서 면적별 전세가율(%) 수치가 표시된다
+  2. 아파트 상세 페이지에서 면적별 갭 금액(매매가 - 전세가)이 표시된다
+  3. 면적별 전세가율 추이 차트를 볼 수 있다
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 12: 금리 표현 개선
+**Goal**: 금리 페이지가 핵심 정보를 즉시 보여주고 상세는 요청 시에만 펼쳐진다
+**Depends on**: Phase 9 (v1.0 완료, 독립적)
+**Requirements**: RATE-01, RATE-02, RATE-03
+**Success Criteria** (what must be TRUE):
+  1. 금리 페이지 초기 화면에 시중금리 평균값 1개만 대표로 표시된다
+  2. 기준금리·COFIX 등 세부 지표는 펼침(accordion) 또는 상세 영역으로 분리된다
+  3. 은행별 상세 금리는 터치/클릭 시 확장되는 형태로 표시된다
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 13: 차트 개선
+**Goal**: 사용자가 원하는 기간과 지표 조합으로 가격 추이를 분석할 수 있다
+**Depends on**: Phase 10 (정규화 엔진 완료 후 차트에 적용)
+**Requirements**: CHART-01, CHART-02, CHART-03
+**Success Criteria** (what must be TRUE):
+  1. 차트 상단에 1개월/3개월/6개월/1년/전체 기간 탭이 존재하고 전환된다
+  2. 면적별 차트에서 매매가 선과 전세가 선이 동시에 표시된다 (듀얼 라인)
+  3. 전세가율 오버레이 라인을 차트에서 켜고 끌 수 있다 (2차 Y축)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 14: 랭킹 정교화
+**Goal**: 폭락·신고가 랭킹이 저층 노이즈와 이상거래를 제거한 신뢰할 수 있는 순위를 보여준다
+**Depends on**: Phase 10 (층별 보정 로직 완료 후 랭킹에 적용)
+**Requirements**: RANK-01, RANK-02, RANK-03
+**Success Criteria** (what must be TRUE):
+  1. 랭킹의 변동률이 층별 보정 후 고층 환산 기준으로 산출된다
+  2. 직거래 저가·이상거래로 의심되는 거래는 랭킹 산정에서 자동 제외된다
+  3. 랭킹 리스트에서 저층 거래는 "저층" 라벨이 표시되고 변동률은 고층 환산값으로 보인다
+**Plans**: TBD
+
+### Phase 15: 지역 지수 대시보드
+**Goal**: 사용자가 강남3구·마용성·노도강 등 군집별 가격 흐름을 S&P500 스타일 대시보드로 파악할 수 있다
+**Depends on**: Phase 10 (정규화 로직 — 저층 제외, 이상거래 필터 공유)
+**Requirements**: INDEX-01, INDEX-02, INDEX-03, INDEX-04
+**Success Criteria** (what must be TRUE):
+  1. 강남3구·마용성·노도강 등 군집별 중위가 지수가 기준시점 100으로 산출된다
+  2. 군집별 지수의 시계열 차트(월별)를 볼 수 있다
+  3. 시도·시군구 단위 평균 매매가·중위가가 지역별 시세 페이지에 표시된다
+  4. 신규 지역 지수 페이지(`/index` 또는 `/market`)가 존재하고 대시보드 형태로 모든 군집 지수를 보여준다
+**Plans**: TBD
+**UI hint**: yes
 
 ---
-*Roadmap created: 2026-03-26*
-*Last updated: 2026-03-27 after Phase 9 planning*
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. SEO / 메타데이터 | v1.0 | 2/2 | Complete | 2026-03-26 |
+| 2. 코드 정리 | v1.0 | 2/2 | Complete | 2026-03-26 |
+| 3. 컴포넌트 분할 | v1.0 | 1/1 | Complete | 2026-03-26 |
+| 4. 에러 핸들링 / 로깅 | v1.0 | 2/2 | Complete | 2026-03-26 |
+| 5. 성능 최적화 | v1.0 | 2/2 | Complete | 2026-03-26 |
+| 6. TypeScript 타입 강화 | v1.0 | 2/2 | Complete | 2026-03-27 |
+| 7. 접근성 (a11y) | v1.0 | 2/2 | Complete | 2026-03-27 |
+| 8. 보안 강화 | v1.0 | 2/2 | Complete | 2026-03-27 |
+| 9. 모바일 UI 전면 개편 | v1.0 | 3/3 | Complete | 2026-03-28 |
+| 10. 가격 정규화 엔진 | v1.1 | 0/? | Not started | - |
+| 11. 전세가율·갭 분석 | v1.1 | 0/? | Not started | - |
+| 12. 금리 표현 개선 | v1.1 | 0/? | Not started | - |
+| 13. 차트 개선 | v1.1 | 0/? | Not started | - |
+| 14. 랭킹 정교화 | v1.1 | 0/? | Not started | - |
+| 15. 지역 지수 대시보드 | v1.1 | 0/? | Not started | - |
+
+---
+*Roadmap created: 2026-03-26 (v1.0)*
+*v1.1 phases added: 2026-03-28*
