@@ -103,7 +103,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — 구조화 로깅 유틸 + 브랜드 에러 페이지 (ERR-01, ERR-03)
-- [ ] 04-02-PLAN.md — API 에러 응답 정리 + 크론잡 Slack 알림 (ERR-02, ERR-04)
+- [x] 04-02-PLAN.md — API 에러 응답 정리 + 크론잡 Slack 알림 (ERR-02, ERR-04)
 
 **Scope:**
 - src/app/error.tsx (브랜드 에러 페이지) 구현/개선
@@ -156,7 +156,7 @@ Plans:
 
 Plans:
 - [x] 06-01-PLAN.md — DB 모델 인터페이스 정의 + API 라우트 응답 타입 적용 (TYPE-01, TYPE-02)
-- [ ] 06-02-PLAN.md — 주요 컴포넌트/페이지 any 제거 + KakaoMap/client.ts 타입 강화 (TYPE-03)
+- [x] 06-02-PLAN.md — 주요 컴포넌트/페이지 any 제거 + KakaoMap/client.ts 타입 강화 (TYPE-03)
 
 **Scope:**
 - src/types/ 또는 src/lib/types.ts에 DB 모델 인터페이스 정의
@@ -234,9 +234,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — 신고가 모바일 카드 + 금리 은행명 한국어화 + 홈 히어로 모바일 타이포그래피 (MOBILE-06, MOBILE-07, MOBILE-09)
-- [ ] 09-02-PLAN.md — MobileNav 터치 차단 수정 + 면적 선택 수평 칩 + 차트 모바일 최적화 (MOBILE-02, MOBILE-03, MOBILE-04)
-- [ ] 09-03-PLAN.md — 거래 테이블 모바일 카드 전환 + 지도 페이지 모바일 레이아웃 수정 (MOBILE-01, MOBILE-05, MOBILE-08)
+- [x] 09-01-PLAN.md — 신고가 모바일 카드 + 금리 은행명 한국어화 + 홈 히어로 모바일 타이포그래피 (MOBILE-06, MOBILE-07, MOBILE-09)
+- [x] 09-02-PLAN.md — MobileNav 터치 차단 수정 + 면적 선택 수평 칩 + 차트 모바일 최적화 (MOBILE-02, MOBILE-03, MOBILE-04)
+- [x] 09-03-PLAN.md — 거래 테이블 모바일 카드 전환 + 지도 페이지 모바일 레이아웃 수정 (MOBILE-01, MOBILE-05, MOBILE-08)
 
 **Scope:**
 - 신고가/오늘거래 테이블 → 모바일 카드 레이아웃
