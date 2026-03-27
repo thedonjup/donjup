@@ -3,7 +3,13 @@
 import { useState, useMemo, createContext, useContext } from "react";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChart";
 import TransactionTabs from "@/components/apt/TransactionTabs";
-import { LOW_FLOOR_MAX } from "@/lib/price-normalization";
+import {
+  filterTransactions,
+  computeMovingMedian,
+  groupByMonth,
+  computeMedianPrice,
+  LOW_FLOOR_MAX,
+} from "@/lib/price-normalization";
 
 // DB의 size_sqm = 전용면적. 공급면적 = 전용 / 비율
 function supplyArea(exclusiveSqm: number): number {
@@ -80,6 +86,9 @@ export default function AptDetailClient({
 
   const [selectedSize, setSelectedSize] = useState<number | null>(mostTradedSize);
 
+  // 저층 포함/제외 토글 (기본: 제외)
+  const [includeLowFloor, setIncludeLowFloor] = useState(false);
+
   // 면적 목록 + 각 면적별 최근 매매가/전세가
   const sizeOptions = useMemo(() => {
     const sizes = new Set<number>();
@@ -127,6 +136,64 @@ export default function AptDetailClient({
     }
     return `${v.toLocaleString()}만`;
   }
+
+  // ── Normalization pipeline ──────────────────────────────────────
+
+  // 최근 6개월 동일 면적 중위가 (이상거래 필터 기준)
+  const recentMedian = useMemo(() => {
+    if (!selectedSize) return 0;
+    const last6Months = new Date();
+    last6Months.setMonth(last6Months.getMonth() - 6);
+    const dateStr = last6Months.toISOString().slice(0, 10);
+    const recentPrices = saleTxns
+      .filter(
+        (t) =>
+          t.size_sqm === selectedSize &&
+          t.trade_date >= dateStr &&
+          t.floor > LOW_FLOOR_MAX
+      )
+      .map((t) => t.trade_price);
+    return computeMedianPrice(recentPrices);
+  }, [saleTxns, selectedSize]);
+
+  // filterTransactions: normal / directDeals / excluded
+  const { normal, directDeals } = useMemo(() => {
+    const sizeFiltered = selectedSize
+      ? saleTxns.filter((t) => t.size_sqm === selectedSize)
+      : saleTxns;
+    return filterTransactions(sizeFiltered, {
+      excludeLowFloor: !includeLowFloor,
+      recentMedian,
+    });
+  }, [saleTxns, selectedSize, includeLowFloor, recentMedian]);
+
+  // 3개월 이동중위가 추이선
+  const trendLine = useMemo(() => {
+    const monthly = groupByMonth(normal);
+    return computeMovingMedian(monthly);
+  }, [normal]);
+
+  // prevPrice 조회: 각 직거래에 대해 직전 정상거래가 찾기
+  const directDealsWithPrev = useMemo(() => {
+    // Sort normal transactions by date descending for lookup
+    const normalByDate = [...normal].sort((a, b) =>
+      b.trade_date.localeCompare(a.trade_date)
+    );
+
+    return directDeals.map((dd) => {
+      // Find most recent non-direct transaction before this direct deal's date
+      const prev = normalByDate.find((n) => n.trade_date <= dd.trade_date);
+      return {
+        trade_date: dd.trade_date,
+        trade_price: dd.trade_price,
+        size_sqm: dd.size_sqm,
+        deal_type: dd.deal_type,
+        floor: dd.floor,
+        isDirectDeal: true as const,
+        prevPrice: prev?.trade_price,
+      };
+    });
+  }, [directDeals, normal]);
 
   const ctxValue: SizeUnitContextType = {
     sizeUnit,
@@ -189,21 +256,37 @@ export default function AptDetailClient({
         </div>
       )}
 
-      {/* 가격 추이 차트 (고층만 — 저층 1~3층 제외) */}
+      {/* 가격 추이 차트 — 정규화된 데이터 */}
       {saleTxns.length >= 2 && (
         <div className="mb-8">
           <PriceHistoryChart
-            transactions={saleTxns
-              .filter((t) => t.floor > LOW_FLOOR_MAX)
-              .map((t) => ({
-                trade_date: t.trade_date,
-                trade_price: t.trade_price,
-                size_sqm: t.size_sqm,
-              }))}
-            externalSelectedSize={selectedSize}
-            onSizeChange={setSelectedSize}
+            normalDots={normal.map((t) => ({
+              trade_date: t.trade_date,
+              trade_price: t.trade_price,
+              size_sqm: t.size_sqm,
+              deal_type: t.deal_type,
+              floor: t.floor,
+              isDirectDeal: false,
+            }))}
+            directDealDots={directDealsWithPrev}
+            trendLine={trendLine}
             sizeUnit={sizeUnit}
           />
+          {/* Annotation + 저층 포함 토글 */}
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
+              * 추이선: 3개월 이동중위가 · 직거래(회색 점)는 추이선 미반영
+            </p>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <span className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>저층 포함</span>
+              <input
+                type="checkbox"
+                checked={includeLowFloor}
+                onChange={(e) => setIncludeLowFloor(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-gray-300 accent-brand-600"
+              />
+            </label>
+          </div>
         </div>
       )}
 
