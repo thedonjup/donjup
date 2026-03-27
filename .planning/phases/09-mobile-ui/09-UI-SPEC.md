@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-03-27
+revised: 2026-03-27
 ---
 
 # Phase 9 — UI Design Contract: 모바일 UI 전면 개편
@@ -51,18 +52,19 @@ Exceptions:
 
 ## Typography
 
+**Scope: mobile-only phase (< 640px). Desktop sizes are out of scope and must not be introduced.**
+
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Body | 14px (mobile) / 16px (desktop) | 400 | 1.6 (mobile per globals.css) / 1.5 |
 | Label / Meta | 12px | 400 | 1.4 |
-| Card title | 14px | 600 | 1.4 |
-| Section heading | 24px (mobile, text-2xl) / 28px (desktop, text-3xl) | 800 | 1.2 |
+| Body / Card title | 14px | 400 / 600 | 1.6 (body) / 1.4 (card title) |
+| Section heading | 24px (text-2xl) | 600 | 1.2 |
 
 **Font family:** `--font-sans` (Pretendard Variable → system-ui fallback chain)
 
-**Source:** `globals.css` mobile media query sets `body { font-size: 14px; line-height: 1.6 }` at max-width 640px. Heading sizes from `new-highs/page.tsx` (`text-2xl sm:text-3xl`). Card title from existing card pattern (`text-sm font-semibold`).
+**Source:** `globals.css` mobile media query sets `body { font-size: 14px; line-height: 1.6 }` at max-width 640px. Heading size from `new-highs/page.tsx` (`text-2xl` at mobile). Card title from existing card pattern (`text-sm font-semibold`).
 
-**Constraint:** Use exactly these 4 sizes. Do not introduce new type sizes in this phase.
+**Constraint:** Exactly 3 sizes (12px, 14px, 24px). Exactly 2 weights (400, 600). Do not introduce new type sizes or weights in this phase.
 
 ---
 
@@ -88,6 +90,22 @@ All colors must reference existing CSS variables. No hex literals in new code.
 **Destructive:** `--color-semantic-drop` (`#ef4444`) for drop rank badges only. No destructive actions exist in this phase (read-only data display).
 
 **Source:** `globals.css` — entire palette already declared. No new colors introduced in Phase 9.
+
+---
+
+## Screen Focal Points
+
+Primary visual element per mobile screen (dominant focal point at first render):
+
+| Screen | Focal Point |
+|--------|-------------|
+| Home (HeroSection) | Dynamic price stat text — single large `text-2xl` line with brand-colored percent change |
+| New-highs (/new-highs) | Ranked card list — rank badge + apt name + price in first card row |
+| Apt detail | Area chip selector row — single horizontal scroll line just below page title |
+| Apt detail chart | PriceHistoryChart at 280px height — dominant vertical space |
+| Transaction list | Card list — first card's rank badge + apt name |
+| Map (/map) | Full-viewport KakaoMap canvas — bottom sheet sits below fold until triggered |
+| Rate (/rate) | Bank name + rate value pairs in card list — Korean bank name as primary label |
 
 ---
 
@@ -137,9 +155,9 @@ Components modified or created in this phase:
 - **No legend overflow** on mobile — truncate or hide if needed
 
 ### Table → Card Pattern
-- **Breakpoint:** `sm:` (768px) — hide table on `< 768px`, show card list
+- **Breakpoint:** `sm:` (640px) — hide table on `< 640px`, show card list
 - **Pattern:** `<div className="space-y-2 sm:hidden">` for cards, `<div className="hidden sm:block">` for table
-- **Card padding:** `px-4 py-3.5`
+- **Card padding:** `px-4 py-4`
 - **Card border:** `rounded-xl border t-border t-card`
 
 ---
