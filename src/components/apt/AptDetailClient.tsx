@@ -3,6 +3,7 @@
 import { useState, useMemo, createContext, useContext } from "react";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChart";
 import TransactionTabs from "@/components/apt/TransactionTabs";
+import { LOW_FLOOR_MAX } from "@/lib/price-normalization";
 
 // DB의 size_sqm = 전용면적. 공급면적 = 전용 / 비율
 function supplyArea(exclusiveSqm: number): number {
@@ -10,9 +11,6 @@ function supplyArea(exclusiveSqm: number): number {
   const ratio = exclusiveSqm <= 60 ? 0.80 : exclusiveSqm <= 85 ? 0.79 : 0.78;
   return Math.round((exclusiveSqm / ratio) * 10) / 10;
 }
-
-// 저층 기준 (1~3층)
-const LOW_FLOOR_MAX = 3;
 
 function sqmToPyeong(sqm: number): number {
   return Math.round(sqm / 3.3058);
@@ -67,7 +65,20 @@ export default function AptDetailClient({
   rentTxns: AptRentTransaction[];
 }) {
   const [sizeUnit, setSizeUnit] = useState<"sqm" | "pyeong">("sqm");
-  const [selectedSize, setSelectedSize] = useState<number | null>(null);
+
+  // 가장 거래가 많은 면적을 기본 선택 (NORM-01: 전체 면적 합산 제거, 최다 거래 면적 자동 선택)
+  const mostTradedSize = useMemo(() => {
+    const countMap = new Map<number, number>();
+    saleTxns.forEach((t) => countMap.set(t.size_sqm, (countMap.get(t.size_sqm) ?? 0) + 1));
+    let maxSize = saleTxns[0]?.size_sqm ?? null;
+    let maxCount = 0;
+    countMap.forEach((count, size) => {
+      if (count > maxCount) { maxCount = count; maxSize = size; }
+    });
+    return maxSize;
+  }, [saleTxns]);
+
+  const [selectedSize, setSelectedSize] = useState<number | null>(mostTradedSize);
 
   // 면적 목록 + 각 면적별 최근 매매가/전세가
   const sizeOptions = useMemo(() => {
@@ -147,17 +158,6 @@ export default function AptDetailClient({
             className="flex gap-2 overflow-x-auto whitespace-nowrap pb-2 sm:flex-wrap sm:overflow-visible sm:whitespace-normal sm:pb-0"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
           >
-            <button
-              onClick={() => setSelectedSize(null)}
-              className="shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition"
-              style={
-                selectedSize === null
-                  ? { background: "var(--color-brand-600)", color: "#fff" }
-                  : { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
-              }
-            >
-              전체
-            </button>
             {sizeOptions.map((size) => {
               const prices = sizePriceMap.get(size);
               return (
@@ -204,9 +204,6 @@ export default function AptDetailClient({
             onSizeChange={setSelectedSize}
             sizeUnit={sizeUnit}
           />
-          <p className="mt-1 text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
-            * 그래프는 4층 이상 거래만 반영 (저층 1~3층 제외)
-          </p>
         </div>
       )}
 

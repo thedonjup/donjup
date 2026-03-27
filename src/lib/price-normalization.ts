@@ -52,7 +52,6 @@ export function computeMovingMedian(
 ): { month: string; median: number; count: number; isLowConfidence: boolean }[] {
   // month 오름차순으로 정렬
   const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month));
-  const monthIndex = new Map(sorted.map((d, i) => [d.month, i]));
 
   return sorted.map((current, i) => {
     // 현재 월 + 이전 2개월 가격 수집
@@ -75,9 +74,6 @@ export function computeMovingMedian(
       isLowConfidence,
     };
   });
-
-  // monthIndex used implicitly by the sorted order
-  void monthIndex;
 }
 
 /**
