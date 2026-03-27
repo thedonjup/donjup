@@ -162,7 +162,7 @@ export default function AptDetailClient({
       ? saleTxns.filter((t) => t.size_sqm === selectedSize)
       : saleTxns;
     return filterTransactions(sizeFiltered, {
-      excludeLowFloor: !includeLowFloor,
+      lowFloorMode: includeLowFloor ? 'include' : 'adjust',
       recentMedian,
     });
   }, [saleTxns, selectedSize, includeLowFloor, recentMedian]);
@@ -275,10 +275,10 @@ export default function AptDetailClient({
           {/* Annotation + 저층 포함 토글 */}
           <div className="mt-2 flex items-center justify-between">
             <p className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
-              * 추이선: 3개월 이동중위가 · 직거래(회색 점)는 추이선 미반영
+              * 추이선: 3개월 이동중위가 · 저층 거래는 고층 환산가 적용 · 직거래(회색 점)는 추이선 미반영
             </p>
             <label className="flex items-center gap-1.5 cursor-pointer">
-              <span className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>저층 포함</span>
+              <span className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>저층 원가 보기</span>
               <input
                 type="checkbox"
                 checked={includeLowFloor}

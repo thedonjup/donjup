@@ -8,6 +8,25 @@
 /** 저층 기준: 3층 이하 */
 export const LOW_FLOOR_MAX = 3;
 
+/** 층별 고층 환산 계수 (저층 할인율의 역수) */
+export const FLOOR_ADJUSTMENT_FACTORS: Record<number, number> = {
+  1: 1.1494,  // 1층 -13% → x(1/0.87)
+  2: 1.1111,  // 2층 -10% → x(1/0.90)
+  3: 1.0417,  // 3층 -4% → x(1/0.96)
+};
+
+/**
+ * 저층 거래가를 고층 기준가로 환산 (NORM-02)
+ *
+ * 1층: x1.1494, 2층: x1.1111, 3층: x1.0417
+ * 4층 이상은 환산 없이 원가 반환
+ */
+export function adjustFloorPrice(tradePrice: number, floor: number): number {
+  const factor = FLOOR_ADJUSTMENT_FACTORS[floor];
+  if (!factor) return tradePrice;
+  return Math.round(tradePrice * factor);
+}
+
 /**
  * 직거래 여부 판별
  */
@@ -79,12 +98,14 @@ export function computeMovingMedian(
 /**
  * 거래 필터링
  *
- * - normal: 모든 필터를 통과한 거래 (저층 제외 조건 적용 시 저층 아닌 것, 이상거래 아닌 것, 직거래 아닌 것, 중위가 90% 이상)
+ * - normal: 모든 필터를 통과한 거래 (저층 adjust 시 환산가 적용, include 시 원가 그대로)
  * - directDeals: 직거래이면서 이상거래(suspicious)가 아닌 거래 — 차트에 회색 점으로 표시
  * - excluded: 이상거래(직거래 + 중위가 70% 미만) 또는 중위가 90% 미만 거래 — 비표시
  *
  * CONTEXT 결정:
- * - 저층 포함/제외 토글 (기본: 제외)
+ * - lowFloorMode='adjust' (기본): 저층 거래를 고층 환산가로 변환하여 normal에 포함 (NORM-02)
+ * - lowFloorMode='include': 저층 거래를 원가 그대로 normal에 포함
+ * - lowFloorMode='exclude': 저층 거래를 excluded로 분류 (하위 호환)
  * - 중위가 90% 미만 거래는 deal_type 무관하게 제외
  * - 직거래는 회색 점으로 별도 표시 (추이선에 포함 안 함)
  */
@@ -92,23 +113,40 @@ export function filterTransactions<
   T extends { floor: number; trade_price: number; deal_type: string | null }
 >(
   txns: T[],
-  opts: { excludeLowFloor: boolean; recentMedian: number }
-): { normal: T[]; directDeals: T[]; excluded: T[] } {
-  const { excludeLowFloor, recentMedian } = opts;
+  opts: { lowFloorMode: 'adjust' | 'include' | 'exclude'; recentMedian: number }
+): { normal: (T & { original_price?: number })[]; directDeals: T[]; excluded: T[] } {
+  const { lowFloorMode, recentMedian } = opts;
 
-  const normal: T[] = [];
+  const normal: (T & { original_price?: number })[] = [];
   const directDeals: T[] = [];
   const excluded: T[] = [];
 
   for (const t of txns) {
     const isLowFloor = t.floor <= LOW_FLOOR_MAX;
 
-    // 저층 제외 옵션 적용
-    if (excludeLowFloor && isLowFloor) {
-      excluded.push(t);
-      continue;
+    if (isLowFloor) {
+      if (lowFloorMode === 'exclude') {
+        excluded.push(t);
+        continue;
+      }
+      if (lowFloorMode === 'adjust') {
+        const adjustedPrice = adjustFloorPrice(t.trade_price, t.floor);
+        const adjusted = { ...t, trade_price: adjustedPrice, original_price: t.trade_price };
+        if (recentMedian > 0 && adjustedPrice < recentMedian * 0.90) {
+          excluded.push(t);
+          continue;
+        }
+        if (isDirectDeal(t.deal_type)) {
+          directDeals.push(adjusted as T);
+          continue;
+        }
+        normal.push(adjusted);
+        continue;
+      }
+      // lowFloorMode === 'include': fall through to normal processing with original price
     }
 
+    // Non-low-floor (or include mode low-floor): existing logic
     // 중위가 90% 미만이면 제외 (CONTEXT 결정 1: 이중 필터)
     if (recentMedian > 0 && t.trade_price < recentMedian * 0.90) {
       excluded.push(t);
