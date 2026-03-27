@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: 데이터 분석 고도화
 current_phase: 10
 status: verifying
-stopped_at: Completed 10-02-PLAN.md
-last_updated: "2026-03-27T18:20:01.942Z"
+stopped_at: Completed 10-03-PLAN.md
+last_updated: "2026-03-27T18:55:48.238Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 3
+  completed_plans: 3
 ---
 
 # Project State: 돈줍
@@ -73,10 +73,12 @@ None.
 - [10-01] mostTradedSize via useMemo + useState initializer: 최다 거래 면적 자동 선택 (전체 탭 대체)
 - [Phase 10]: ComposedChart dual Line strategy: solid + dashed overlay for low-confidence trend segments
 - [Phase 10]: Direct deal connectors via Recharts Customized SVG overlay using xAxisMap/yAxisMap scale functions
+- [Phase 10-price-normalization]: lowFloorMode='adjust' as default: low-floor transactions converted to high-floor equivalent prices and included in normal (NORM-02)
+- [Phase 10-price-normalization]: original_price field name on adjusted transactions: stores pre-adjustment trade_price for reference
 
 ## Last Session
 
-Stopped at: Completed 10-02-PLAN.md
+Stopped at: Completed 10-03-PLAN.md
 Last updated: 2026-03-28T18:13:00Z
 
 ---
