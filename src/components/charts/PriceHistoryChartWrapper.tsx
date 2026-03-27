@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { ChartTransaction, TrendPoint } from "@/components/charts/PriceHistoryChart";
 
 const PriceHistoryChart = dynamic(
   () => import("@/components/charts/PriceHistoryChart"),
@@ -8,7 +9,10 @@ const PriceHistoryChart = dynamic(
 );
 
 export default function PriceHistoryChartWrapper(props: {
-  transactions: { trade_date: string; trade_price: number; size_sqm: number }[];
+  normalDots: ChartTransaction[];
+  directDealDots: ChartTransaction[];
+  trendLine: TrendPoint[];
+  sizeUnit?: "sqm" | "pyeong";
 }) {
   return <PriceHistoryChart {...props} />;
 }
