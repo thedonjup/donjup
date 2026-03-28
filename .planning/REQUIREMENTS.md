@@ -13,7 +13,7 @@
 
 ## ORM 교체 (ORM)
 
-- [ ] **ORM-01**: Drizzle ORM이 설치·설정되어 Neon PostgreSQL에 연결된다
+- [x] **ORM-01**: Drizzle ORM이 설치·설정되어 Neon PostgreSQL에 연결된다
 - [ ] **ORM-02**: apt_transactions 테이블에 대한 Drizzle 스키마가 정의되고 기존 raw SQL 쿼리가 Drizzle 쿼리로 교체된다
 - [ ] **ORM-03**: apt_rent_transactions 테이블에 대한 Drizzle 스키마가 정의되고 기존 supabase 쿼리가 교체된다
 - [ ] **ORM-04**: finance_rates 테이블에 대한 Drizzle 스키마가 정의되고 기존 쿼리가 교체된다
@@ -35,7 +35,7 @@
 | TEST-03 | Phase 16 | Complete |
 | TEST-04 | Phase 17 | Complete |
 | TEST-05 | Phase 17 | Complete |
-| ORM-01 | Phase 18 | Pending |
+| ORM-01 | Phase 18 | Complete |
 | ORM-02 | Phase 18 | Pending |
 | ORM-03 | Phase 18 | Pending |
 | ORM-04 | Phase 18 | Pending |
