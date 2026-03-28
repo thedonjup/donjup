@@ -243,10 +243,6 @@ export default async function AptDetailPage({
     // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
   }
 
-  // 전세가율 계산
-  const latestJeonse = rentTxns.find((r) => r.rent_type === "전세");
-  const latestJeonseDeposit = latestJeonse?.deposit ?? 0;
-
   const prices = txns.map((t) => t.trade_price);
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
@@ -383,19 +379,6 @@ export default async function AptDetailPage({
                 ? "drop"
                 : "rise"
               : undefined
-          }
-        />
-      </div>
-
-      {/* 핵심 지표 카드 - Row 2 */}
-      <div className="grid gap-3 grid-cols-2 mb-8">
-        <StatCard label="최근 전세가" value={latestJeonseDeposit > 0 ? formatPrice(latestJeonseDeposit) : "-"} />
-        <StatCard
-          label="전세가율"
-          value={
-            latestPrice > 0 && latestJeonseDeposit > 0
-              ? `${((latestJeonseDeposit / latestPrice) * 100).toFixed(1)}%`
-              : "-"
           }
         />
       </div>
