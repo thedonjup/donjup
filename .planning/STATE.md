@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: 데이터 분석 고도화
-current_phase: 13
-status: verifying
+current_phase: 14
+status: planning
 stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-03-28T04:03:50.839Z"
+last_updated: "2026-03-28T04:07:23.884Z"
 progress:
   total_phases: 6
   completed_phases: 4
@@ -15,14 +15,14 @@ progress:
 
 # Project State: 돈줍
 
-**Current Phase:** 13
+**Current Phase:** 14
 **Milestone:** v1.1 — 데이터 분석 고도화
-**Status:** Phase complete — ready for verification
+**Status:** Ready to plan
 
 ## Current Position
 
 Phase: 13 (chart-improvement) — EXECUTING
-Plan: 2 of 2
+Plan: Not started
 
 ## Active Phase
 
