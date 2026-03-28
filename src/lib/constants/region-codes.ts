@@ -419,3 +419,36 @@ export function getSigunguName(code: string): string | undefined {
 
 /** @deprecated REGION_HIERARCHY["11"].sigungu 사용 권장 */
 export const SEOUL_REGION_CODES = REGION_HIERARCHY["11"].sigungu;
+
+// ---------------------------------------------------------------------------
+// Cluster definitions for regional index dashboard
+// ---------------------------------------------------------------------------
+
+export interface ClusterDefinition {
+  id: string;
+  name: string;
+  regionCodes: string[];
+}
+
+export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
+  {
+    id: "gangnam3",
+    name: "강남3구",
+    regionCodes: ["11680", "11650", "11710"],
+  },
+  {
+    id: "mayongseong",
+    name: "마용성",
+    regionCodes: ["11440", "11170", "11200"],
+  },
+  {
+    id: "nodogang",
+    name: "노도강",
+    regionCodes: ["11350", "11320", "11305"],
+  },
+  {
+    id: "sudobukmain",
+    name: "수도권 주요",
+    regionCodes: ["41135", "41465", "41285", "41287"],
+  },
+];
