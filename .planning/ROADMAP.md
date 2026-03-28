@@ -135,7 +135,12 @@ Plans:
   1. 금리 페이지 초기 화면에 시중금리 평균값 1개만 대표로 표시된다
   2. 기준금리·COFIX 등 세부 지표는 펼침(accordion) 또는 상세 영역으로 분리된다
   3. 은행별 상세 금리는 터치/클릭 시 확장되는 형태로 표시된다
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — RateIndicatorAccordion + BankRateExpandable 클라이언트 컴포넌트 생성
+- [ ] 12-02-PLAN.md — page.tsx 재구성: 히어로 카드 + accordion + 확장 은행 테이블
+
 **UI hint**: yes
 
 ### Phase 13: 차트 개선
@@ -188,7 +193,7 @@ Plans:
 | 9. 모바일 UI 전면 개편 | v1.0 | 3/3 | Complete | 2026-03-28 |
 | 10. 가격 정규화 엔진 | v1.1 | 3/3 | Complete   | 2026-03-27 |
 | 11. 전세가율·갭 분석 | v1.1 | 2/2 | Complete    | 2026-03-28 |
-| 12. 금리 표현 개선 | v1.1 | 0/? | Not started | - |
+| 12. 금리 표현 개선 | v1.1 | 0/2 | Planning | - |
 | 13. 차트 개선 | v1.1 | 0/? | Not started | - |
 | 14. 랭킹 정교화 | v1.1 | 0/? | Not started | - |
 | 15. 지역 지수 대시보드 | v1.1 | 0/? | Not started | - |
