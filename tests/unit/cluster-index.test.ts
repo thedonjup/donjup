@@ -1,25 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // DB 모듈 mock — vi.mock은 Vitest가 자동 hoist
-vi.mock('@/lib/db/client', () => ({
-  getPool: vi.fn(),
-}));
+vi.mock('@/lib/db', () => {
+  // Chainable mock that returns this at each step except the final await
+  const mockSelect = vi.fn();
+  return {
+    db: {
+      select: mockSelect,
+    },
+  };
+});
 
 import { computeClusterIndex } from '@/lib/cluster-index';
-import { getPool } from '@/lib/db/client';
+import { db } from '@/lib/db';
 
-// 헬퍼: mock pool 설정
-function mockPoolQuery(
+// 헬퍼: mock db.select().from().where().orderBy() 체인 설정
+function mockDbSelect(
   rows: Array<{
     trade_date: string;
     trade_price: number | string;
-    floor: number | string;
+    floor: number | string | null;
     deal_type: string | null;
   }>
 ) {
-  const mockQuery = vi.fn().mockResolvedValue({ rows });
-  vi.mocked(getPool).mockReturnValue({ query: mockQuery } as unknown as ReturnType<typeof getPool>);
-  return mockQuery;
+  const orderByMock = vi.fn().mockResolvedValue(rows);
+  const whereMock = vi.fn().mockReturnValue({ orderBy: orderByMock });
+  const fromMock = vi.fn().mockReturnValue({ where: whereMock });
+  vi.mocked(db.select).mockReturnValue({ from: fromMock } as any);
+  return { orderByMock, whereMock, fromMock };
 }
 
 beforeEach(() => {
@@ -31,12 +39,10 @@ beforeEach(() => {
 // ──────────────────────────────────────────────
 describe('computeClusterIndex — 빈 입력', () => {
   it('regionCodes=[] 이면 즉시 [] 반환하고 DB를 호출하지 않는다', async () => {
-    const mockQuery = mockPoolQuery([]);
-
     const result = await computeClusterIndex([]);
 
     expect(result).toEqual([]);
-    expect(mockQuery).not.toHaveBeenCalled();
+    expect(db.select).not.toHaveBeenCalled();
   });
 });
 
@@ -59,7 +65,7 @@ describe('computeClusterIndex — 정상 데이터 3개월', () => {
       { trade_date: '2024-03-10', trade_price: 15000, floor: 6, deal_type: null },
       { trade_date: '2024-03-15', trade_price: 15000, floor: 7, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110']);
 
@@ -84,7 +90,7 @@ describe('computeClusterIndex — 정상 데이터 3개월', () => {
       { trade_date: '2024-01-10', trade_price: 10000, floor: 6, deal_type: null },
       { trade_date: '2024-01-15', trade_price: 10000, floor: 7, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110']);
 
@@ -101,7 +107,7 @@ describe('computeClusterIndex — 정상 데이터 3개월', () => {
       { trade_date: '2024-01-10', trade_price: '10000', floor: 6, deal_type: null },
       { trade_date: '2024-01-15', trade_price: '10000', floor: 7, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110']);
 
@@ -125,7 +131,7 @@ describe('computeClusterIndex — 직거래 필터링', () => {
       { trade_date: '2024-01-15', trade_price: 20000, floor: 7, deal_type: null },
       { trade_date: '2024-01-20', trade_price: 20000, floor: 8, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110']);
 
@@ -146,7 +152,7 @@ describe('computeClusterIndex — 직거래 필터링', () => {
       { trade_date: '2024-02-10', trade_price: 10000, floor: 7, deal_type: null },
       { trade_date: '2024-02-15', trade_price: 10000, floor: 8, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110']);
 
@@ -169,7 +175,7 @@ describe('computeClusterIndex — minTransactions 미달', () => {
       { trade_date: '2024-01-15', trade_price: 10000, floor: 7, deal_type: null },
       { trade_date: '2024-02-05', trade_price: 12000, floor: 5, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110']);
 
@@ -184,7 +190,7 @@ describe('computeClusterIndex — minTransactions 미달', () => {
       { trade_date: '2024-01-10', trade_price: 10000, floor: 6, deal_type: null },
       { trade_date: '2024-02-05', trade_price: 12000, floor: 5, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110']);
 
@@ -202,7 +208,7 @@ describe('computeClusterIndex — 기준월 중위가가 0', () => {
       { trade_date: '2024-01-10', trade_price: 0, floor: 6, deal_type: null },
       { trade_date: '2024-01-15', trade_price: 0, floor: 7, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110']);
 
@@ -219,7 +225,7 @@ describe('computeClusterIndex — 커스텀 minTransactions', () => {
       { trade_date: '2024-01-05', trade_price: 10000, floor: 5, deal_type: null },
       { trade_date: '2024-02-05', trade_price: 12000, floor: 5, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110'], 1);
 
@@ -238,7 +244,7 @@ describe('computeClusterIndex — 커스텀 minTransactions', () => {
       { trade_date: '2024-01-15', trade_price: 10000, floor: 7, deal_type: null },
       { trade_date: '2024-01-20', trade_price: 10000, floor: 8, deal_type: null },
     ];
-    mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     const result = await computeClusterIndex(['11110'], 5);
 
@@ -256,10 +262,10 @@ describe('computeClusterIndex — 여러 regionCodes', () => {
       { trade_date: '2024-01-10', trade_price: 10000, floor: 6, deal_type: null },
       { trade_date: '2024-01-15', trade_price: 10000, floor: 7, deal_type: null },
     ];
-    const mockQuery = mockPoolQuery(rows);
+    mockDbSelect(rows);
 
     await computeClusterIndex(['11110', '22220', '33330']);
 
-    expect(mockQuery).toHaveBeenCalledOnce();
+    expect(db.select).toHaveBeenCalledOnce();
   });
 });

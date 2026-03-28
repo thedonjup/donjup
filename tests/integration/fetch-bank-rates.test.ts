@@ -1,10 +1,24 @@
 import { testApiHandler } from 'next-test-api-route-handler'; // 반드시 첫 번째 import
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@/lib/db/client', () => ({
-  createDbClient: vi.fn(),
-  getPool: vi.fn(),
-}));
+vi.mock('@/lib/db', () => {
+  const mockChain = {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
+    insert: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+    onConflictDoUpdate: vi.fn().mockResolvedValue({ rowCount: 0 }),
+    onConflictDoNothing: vi.fn().mockResolvedValue({ rowCount: 0 }),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    execute: vi.fn().mockResolvedValue([]),
+  };
+  return { db: mockChain };
+});
 vi.mock('@/lib/api/finlife', () => ({
   fetchAllMortgageProducts: vi.fn(),
   bankNameToRateType: vi.fn((name: string) => name),
@@ -15,40 +29,7 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 import * as appHandler from '@/app/api/cron/fetch-bank-rates/route';
-import { createDbClient } from '@/lib/db/client';
 import { fetchAllMortgageProducts } from '@/lib/api/finlife';
-
-function makeMockDb() {
-  const chain = {
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    neq: vi.fn().mockReturnThis(),
-    lt: vi.fn().mockReturnThis(),
-    gt: vi.fn().mockReturnThis(),
-    gte: vi.fn().mockReturnThis(),
-    lte: vi.fn().mockReturnThis(),
-    in: vi.fn().mockReturnThis(),
-    not: vi.fn().mockReturnThis(),
-    or: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    range: vi.fn().mockReturnThis(),
-    abortSignal: vi.fn().mockReturnThis(),
-    upsert: vi.fn().mockResolvedValue({ error: null }),
-    insert: vi.fn().mockResolvedValue({ error: null }),
-    update: vi.fn().mockResolvedValue({ error: null }),
-    delete: vi.fn().mockResolvedValue({ error: null }),
-    single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    then: vi.fn().mockImplementation((resolve) =>
-      resolve({ data: [], error: null, count: 0 })
-    ),
-  };
-  return {
-    from: vi.fn().mockReturnValue(chain),
-    rpc: vi.fn(),
-    _chain: chain,
-  };
-}
 
 describe('GET /api/cron/fetch-bank-rates', () => {
   beforeEach(() => {
@@ -84,7 +65,6 @@ describe('GET /api/cron/fetch-bank-rates', () => {
   });
 
   it('FinLife 데이터 없으면 success:false 반환', async () => {
-    vi.mocked(createDbClient).mockReturnValue(makeMockDb() as any);
     vi.mocked(fetchAllMortgageProducts).mockResolvedValue([]);
 
     await testApiHandler({
@@ -103,7 +83,6 @@ describe('GET /api/cron/fetch-bank-rates', () => {
   });
 
   it('정상 데이터 있으면 success:true, inserted >= 1', async () => {
-    vi.mocked(createDbClient).mockReturnValue(makeMockDb() as any);
     vi.mocked(fetchAllMortgageProducts).mockResolvedValue([
       {
         bankName: '국민은행',

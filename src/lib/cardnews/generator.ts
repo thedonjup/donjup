@@ -6,7 +6,7 @@
  * the caption + hashtags for social distribution.
  *
  * Usage:
- *   const result = await generateDailyCardNews(supabase);
+ *   const result = await generateDailyCardNews();
  *   // result.buffers  — PNG image buffers (cover + rank cards + CTA)
  *   // result.caption  — formatted caption string
  *   // result.hashtags — array of hashtag words (without #)
@@ -15,7 +15,9 @@
 
 import { generateCardNews } from "./render";
 import type { CardType, RankItem } from "./types";
-import type { DbClient } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { dailyReports } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,7 +88,6 @@ function buildHashtags(cardType: CardType, items: RankItem[]): string[] {
  * Returns null if the day is a weekend (no content scheduled).
  */
 export async function generateDailyCardNews(
-  db: DbClient,
   targetDate?: Date
 ): Promise<CardNewsResult | null> {
   const date = targetDate ?? new Date();
@@ -96,13 +97,17 @@ export async function generateDailyCardNews(
   if (!cardType) return null; // weekend
 
   // Fetch today's report
-  const { data: report, error: reportError } = await db
-    .from("daily_reports")
-    .select("top_drops,top_highs")
-    .eq("report_date", dateStr)
-    .single();
+  const reportRows = await db
+    .select({
+      top_drops: dailyReports.topDrops,
+      top_highs: dailyReports.topHighs,
+    })
+    .from(dailyReports)
+    .where(eq(dailyReports.reportDate, dateStr))
+    .limit(1);
 
-  if (reportError || !report) {
+  const report = reportRows[0];
+  if (!report) {
     throw new Error(`No daily report found for ${dateStr}`);
   }
 
@@ -114,9 +119,9 @@ export async function generateDailyCardNews(
   }
 
   // Map to RankItem (top 3)
-  const items: RankItem[] = rawItems
+  const items: RankItem[] = (rawItems as Record<string, unknown>[])
     .slice(0, 3)
-    .map((item: Record<string, unknown>, i: number) => ({
+    .map((item, i) => ({
       rank: i + 1,
       apt_name: item.apt_name as string,
       region_name: item.region_name as string,
