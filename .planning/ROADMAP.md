@@ -230,7 +230,7 @@ Plans:
 | 13. 차트 개선 | v1.1 | 2/2 | Complete | 2026-03-28 |
 | 14. 랭킹 정교화 | v1.1 | 1/1 | Complete | 2026-03-28 |
 | 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete | 2026-03-28 |
-| 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete   | 2026-03-28 |
+| 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete    | 2026-03-28 |
 | 17. 통합 테스트 & E2E | v1.2 | 0/TBD | Not started | - |
 | 18. Drizzle ORM 교체 | v1.2 | 0/TBD | Not started | - |
 | 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |
