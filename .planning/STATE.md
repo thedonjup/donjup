@@ -2,26 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: 데이터 분석 고도화
-current_phase: 10
-status: verifying
-stopped_at: Phase 11 context gathered
-last_updated: "2026-03-28T02:17:02.590Z"
+current_phase: 11
+status: executing
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-28T02:36:25.694Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # Project State: 돈줍
 
-**Current Phase:** 10
+**Current Phase:** 11
 **Milestone:** v1.1 — 데이터 분석 고도화
-**Status:** Phase complete — ready for verification
+**Status:** Ready to execute
 
 ## Current Position
 
-Phase: 10 (price-normalization) — EXECUTING
+Phase: 11 (jeonse-gap-analysis) — EXECUTING
 Plan: 2 of 2
 
 ## Active Phase
@@ -75,10 +75,12 @@ None.
 - [Phase 10]: Direct deal connectors via Recharts Customized SVG overlay using xAxisMap/yAxisMap scale functions
 - [Phase 10-price-normalization]: lowFloorMode='adjust' as default: low-floor transactions converted to high-floor equivalent prices and included in normal (NORM-02)
 - [Phase 10-price-normalization]: original_price field name on adjusted transactions: stores pre-adjustment trade_price for reference
+- [Phase 11-jeonse-gap-analysis]: monthly_rent === 0 필터로 순수전세만 전세가율 산출에 사용
+- [Phase 11-jeonse-gap-analysis]: latestSale은 raw trade_price 사용 (Phase 10 정규화가 아닌 원 거래가, D-02)
 
 ## Last Session
 
-Stopped at: Phase 11 context gathered
+Stopped at: Completed 11-01-PLAN.md
 Last updated: 2026-03-28T18:13:00Z
 
 ---

@@ -38,8 +38,8 @@
 
 ## 전세가율/갭 분석 (GAP)
 
-- [ ] **GAP-01**: 아파트 상세 페이지에 면적별 전세가율(매매가 대비 전세 비율)을 표시한다
-- [ ] **GAP-02**: 아파트 상세 페이지에 갭 금액(매매가 - 전세가)을 표시한다
+- [x] **GAP-01**: 아파트 상세 페이지에 면적별 전세가율(매매가 대비 전세 비율)을 표시한다
+- [x] **GAP-02**: 아파트 상세 페이지에 갭 금액(매매가 - 전세가)을 표시한다
 - [ ] **GAP-03**: 전세가율 추이 차트를 면적별로 제공한다
 
 ## Traceability
@@ -51,8 +51,8 @@
 | NORM-03 | Phase 10 | Complete |
 | NORM-04 | Phase 10 | Complete |
 | NORM-05 | Phase 10 | Complete |
-| GAP-01 | Phase 11 | Pending |
-| GAP-02 | Phase 11 | Pending |
+| GAP-01 | Phase 11 | Complete |
+| GAP-02 | Phase 11 | Complete |
 | GAP-03 | Phase 11 | Pending |
 | RATE-01 | Phase 12 | Pending |
 | RATE-02 | Phase 12 | Pending |
