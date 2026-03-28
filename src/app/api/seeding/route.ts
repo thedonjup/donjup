@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { seedingQueue } from "@/lib/db/schema";
+import { eq, and, asc } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
@@ -13,25 +15,33 @@ export async function GET(request: Request) {
   const date = searchParams.get("date") ?? new Date().toISOString().split("T")[0];
   const platform = searchParams.get("platform");
 
-  const supabase = createServiceClient();
+  try {
+    const whereClause = platform
+      ? and(
+          eq(seedingQueue.reportDate, date),
+          eq(seedingQueue.status, "pending"),
+          eq(seedingQueue.platform, platform)
+        )
+      : and(
+          eq(seedingQueue.reportDate, date),
+          eq(seedingQueue.status, "pending")
+        );
 
-  let query = supabase
-    .from("seeding_queue")
-    .select("id,platform,title,status,report_date")
-    .eq("report_date", date)
-    .eq("status", "pending")
-    .order("created_at", { ascending: true });
+    const data = await db
+      .select({
+        id: seedingQueue.id,
+        platform: seedingQueue.platform,
+        title: seedingQueue.title,
+        status: seedingQueue.status,
+        report_date: seedingQueue.reportDate,
+      })
+      .from(seedingQueue)
+      .where(whereClause)
+      .orderBy(asc(seedingQueue.createdAt));
 
-  if (platform) {
-    query = query.eq("platform", platform);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    logger.error("Failed to fetch seeding queue", { error, route: "/api/seeding" });
+    return NextResponse.json({ data, count: data.length });
+  } catch (e) {
+    logger.error("Failed to fetch seeding queue", { error: e, route: "/api/seeding" });
     return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
-
-  return NextResponse.json({ data, count: data?.length ?? 0 });
 }

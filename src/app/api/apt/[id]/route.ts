@@ -1,39 +1,36 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
-import type { AptComplex, AptTransaction } from "@/types/db";
+import { db } from "@/lib/db";
+import { aptComplexes, aptTransactions } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = createServiceClient();
 
   // slug 또는 UUID로 조회
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-  const { data: complexData, error } = await supabase
-    .from("apt_complexes")
-    .select("*")
-    .eq(isUuid ? "id" : "slug", id)
-    .single();
+  const complexRows = await db
+    .select()
+    .from(aptComplexes)
+    .where(isUuid ? eq(aptComplexes.id, id) : eq(aptComplexes.slug, id))
+    .limit(1);
 
-  if (error || !complexData) {
+  const complex = complexRows[0];
+
+  if (!complex) {
     return NextResponse.json({ error: "단지를 찾을 수 없습니다." }, { status: 404 });
   }
 
-  const complex = complexData as AptComplex;
-
   // 최근 거래 내역
-  const { data: transactionsData } = await supabase
-    .from("apt_transactions")
-    .select("*")
-    .eq("apt_name", complex.apt_name)
-    .eq("region_code", complex.region_code)
-    .order("trade_date", { ascending: false })
+  const transactions = await db
+    .select()
+    .from(aptTransactions)
+    .where(eq(aptTransactions.aptName, complex.aptName))
+    .orderBy(desc(aptTransactions.tradeDate))
     .limit(50);
-
-  const transactions: AptTransaction[] = (transactionsData ?? []) as AptTransaction[];
 
   return NextResponse.json({
     complex,

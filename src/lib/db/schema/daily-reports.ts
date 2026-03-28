@@ -3,11 +3,12 @@ import {
   text,
   jsonb,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const dailyReports = pgTable("daily_reports", {
-  id: text("id").primaryKey(),
-  reportDate: text("report_date").notNull(),
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  reportDate: text("report_date").notNull().unique(),
   title: text("title").notNull(),
   summary: text("summary"),
   topDrops: jsonb("top_drops"),

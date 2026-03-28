@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const aptTransactions = pgTable("apt_transactions", {
-  id: text("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   complexId: text("complex_id"),
   regionCode: text("region_code").notNull(),
   regionName: text("region_name").notNull(),

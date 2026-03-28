@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptComplexes, aptTransactions } from "@/lib/db/schema";
+import { isNull, sql } from "drizzle-orm";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("Authorization");
@@ -7,28 +9,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const db = createServiceClient();
-
-    const [nullHighest, nullGeo, totalComplexes, totalTx] = await Promise.allSettled([
-      db.from("apt_complexes").select("id", { count: "exact", head: true }).is("highest_price", null),
-      db.from("apt_complexes").select("id", { count: "exact", head: true }).is("lat", null),
-      db.from("apt_complexes").select("id", { count: "exact", head: true }),
-      db.from("apt_transactions").select("id", { count: "exact", head: true }),
+    const [nullGeo, totalComplexes, totalTx] = await Promise.allSettled([
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(aptComplexes)
+        .where(isNull(aptComplexes.latitude)),
+      db.select({ count: sql<number>`count(*)` }).from(aptComplexes),
+      db.select({ count: sql<number>`count(*)` }).from(aptTransactions),
     ]);
 
-    const nullHighestCount = nullHighest.status === "fulfilled" ? (nullHighest.value.count ?? 0) : 0;
-    const nullGeoCount = nullGeo.status === "fulfilled" ? (nullGeo.value.count ?? 0) : 0;
-    const totalCx = totalComplexes.status === "fulfilled" ? (totalComplexes.value.count ?? 0) : 0;
-    const totalTxCount = totalTx.status === "fulfilled" ? (totalTx.value.count ?? 0) : 0;
+    const nullGeoCount = nullGeo.status === "fulfilled" ? Number(nullGeo.value[0]?.count ?? 0) : 0;
+    const totalCx = totalComplexes.status === "fulfilled" ? Number(totalComplexes.value[0]?.count ?? 0) : 0;
+    const totalTxCount = totalTx.status === "fulfilled" ? Number(totalTx.value[0]?.count ?? 0) : 0;
 
     return NextResponse.json({
       checks: [
-        {
-          label: "highest_price NULL",
-          description: "최고가 정보가 없는 단지 수",
-          count: nullHighestCount,
-          severity: nullHighestCount > 100 ? "error" : nullHighestCount > 0 ? "warn" : "ok",
-        },
         {
           label: "좌표 정보 누락",
           description: "위도/경도가 없는 단지 수",

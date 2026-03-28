@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { pageViews } from "@/lib/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -13,25 +15,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-
     const today = new Date().toISOString().split("T")[0];
 
-    const { error } = await supabase
-      .from("page_views")
-      .upsert(
-        {
-          page_path: pagePath,
-          page_type: pageType || null,
-          view_date: today,
-          view_count: 1,
-        },
-        { onConflict: "page_path,view_date" }
-      );
-
-    if (error) {
+    try {
+      await db
+        .insert(pageViews)
+        .values({
+          pagePath,
+          pageType: pageType || null,
+          viewDate: today,
+          viewCount: 1,
+        })
+        .onConflictDoUpdate({
+          target: [pageViews.pagePath, pageViews.viewDate],
+          set: {
+            viewCount: sql`${pageViews.viewCount} + 1`,
+          },
+        });
+    } catch (e) {
       // page_views upsert 실패 시에도 200 반환 (분석은 best-effort)
-      logger.warn("Failed to track page view", { error: error.message, route: "/api/analytics/pageview" });
+      logger.warn("Failed to track page view", { error: e, route: "/api/analytics/pageview" });
     }
 
     return NextResponse.json({ success: true });

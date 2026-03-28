@@ -1,37 +1,39 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { financeRates } from "@/lib/db/schema";
+import { eq, gte, asc } from "drizzle-orm";
 import { logger } from "@/lib/logger";
-import type { FinanceRate } from "@/types/db";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rateType = searchParams.get("type"); // BASE_RATE, CD_91 등
   const months = parseInt(searchParams.get("months") ?? "12", 10);
 
-  const supabase = createServiceClient();
-
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - months);
 
-  let query = supabase
-    .from("finance_rates")
-    .select("rate_type,rate_value,change_bp,base_date")
-    .gte("base_date", startDate.toISOString().split("T")[0])
-    .order("base_date", { ascending: true });
+  try {
+    const query = db
+      .select({
+        rate_type: financeRates.rateType,
+        rate_value: financeRates.rateValue,
+        change_bp: financeRates.changeBp,
+        base_date: financeRates.baseDate,
+      })
+      .from(financeRates)
+      .where(
+        rateType
+          ? eq(financeRates.rateType, rateType)
+          : gte(financeRates.baseDate, startDate.toISOString().split("T")[0])
+      )
+      .orderBy(asc(financeRates.baseDate))
+      .limit(500);
 
-  if (rateType) {
-    query = query.eq("rate_type", rateType);
-  }
+    const rates = await query;
 
-  const { data, error } = await query.limit(500);
-
-  if (error) {
-    logger.error("Failed to fetch rate history", { error, route: "/api/rate/history" });
+    return NextResponse.json({ data: rates });
+  } catch (e) {
+    logger.error("Failed to fetch rate history", { error: e, route: "/api/rate/history" });
     return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
-
-  const rates: Pick<FinanceRate, "rate_type" | "rate_value" | "change_bp" | "base_date">[] =
-    (data ?? []) as Pick<FinanceRate, "rate_type" | "rate_value" | "change_bp" | "base_date">[];
-
-  return NextResponse.json({ data: rates });
 }

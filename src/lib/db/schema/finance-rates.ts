@@ -4,10 +4,11 @@ import {
   numeric,
   integer,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const financeRates = pgTable("finance_rates", {
-  id: text("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   rateType: text("rate_type").notNull(),
   rateValue: numeric("rate_value").notNull(),
   prevValue: numeric("prev_value"),
@@ -15,7 +16,7 @@ export const financeRates = pgTable("finance_rates", {
   baseDate: text("base_date").notNull(),
   source: text("source").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [unique("finance_rates_rate_type_base_date_unique").on(t.rateType, t.baseDate)]);
 
 export type FinanceRate = typeof financeRates.$inferSelect;
 export type NewFinanceRate = typeof financeRates.$inferInsert;

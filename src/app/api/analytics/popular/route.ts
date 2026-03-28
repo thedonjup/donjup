@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { pageViews } from "@/lib/db/schema";
+import { gte, desc } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
@@ -7,22 +9,24 @@ export async function GET(request: Request) {
   const days = parseInt(searchParams.get("days") ?? "7", 10);
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "10", 10), 50);
 
-  const supabase = createServiceClient();
-
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const { data, error } = await supabase
-    .from("page_views")
-    .select("page_path,page_type,view_count")
-    .gte("view_date", startDate.toISOString().split("T")[0])
-    .order("view_count", { ascending: false })
-    .limit(limit);
+  try {
+    const data = await db
+      .select({
+        page_path: pageViews.pagePath,
+        page_type: pageViews.pageType,
+        view_count: pageViews.viewCount,
+      })
+      .from(pageViews)
+      .where(gte(pageViews.viewDate, startDate.toISOString().split("T")[0]))
+      .orderBy(desc(pageViews.viewCount))
+      .limit(limit);
 
-  if (error) {
-    logger.error("Failed to fetch popular pages", { error, route: "/api/analytics/popular" });
+    return NextResponse.json({ data });
+  } catch (e) {
+    logger.error("Failed to fetch popular pages", { error: e, route: "/api/analytics/popular" });
     return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
-
-  return NextResponse.json({ data: data ?? [] });
 }

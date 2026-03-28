@@ -5,7 +5,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const seedingQueue = pgTable("seeding_queue", {
-  id: text("id").primaryKey(),
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   reportDate: text("report_date").notNull(),
   platform: text("platform").notNull(),
   title: text("title").notNull(),

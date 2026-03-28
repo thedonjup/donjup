@@ -3,6 +3,7 @@ import {
   text,
   numeric,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const rebPriceIndices = pgTable("reb_price_indices", {
@@ -13,7 +14,7 @@ export const rebPriceIndices = pgTable("reb_price_indices", {
   prevValue: numeric("prev_value"),
   changeRate: numeric("change_rate"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [unique("reb_price_indices_compound_unique").on(t.indexType, t.regionName, t.baseDate)]);
 
 export type RebPriceIndex = typeof rebPriceIndices.$inferSelect;
 export type NewRebPriceIndex = typeof rebPriceIndices.$inferInsert;
