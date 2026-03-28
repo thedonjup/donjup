@@ -36,6 +36,7 @@
 - ✓ 기존 기능 전체 (실거래가, 금리, 검색, 지도, 계산기 등)
 - ✓ 가격 정규화 엔진 — v1.1 Phase 10
 - ✓ 전세가율/갭 분석 — v1.1 Phase 11
+- ✓ 금리 표현 개선 — v1.1 Phase 12
 
 ### Active
 
@@ -92,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 — Phase 11 complete, Phase 12 next*
+*Last updated: 2026-03-28 — Phase 12 complete, Phase 13 next*
