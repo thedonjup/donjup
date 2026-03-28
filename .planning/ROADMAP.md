@@ -86,7 +86,7 @@ Plans:
 
 ---
 
-### 🚧 v1.1 데이터 분석 고도화 (In Progress)
+### v1.1 데이터 분석 고도화 (In Progress)
 
 **Milestone Goal:** 가격 노이즈 제거 + 일관된 추이/지수 제공 + 업계 기본 지표 추가로 사용자가 시장을 정확히 읽게 한다
 
@@ -119,7 +119,12 @@ Plans:
   1. 아파트 상세 페이지에서 면적별 전세가율(%) 수치가 표시된다
   2. 아파트 상세 페이지에서 면적별 갭 금액(매매가 - 전세가)이 표시된다
   3. 면적별 전세가율 추이 차트를 볼 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — sizePriceMap 확장 + GAP 지표 카드 + Row 2 StatCard 제거
+- [ ] 11-02-PLAN.md — 전세가율 추이 차트 (JeonseRatioChart 컴포넌트)
+
 **UI hint**: yes
 
 ### Phase 12: 금리 표현 개선
@@ -182,7 +187,7 @@ Plans:
 | 8. 보안 강화 | v1.0 | 2/2 | Complete | 2026-03-27 |
 | 9. 모바일 UI 전면 개편 | v1.0 | 3/3 | Complete | 2026-03-28 |
 | 10. 가격 정규화 엔진 | v1.1 | 3/3 | Complete   | 2026-03-27 |
-| 11. 전세가율·갭 분석 | v1.1 | 0/? | Not started | - |
+| 11. 전세가율·갭 분석 | v1.1 | 0/2 | Planning | - |
 | 12. 금리 표현 개선 | v1.1 | 0/? | Not started | - |
 | 13. 차트 개선 | v1.1 | 0/? | Not started | - |
 | 14. 랭킹 정교화 | v1.1 | 0/? | Not started | - |
