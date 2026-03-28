@@ -261,13 +261,13 @@ export default async function AptDetailPage({
       }).from(aptComplexes)
         .where(and(
           eq(aptComplexes.dongName, complex.dongName),
-          ne(aptComplexes.slug, slug),
+          ne(aptComplexes.slug, decodedSlug),
         ))
         .limit(5);
       nearbyComplexes = nearby as unknown as typeof nearbyComplexes;
     }
-  } catch {
-    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+  } catch (err) {
+    console.error("[apt-detail] DB query failed:", err, "slug:", decodedSlug);
   }
 
   const prices = txns.map((t) => t.trade_price);

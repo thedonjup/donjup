@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { aptTransactions, aptComplexes } from "@/lib/db/schema";
-import { inArray, desc } from "drizzle-orm";
+import { inArray, desc, eq, and, isNull } from "drizzle-orm";
 import { sendSlackAlert } from "@/lib/alert";
 import { fetchTransactions, delay } from "@/lib/api/molit";
 import {
@@ -287,6 +287,7 @@ async function upsertComplexes(
     seen.add(key);
 
     const slug = `${t.regionCode}-${toSlug(t.aptName)}`;
+    const govtComplexId = t.aptSeq ? `${t.regionCode}-${t.aptSeq}` : null;
 
     complexes.push({
       regionCode: t.regionCode,
@@ -295,10 +296,24 @@ async function upsertComplexes(
       aptName: t.aptName,
       builtYear: t.builtYear || null,
       slug,
+      govtComplexId,
     });
   }
 
   if (complexes.length > 0) {
+    for (const c of complexes) {
+      if (c.govtComplexId) {
+        // Update existing complexes with govt_complex_id if they don't have one
+        await db
+          .update(aptComplexes)
+          .set({ govtComplexId: c.govtComplexId })
+          .where(and(
+            eq(aptComplexes.regionCode, c.regionCode),
+            eq(aptComplexes.aptName, c.aptName),
+            isNull(aptComplexes.govtComplexId),
+          ));
+      }
+    }
     await db
       .insert(aptComplexes)
       .values(complexes)
@@ -366,6 +381,7 @@ async function handleMultiPropertyType(
           regionCode: t.regionCode,
           dongName: t.dongName,
           aptName: t.aptName,
+          aptSeq: "",
           sizeSqm: t.sizeSqm,
           floor: t.floor,
           tradePrice: t.tradePrice,

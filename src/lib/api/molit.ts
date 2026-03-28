@@ -19,12 +19,14 @@ interface MolitRawItem {
   floor: string;
   sggCd: string;
   dealingGbn: string;
+  aptSeq: string;
 }
 
 export interface ParsedTransaction {
   regionCode: string;
   dongName: string;
   aptName: string;
+  aptSeq: string;
   sizeSqm: number;
   floor: number;
   tradePrice: number; // 만원 단위
@@ -93,6 +95,7 @@ function parseXmlResponse(
       const floor = extractTag(itemXml, "floor")?.trim();
       const builtYear = extractTag(itemXml, "buildYear")?.trim();
       const dealingGbn = extractTag(itemXml, "dealingGbn")?.trim() || "";
+      const aptSeq = extractTag(itemXml, "aptSeq")?.trim() || "";
 
       if (!rawPrice || !year || !month || !day || !aptName || !size) continue;
 
@@ -103,6 +106,7 @@ function parseXmlResponse(
         regionCode,
         dongName: dong || "",
         aptName,
+        aptSeq,
         sizeSqm: parseFloat(size),
         floor: parseInt(floor || "0", 10),
         tradePrice,
@@ -121,6 +125,7 @@ function parseXmlResponse(
           floor: floor || "",
           sggCd: regionCode,
           dealingGbn,
+          aptSeq,
         },
       });
     } catch (e) {
