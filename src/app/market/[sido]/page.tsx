@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { REGION_HIERARCHY, getSidoBySlug } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
+import { computeMedianPrice, isDirectDeal } from "@/lib/price-normalization";
 
 export const revalidate = 3600;
 
@@ -58,12 +59,18 @@ export default async function MarketSidoPage({
   const supabase = await createClient();
   const sigunguEntries = Object.entries(sido.sigungu);
 
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const cutoff = threeMonthsAgo.toISOString().split("T")[0];
+
   let sigunguStats: {
     code: string;
     name: string;
     count: number;
     topDrop: { apt_name: string; change_rate: number; trade_price: number } | null;
     topHigh: { apt_name: string; trade_price: number } | null;
+    medianPrice: number;
+    avgPrice: number;
   }[] = [];
 
   try {
@@ -72,7 +79,7 @@ export default async function MarketSidoPage({
 
     sigunguStats = await Promise.all(
       sigunguEntries.map(async ([code, name]) => {
-        const [countResult, dropResult, highResult] = await Promise.all([
+        const [countResult, dropResult, highResult, priceResult] = await Promise.all([
           supabase
             .from("apt_transactions")
             .select("id", { count: "exact", head: true })
@@ -95,7 +102,24 @@ export default async function MarketSidoPage({
             .order("trade_date", { ascending: false })
             .limit(1)
             .abortSignal(ac.signal),
+          supabase
+            .from("apt_transactions")
+            .select("trade_price,deal_type")
+            .eq("region_code", code)
+            .gte("trade_date", cutoff)
+            .eq("property_type", 1)
+            .abortSignal(ac.signal),
         ]);
+
+        type PriceRow = { trade_price: number; deal_type: string | null };
+        const priceRows: PriceRow[] = (priceResult.data ?? []) as PriceRow[];
+        const validPrices: number[] = priceRows
+          .filter((t) => !isDirectDeal(t.deal_type))
+          .map((t) => t.trade_price);
+        const medianPrice = computeMedianPrice(validPrices);
+        const avgPrice = validPrices.length
+          ? Math.round(validPrices.reduce((a: number, b: number) => a + b, 0) / validPrices.length)
+          : 0;
 
         return {
           code,
@@ -103,6 +127,8 @@ export default async function MarketSidoPage({
           count: countResult.count ?? 0,
           topDrop: dropResult.data?.[0] ?? null,
           topHigh: highResult.data?.[0] ?? null,
+          medianPrice,
+          avgPrice,
         };
       })
     );
@@ -195,6 +221,19 @@ export default async function MarketSidoPage({
                     </div>
                   )}
                 </div>
+
+                {(region.medianPrice > 0 || region.avgPrice > 0) && (
+                  <div className="mt-3 pt-3 border-t t-border flex gap-4 text-xs">
+                    <div>
+                      <p className="t-text-tertiary">최근 3개월 중위가</p>
+                      <p className="font-semibold t-text tabular-nums">{formatPrice(region.medianPrice)}</p>
+                    </div>
+                    <div>
+                      <p className="t-text-tertiary">평균가</p>
+                      <p className="font-semibold t-text tabular-nums">{formatPrice(region.avgPrice)}</p>
+                    </div>
+                  </div>
+                )}
               </Link>
             </React.Fragment>
           );
