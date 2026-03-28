@@ -158,7 +158,7 @@ Plans:
 
 - [x] **Phase 16: 테스트 인프라 기반** - Vitest 설정 + 핵심 유틸 유닛 테스트 (completed 2026-03-28)
 - [x] **Phase 17: 통합 테스트 & E2E** - API 통합 테스트 + Playwright E2E 기반 (completed 2026-03-28)
-- [ ] **Phase 18: Drizzle ORM 교체** - 전체 DB 접근 Drizzle 단일 패턴으로 교체
+- [x] **Phase 18: Drizzle ORM 교체** - 전체 DB 접근 Drizzle 단일 패턴으로 교체 (completed 2026-03-28)
 - [ ] **Phase 19: 코드 정리** - as any 제거, 미사용 import 0건, 연결 패턴 통일
 
 ## Phase Details
@@ -207,7 +207,7 @@ Plans:
 - [x] 18-01-PLAN.md — Drizzle 설치 + 13 테이블 스키마 정의 + db 진입점 (ORM-01)
 - [x] 18-02-PLAN.md — Server Component 페이지 17개 Drizzle 마이그레이션 (ORM-02, ORM-05)
 - [x] 18-03-PLAN.md — API 라우트 + 크론잡 27개 Drizzle 마이그레이션 (ORM-02, ORM-03, ORM-04, ORM-05)
-- [ ] 18-04-PLAN.md — Raw SQL 8개 마이그레이션 + 레거시 삭제 + 테스트 업데이트 (ORM-06)
+- [x] 18-04-PLAN.md — Raw SQL 8개 마이그레이션 + 레거시 삭제 + 테스트 업데이트 (ORM-06)
 
 ### Phase 19: 코드 정리
 **Goal**: 프로덕션 코드에서 타입 안전하지 않은 패턴과 미사용 코드가 제거되어 코드베이스가 깔끔하다
@@ -242,7 +242,7 @@ Plans:
 | 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete | 2026-03-28 |
 | 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete    | 2026-03-28 |
 | 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete    | 2026-03-28 |
-| 18. Drizzle ORM 교체 | v1.2 | 3/4 | In Progress|  |
+| 18. Drizzle ORM 교체 | v1.2 | 4/4 | Complete   | 2026-03-28 |
 | 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |
 
 ---

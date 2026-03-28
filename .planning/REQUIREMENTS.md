@@ -18,7 +18,7 @@
 - [x] **ORM-03**: apt_rent_transactions 테이블에 대한 Drizzle 스키마가 정의되고 기존 supabase 쿼리가 교체된다
 - [x] **ORM-04**: finance_rates 테이블에 대한 Drizzle 스키마가 정의되고 기존 쿼리가 교체된다
 - [x] **ORM-05**: apt_complexes 및 기타 테이블의 Drizzle 스키마가 정의되고 모든 DB 접근이 통일된다
-- [ ] **ORM-06**: getPool().query() 직접 호출이 0건이 된다 (cluster-index 포함)
+- [x] **ORM-06**: getPool().query() 직접 호출이 0건이 된다 (cluster-index 포함)
 
 ## 코드 정리 (CLEAN)
 
@@ -40,7 +40,7 @@
 | ORM-03 | Phase 18 | Complete |
 | ORM-04 | Phase 18 | Complete |
 | ORM-05 | Phase 18 | Complete |
-| ORM-06 | Phase 18 | Pending |
+| ORM-06 | Phase 18 | Complete |
 | CLEAN-01 | Phase 19 | Pending |
 | CLEAN-02 | Phase 19 | Pending |
 | CLEAN-03 | Phase 19 | Pending |

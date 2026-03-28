@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: 코드 품질 강화
 current_phase: 18
-status: executing
-stopped_at: Completed 18-02-PLAN.md
-last_updated: "2026-03-28T13:52:26.052Z"
+status: verifying
+stopped_at: Completed 18-04-PLAN.md
+last_updated: "2026-03-28T14:05:05.865Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 18
 **Milestone:** v1.2 — 코드 품질 강화
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 
 ## Current Position
 
@@ -75,10 +75,12 @@ None.
 - [Phase 18-drizzle-orm]: onConflictDoNothing for apt_transactions and apt_rent_transactions upserts; onConflictDoUpdate for financeRates and rebPriceIndices; crypto.randomUUID() defaultFn for auto-generated UUIDs in text PK schemas
 - [Phase 18-drizzle-orm]: Explicit snake_case aliases used for pages with snake_case downstream types; single db instance handles all tables
 - [Phase 18-drizzle-orm]: Supabase RPC get_monthly_volume removed; replaced with direct query + server-side JS aggregation
+- [Phase 18-drizzle-orm]: db.execute(sql tagged template) for search/page dynamic WHERE — sql.join() with individually constructed sql chunks handles multi-part OR conditions with shared parameter values
+- [Phase 18-drizzle-orm]: Legacy DB files (client.ts, server.ts, rent-client.ts) deleted — codebase now has single db entry point at src/lib/db/index.ts
 
 ## Last Session
 
-Stopped at: Completed 18-02-PLAN.md
+Stopped at: Completed 18-04-PLAN.md
 Last updated: 2026-03-28
 
 ---
