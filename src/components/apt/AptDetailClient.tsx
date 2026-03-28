@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useMemo, createContext, useContext } from "react";
-import PriceHistoryChart from "@/components/charts/PriceHistoryChart";
-import JeonseRatioChart from "@/components/charts/JeonseRatioChart";
+import PriceHistoryChartWrapper from "@/components/charts/PriceHistoryChartWrapper";
 import TransactionTabs from "@/components/apt/TransactionTabs";
 import {
   filterTransactions,
@@ -64,6 +63,20 @@ export interface AptRentTransaction {
   trade_date: string;
 }
 
+export interface RatioPoint {
+  month: string;
+  ratio: number;
+  isLowConfidence: boolean;
+}
+
+type PeriodKey = "1m" | "3m" | "6m" | "1y" | "all";
+const PERIOD_MONTHS: Record<PeriodKey, number | null> = {
+  "1m": 1, "3m": 3, "6m": 6, "1y": 12, "all": null,
+};
+const PERIOD_LABELS: Record<PeriodKey, string> = {
+  "1m": "1개월", "3m": "3개월", "6m": "6개월", "1y": "1년", "all": "전체",
+};
+
 export default function AptDetailClient({
   saleTxns,
   rentTxns,
@@ -89,6 +102,32 @@ export default function AptDetailClient({
 
   // 저층 포함/제외 토글 (기본: 제외)
   const [includeLowFloor, setIncludeLowFloor] = useState(false);
+
+  // 전세가율 표시 토글 (기본: OFF)
+  const [showJeonseRatio, setShowJeonseRatio] = useState(false);
+
+  // 기간 선택 상태
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("all");
+
+  // 기간 기준 컷오프 날짜
+  const periodCutoff = useMemo(() => {
+    const months = PERIOD_MONTHS[selectedPeriod];
+    if (!months) return null;
+    const d = new Date();
+    d.setMonth(d.getMonth() - months);
+    return d.toISOString().slice(0, 10);
+  }, [selectedPeriod]);
+
+  // 기간 필터링된 매매/전세 거래
+  const filteredSaleTxns = useMemo(() => {
+    if (!periodCutoff) return saleTxns;
+    return saleTxns.filter((t) => t.trade_date >= periodCutoff);
+  }, [saleTxns, periodCutoff]);
+
+  const filteredRentTxns = useMemo(() => {
+    if (!periodCutoff) return rentTxns;
+    return rentTxns.filter((t) => t.trade_date >= periodCutoff);
+  }, [rentTxns, periodCutoff]);
 
   // 면적 목록 + 각 면적별 최근 매매가/전세가
   const sizeOptions = useMemo(() => {
@@ -158,7 +197,7 @@ export default function AptDetailClient({
 
   // ── Normalization pipeline ──────────────────────────────────────
 
-  // 최근 6개월 동일 면적 중위가 (이상거래 필터 기준)
+  // 최근 6개월 동일 면적 중위가 (이상거래 필터 기준) — 전체 saleTxns 사용 (필터링 전)
   const recentMedian = useMemo(() => {
     if (!selectedSize) return 0;
     const last6Months = new Date();
@@ -175,16 +214,16 @@ export default function AptDetailClient({
     return computeMedianPrice(recentPrices);
   }, [saleTxns, selectedSize]);
 
-  // filterTransactions: normal / directDeals / excluded
+  // filterTransactions: normal / directDeals / excluded (기간 필터링된 데이터 사용)
   const { normal, directDeals } = useMemo(() => {
     const sizeFiltered = selectedSize
-      ? saleTxns.filter((t) => t.size_sqm === selectedSize)
-      : saleTxns;
+      ? filteredSaleTxns.filter((t) => t.size_sqm === selectedSize)
+      : filteredSaleTxns;
     return filterTransactions(sizeFiltered, {
       lowFloorMode: includeLowFloor ? 'include' : 'adjust',
       recentMedian,
     });
-  }, [saleTxns, selectedSize, includeLowFloor, recentMedian]);
+  }, [filteredSaleTxns, selectedSize, includeLowFloor, recentMedian]);
 
   // 3개월 이동중위가 추이선
   const trendLine = useMemo(() => {
@@ -214,16 +253,51 @@ export default function AptDetailClient({
     });
   }, [directDeals, normal]);
 
-  // Size-filtered txns for JeonseRatioChart (reduces chart re-computation)
-  const selectedSizeRentTxns = useMemo(() => {
+  // 전세 추이선: 순수전세(monthly_rent === 0) 기반 3개월 이동중위가
+  const rentTrendLine = useMemo(() => {
     if (!selectedSize) return [];
-    return rentTxns.filter((t) => t.size_sqm === selectedSize);
-  }, [rentTxns, selectedSize]);
+    const pureJeonse = filteredRentTxns.filter(
+      (t) => t.size_sqm === selectedSize && t.monthly_rent === 0
+    );
+    const forGrouping = pureJeonse.map((r) => ({
+      trade_date: r.trade_date,
+      trade_price: r.deposit,
+    }));
+    const monthly = groupByMonth(forGrouping);
+    return computeMovingMedian(monthly);
+  }, [filteredRentTxns, selectedSize]);
 
-  const selectedSizeSaleTxns = useMemo(() => {
+  // 전세가율 추이: 월별 전세중위가 / 매매중위가 x 100
+  const jeonseRatioLine = useMemo((): RatioPoint[] => {
     if (!selectedSize) return [];
-    return saleTxns.filter((t) => t.size_sqm === selectedSize);
-  }, [saleTxns, selectedSize]);
+    const pureJeonse = filteredRentTxns.filter(
+      (t) => t.size_sqm === selectedSize && t.rent_type === "전세" && t.monthly_rent === 0
+    );
+    const jeonseForGrouping = pureJeonse.map((r) => ({
+      trade_date: r.trade_date, trade_price: r.deposit,
+    }));
+    const saleForGrouping = filteredSaleTxns
+      .filter((t) => t.size_sqm === selectedSize)
+      .map((t) => ({ trade_date: t.trade_date, trade_price: t.trade_price }));
+    const rentByMonth = groupByMonth(jeonseForGrouping);
+    const saleByMonth = groupByMonth(saleForGrouping);
+    const rentMap = new Map(rentByMonth.map((r) => [r.month, r.prices]));
+    const saleMap = new Map(saleByMonth.map((s) => [s.month, s.prices]));
+    const commonMonths = [...rentMap.keys()].filter((m) => saleMap.has(m));
+    return commonMonths
+      .map((month) => {
+        const rentPrices = rentMap.get(month)!;
+        const salePrices = saleMap.get(month)!;
+        const rentMedian = computeMedianPrice(rentPrices);
+        const saleMedian = computeMedianPrice(salePrices);
+        if (saleMedian === 0) return null;
+        const ratio = Math.round((rentMedian / saleMedian) * 1000) / 10;
+        const isLowConfidence = (rentPrices.length + salePrices.length) < 5;
+        return { month, ratio, isLowConfidence };
+      })
+      .filter((p): p is RatioPoint => p !== null)
+      .sort((a, b) => a.month.localeCompare(b.month));
+  }, [filteredRentTxns, filteredSaleTxns, selectedSize]);
 
   function getJeonseRatioColor(ratio: number | null): string {
     if (ratio === null) return "var(--color-text-primary)";
@@ -326,7 +400,25 @@ export default function AptDetailClient({
       {/* 가격 추이 차트 — 정규화된 데이터 */}
       {saleTxns.length >= 2 && (
         <div className="mb-8">
-          <PriceHistoryChart
+          {/* 기간 선택 탭 */}
+          <div className="flex gap-1.5 mb-3">
+            {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => setSelectedPeriod(key)}
+                className="rounded-full px-3 py-1 text-xs font-bold transition"
+                style={
+                  selectedPeriod === key
+                    ? { background: "var(--color-brand-600)", color: "#fff" }
+                    : { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
+                }
+              >
+                {PERIOD_LABELS[key]}
+              </button>
+            ))}
+          </div>
+
+          <PriceHistoryChartWrapper
             normalDots={normal.map((t) => ({
               trade_date: t.trade_date,
               trade_price: t.trade_price,
@@ -337,33 +429,37 @@ export default function AptDetailClient({
             }))}
             directDealDots={directDealsWithPrev}
             trendLine={trendLine}
+            rentTrendLine={rentTrendLine}
+            jeonseRatioLine={jeonseRatioLine}
+            showJeonseRatio={showJeonseRatio}
             sizeUnit={sizeUnit}
           />
-          {/* Annotation + 저층 포함 토글 */}
+          {/* Annotation + 저층 포함 토글 + 전세가율 표시 토글 */}
           <div className="mt-2 flex items-center justify-between">
             <p className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
               * 추이선: 3개월 이동중위가 · 저층 거래는 고층 환산가 적용 · 직거래(회색 점)는 추이선 미반영
             </p>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <span className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>저층 원가 보기</span>
-              <input
-                type="checkbox"
-                checked={includeLowFloor}
-                onChange={(e) => setIncludeLowFloor(e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-gray-300 accent-brand-600"
-              />
-            </label>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <span className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>전세가율 표시</span>
+                <input
+                  type="checkbox"
+                  checked={showJeonseRatio}
+                  onChange={(e) => setShowJeonseRatio(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-gray-300 accent-brand-600"
+                />
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <span className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>저층 원가 보기</span>
+                <input
+                  type="checkbox"
+                  checked={includeLowFloor}
+                  onChange={(e) => setIncludeLowFloor(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-gray-300 accent-brand-600"
+                />
+              </label>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* 전세가율 추이 차트 (D-10) */}
-      {selectedSize && selectedSizeRentTxns.length > 0 && (
-        <div className="mb-8">
-          <JeonseRatioChart
-            saleTxns={selectedSizeSaleTxns}
-            rentTxns={selectedSizeRentTxns}
-          />
         </div>
       )}
 
