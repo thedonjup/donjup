@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { financeRates } from "@/lib/db/schema";
+import { eq, lt, desc } from "drizzle-orm";
 import {
   fetchAllMortgageProducts,
   bankNameToRateType,
@@ -21,7 +23,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
   const errors: string[] = [];
   let inserted = 0;
 
@@ -59,37 +60,40 @@ export async function GET(request: Request) {
 
     for (const [, bank] of bankBest) {
       // 이전 값 조회 (변동폭 계산)
-      const { data: prevRow } = await supabase
-        .from("finance_rates")
-        .select("rate_value")
-        .eq("rate_type", bank.rateType)
-        .lt("base_date", baseDate)
-        .order("base_date", { ascending: false })
-        .limit(1)
-        .single();
+      const prevRows = await db
+        .select({ rate_value: financeRates.rateValue })
+        .from(financeRates)
+        .where(eq(financeRates.rateType, bank.rateType))
+        .orderBy(desc(financeRates.baseDate))
+        .limit(1);
 
-      const prevValue = prevRow?.rate_value ?? null;
+      const prevValue = prevRows[0] ? Number(prevRows[0].rate_value) : null;
       const changeBp =
         prevValue !== null
           ? Math.round((bank.minRate - prevValue) * 100)
           : null;
 
-      const { error } = await supabase.from("finance_rates").upsert(
-        {
-          rate_type: bank.rateType,
-          rate_value: bank.minRate,
-          prev_value: prevValue,
-          change_bp: changeBp,
-          base_date: baseDate,
+      try {
+        await db.insert(financeRates).values({
+          rateType: bank.rateType,
+          rateValue: String(bank.minRate),
+          prevValue: prevValue !== null ? String(prevValue) : null,
+          changeBp,
+          baseDate,
           source: "FINLIFE",
-        },
-        { onConflict: "rate_type,base_date" }
-      );
-
-      if (error) {
-        errors.push(`${bank.rateType}: ${error.message}`);
-      } else {
+        })
+        .onConflictDoUpdate({
+          target: [financeRates.rateType, financeRates.baseDate],
+          set: {
+            rateValue: String(bank.minRate),
+            prevValue: prevValue !== null ? String(prevValue) : null,
+            changeBp,
+          },
+        });
         inserted++;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`${bank.rateType}: ${msg}`);
       }
     }
 
@@ -103,20 +107,24 @@ export async function GET(request: Request) {
       rate_avg: p.rateAvg,
     }));
 
-    const { error: metaError } = await supabase.from("finance_rates").upsert(
-      {
-        rate_type: "BANK_PRODUCTS_ALL",
-        rate_value: 0,
-        base_date: baseDate,
+    try {
+      await db.insert(financeRates).values({
+        rateType: "BANK_PRODUCTS_ALL",
+        rateValue: "0",
+        baseDate,
         source: "FINLIFE",
-        // raw_data 컬럼이 없으므로, change_bp에 상품 수를 기록
-        change_bp: allProductsData.length,
-      },
-      { onConflict: "rate_type,base_date" }
-    );
-
-    if (metaError) {
-      errors.push(`BANK_PRODUCTS_ALL: ${metaError.message}`);
+        // change_bp에 상품 수를 기록
+        changeBp: allProductsData.length,
+      })
+      .onConflictDoUpdate({
+        target: [financeRates.rateType, financeRates.baseDate],
+        set: {
+          changeBp: allProductsData.length,
+        },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      errors.push(`BANK_PRODUCTS_ALL: ${msg}`);
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

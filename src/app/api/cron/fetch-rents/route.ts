@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createRentServiceClient } from "@/lib/db/rent-client";
+import { db } from "@/lib/db";
+import { aptRentTransactions } from "@/lib/db/schema";
 import { fetchRentTransactions } from "@/lib/api/molit-rent";
 import { delay } from "@/lib/api/molit";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
@@ -51,7 +52,6 @@ export async function GET(request: Request) {
   const batch = batchParam !== null ? parseInt(batchParam, 10) : null;
   const isCronBatch = batch !== null && !isNaN(batch);
 
-  const supabase = createRentServiceClient();
   const now = new Date();
 
   // 3개월 데이터 수집
@@ -82,33 +82,29 @@ export async function GET(request: Request) {
         }
 
         // DB 삽입 (중복 무시)
-        const { data, error } = await supabase
-          .from("apt_rent_transactions")
-          .upsert(
+        const inserted = await db
+          .insert(aptRentTransactions)
+          .values(
             transactions.map((t) => ({
-              region_code: t.regionCode,
-              region_name: `${name} ${t.dongName}`,
-              apt_name: t.aptName,
-              size_sqm: t.sizeSqm,
+              regionCode: t.regionCode,
+              regionName: `${name} ${t.dongName}`,
+              aptName: t.aptName,
+              sizeSqm: t.sizeSqm !== undefined ? String(t.sizeSqm) : null,
               floor: t.floor,
               deposit: t.deposit,
-              monthly_rent: t.monthlyRent,
-              rent_type: t.rentType,
-              contract_type: t.contractType || null,
-              trade_date: t.tradeDate,
-              pre_deposit: t.preDeposit,
-              pre_monthly_rent: t.preMonthlyRent,
-              raw_data: t.rawData,
-            })),
-            { onConflict: "apt_name,size_sqm,floor,trade_date,deposit,monthly_rent", ignoreDuplicates: true }
+              monthlyRent: t.monthlyRent,
+              rentType: t.rentType,
+              contractType: t.contractType || null,
+              tradeDate: t.tradeDate,
+              preDeposit: t.preDeposit,
+              preMonthlyRent: t.preMonthlyRent,
+              rawData: t.rawData,
+            }))
           )
-          .select("id");
+          .onConflictDoNothing()
+          .returning({ id: aptRentTransactions.id });
 
-        if (error) {
-          errors.push(`${name}(${dealYearMonth}): ${error.message}`);
-        } else {
-          totalInserted += data?.length ?? 0;
-        }
+        totalInserted += inserted.length;
 
         await delay(300); // API 부하 방지
       } catch (e) {

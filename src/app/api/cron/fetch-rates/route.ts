@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
-import { fetchAllRates, type EcosRateItem } from "@/lib/api/ecos";
+import { db } from "@/lib/db";
+import { financeRates } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
+import { fetchAllRates } from "@/lib/api/ecos";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
@@ -13,7 +15,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
   const errors: string[] = [];
   let inserted = 0;
 
@@ -22,38 +23,39 @@ export async function GET(request: Request) {
 
     for (const rate of rates) {
       // 이전 값 조회 (변동폭 계산)
-      const { data: prevRow } = await supabase
-        .from("finance_rates")
-        .select("rate_value")
-        .eq("rate_type", rate.rateType)
-        .lt("base_date", rate.baseDate)
-        .order("base_date", { ascending: false })
-        .limit(1)
-        .single();
+      const prevRows = await db
+        .select({ rate_value: financeRates.rateValue })
+        .from(financeRates)
+        .where(eq(financeRates.rateType, rate.rateType))
+        .orderBy(desc(financeRates.baseDate))
+        .limit(1);
 
-      const prevValue = prevRow?.rate_value ?? null;
+      const prevValue = prevRows[0] ? Number(prevRows[0].rate_value) : null;
       const changeBp = prevValue !== null
         ? Math.round((rate.rateValue - prevValue) * 100)
         : null;
 
-      const { error } = await supabase
-        .from("finance_rates")
-        .upsert(
-          {
-            rate_type: rate.rateType,
-            rate_value: rate.rateValue,
-            prev_value: prevValue,
-            change_bp: changeBp,
-            base_date: rate.baseDate,
-            source: rate.source,
+      try {
+        await db.insert(financeRates).values({
+          rateType: rate.rateType,
+          rateValue: String(rate.rateValue),
+          prevValue: prevValue !== null ? String(prevValue) : null,
+          changeBp,
+          baseDate: rate.baseDate,
+          source: rate.source,
+        })
+        .onConflictDoUpdate({
+          target: [financeRates.rateType, financeRates.baseDate],
+          set: {
+            rateValue: String(rate.rateValue),
+            prevValue: prevValue !== null ? String(prevValue) : null,
+            changeBp,
           },
-          { onConflict: "rate_type,base_date" }
-        );
-
-      if (error) {
-        errors.push(`${rate.rateType}: ${error.message}`);
-      } else {
+        });
         inserted++;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`${rate.rateType}: ${msg}`);
       }
     }
   } catch (e) {

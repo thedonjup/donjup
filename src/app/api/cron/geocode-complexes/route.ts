@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptComplexes } from "@/lib/db/schema";
+import { eq, isNull } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
@@ -20,20 +22,26 @@ export async function GET(request: Request) {
     );
   }
 
-  const supabase = createServiceClient();
-
   // 좌표가 없는 단지 최대 100개 조회
-  const { data: complexes, error: fetchError } = await supabase
-    .from("apt_complexes")
-    .select("id, address, apt_name, region_name, dong_name")
-    .is("latitude", null)
-    .limit(100);
-
-  if (fetchError) {
+  let complexes;
+  try {
+    complexes = await db
+      .select({
+        id: aptComplexes.id,
+        address: aptComplexes.address,
+        apt_name: aptComplexes.aptName,
+        region_name: aptComplexes.regionName,
+        dong_name: aptComplexes.dongName,
+      })
+      .from(aptComplexes)
+      .where(isNull(aptComplexes.latitude))
+      .limit(100);
+  } catch (fetchError) {
+    const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
     logger.error("Geocode-complexes DB fetch failed", { error: fetchError, cron: "geocode-complexes" });
-    await sendSlackAlert(`[geocode-complexes] DB 조회 실패: ${fetchError.message}`);
+    await sendSlackAlert(`[geocode-complexes] DB 조회 실패: ${msg}`);
     return NextResponse.json(
-      { error: `DB 조회 실패: ${fetchError.message}` },
+      { error: `DB 조회 실패: ${msg}` },
       { status: 500 },
     );
   }
@@ -87,10 +95,10 @@ export async function GET(request: Request) {
             const lat = parseFloat(doc.y);
             const lng = parseFloat(doc.x);
 
-            await supabase
-              .from("apt_complexes")
-              .update({ latitude: lat, longitude: lng })
-              .eq("id", complex.id);
+            await db
+              .update(aptComplexes)
+              .set({ latitude: String(lat), longitude: String(lng) })
+              .where(eq(aptComplexes.id, complex.id));
 
             updated++;
             continue;
@@ -105,10 +113,10 @@ export async function GET(request: Request) {
       const lat = parseFloat(doc.y);
       const lng = parseFloat(doc.x);
 
-      await supabase
-        .from("apt_complexes")
-        .update({ latitude: lat, longitude: lng })
-        .eq("id", complex.id);
+      await db
+        .update(aptComplexes)
+        .set({ latitude: String(lat), longitude: String(lng) })
+        .where(eq(aptComplexes.id, complex.id));
 
       updated++;
 

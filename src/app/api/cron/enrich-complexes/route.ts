@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptComplexes } from "@/lib/db/schema";
+import { eq, or, isNull } from "drizzle-orm";
 import { fetchBuildingLedger } from "@/lib/api/building-ledger";
 import { delay } from "@/lib/api/molit";
 import { logger } from "@/lib/logger";
@@ -14,20 +16,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
-
   // total_units 또는 parking_count가 없는 단지를 최대 100개 조회
-  const { data: complexes, error: fetchError } = await supabase
-    .from("apt_complexes")
-    .select("id, region_code, apt_name")
-    .or("total_units.is.null,parking_count.is.null,floor_area_ratio.is.null,elevator_count.is.null")
-    .limit(100);
-
-  if (fetchError) {
+  let complexes;
+  try {
+    complexes = await db
+      .select({
+        id: aptComplexes.id,
+        region_code: aptComplexes.regionCode,
+        apt_name: aptComplexes.aptName,
+      })
+      .from(aptComplexes)
+      .where(
+        or(
+          isNull(aptComplexes.totalUnits),
+          isNull(aptComplexes.parkingCount),
+          isNull(aptComplexes.floorAreaRatio),
+          isNull(aptComplexes.elevatorCount)
+        )
+      )
+      .limit(100);
+  } catch (fetchError) {
+    const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
     logger.error("Enrich-complexes DB fetch failed", { error: fetchError, cron: "enrich-complexes" });
-    await sendSlackAlert(`[enrich-complexes] DB 조회 실패: ${fetchError.message}`);
+    await sendSlackAlert(`[enrich-complexes] DB 조회 실패: ${msg}`);
     return NextResponse.json(
-      { error: `DB 조회 실패: ${fetchError.message}` },
+      { error: `DB 조회 실패: ${msg}` },
       { status: 500 }
     );
   }
@@ -48,36 +61,32 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const updateData: Record<string, unknown> = {};
-      if (info.totalUnits) updateData.total_units = info.totalUnits;
-      if (info.parkingCount) updateData.parking_count = info.parkingCount;
-      if (info.heatingMethod) updateData.heating_method = info.heatingMethod;
-      if (info.floorCount) updateData.floor_count = info.floorCount;
-      if (info.floorAreaRatio) updateData.floor_area_ratio = info.floorAreaRatio;
-      if (info.buildingCoverage) updateData.building_coverage = info.buildingCoverage;
-      if (info.energyGrade) updateData.energy_grade = info.energyGrade;
-      if (info.elevatorCount) updateData.elevator_count = info.elevatorCount;
-      if (info.landArea) updateData.land_area = info.landArea;
-      if (info.buildingArea) updateData.building_area = info.buildingArea;
-      if (info.totalFloorArea) updateData.total_floor_area = info.totalFloorArea;
+      const updateData: Partial<typeof aptComplexes.$inferInsert> = {};
+      if (info.totalUnits) updateData.totalUnits = info.totalUnits;
+      if (info.parkingCount) updateData.parkingCount = info.parkingCount;
+      if (info.heatingMethod) updateData.heatingMethod = info.heatingMethod;
+      if (info.floorCount) updateData.floorCount = info.floorCount;
+      if (info.floorAreaRatio) updateData.floorAreaRatio = String(info.floorAreaRatio);
+      if (info.buildingCoverage) updateData.buildingCoverage = String(info.buildingCoverage);
+      if (info.energyGrade) updateData.energyGrade = info.energyGrade;
+      if (info.elevatorCount) updateData.elevatorCount = info.elevatorCount;
+      if (info.landArea) updateData.landArea = String(info.landArea);
+      if (info.buildingArea) updateData.buildingArea = String(info.buildingArea);
+      if (info.totalFloorArea) updateData.totalFloorArea = String(info.totalFloorArea);
 
       if (Object.keys(updateData).length === 0) {
         await delay(300);
         continue;
       }
 
-      updateData.updated_at = new Date().toISOString();
+      updateData.updatedAt = new Date();
 
-      const { error: updateError } = await supabase
-        .from("apt_complexes")
-        .update(updateData)
-        .eq("id", complex.id);
+      await db
+        .update(aptComplexes)
+        .set(updateData)
+        .where(eq(aptComplexes.id, complex.id));
 
-      if (updateError) {
-        errors.push(`${complex.apt_name}: ${updateError.message}`);
-      } else {
-        updated++;
-      }
+      updated++;
 
       await delay(300); // API 부하 방지
     } catch (e) {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { contentQueue, instagramPosts } from "@/lib/db/schema";
+import { eq, like, desc } from "drizzle-orm";
 import {
   publishPhoto,
   publishCarousel,
@@ -15,8 +17,6 @@ export async function GET(request: Request) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const supabase = createServiceClient();
 
   try {
     // ---------------------------------------------------------------
@@ -34,16 +34,23 @@ export async function GET(request: Request) {
     // ---------------------------------------------------------------
     // 2. content_queue에서 ready 상태의 카드뉴스 조회 (최신 1건)
     // ---------------------------------------------------------------
-    const { data: queueItem, error: fetchError } = await supabase
-      .from("content_queue")
-      .select("id,storage_urls,caption,hashtags,report_date,content_type")
-      .eq("status", "ready")
-      .like("content_type", "cardnews_%")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    const queueRows = await db
+      .select({
+        id: contentQueue.id,
+        storage_urls: contentQueue.storageUrls,
+        caption: contentQueue.caption,
+        hashtags: contentQueue.hashtags,
+        report_date: contentQueue.reportDate,
+        content_type: contentQueue.contentType,
+      })
+      .from(contentQueue)
+      .where(eq(contentQueue.status, "ready"))
+      .orderBy(desc(contentQueue.createdAt))
+      .limit(1);
 
-    if (fetchError || !queueItem) {
+    const queueItem = queueRows[0];
+
+    if (!queueItem) {
       return NextResponse.json({
         success: true,
         skipped: true,
@@ -51,12 +58,18 @@ export async function GET(request: Request) {
       });
     }
 
-    const { id, storage_urls, caption, hashtags, report_date, content_type } =
-      queueItem;
+    // Filter to only cardnews_ content types
+    if (!queueItem.content_type.startsWith("cardnews_")) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: "No ready cardnews in queue",
+      });
+    }
 
-    const imageUrls: string[] = Array.isArray(storage_urls)
-      ? storage_urls
-      : [];
+    const { id, storage_urls, caption, hashtags, report_date, content_type } = queueItem;
+
+    const imageUrls: string[] = Array.isArray(storage_urls) ? storage_urls : [];
 
     if (imageUrls.length === 0) {
       return NextResponse.json(
@@ -92,21 +105,19 @@ export async function GET(request: Request) {
     // ---------------------------------------------------------------
     // 5. instagram_posts 테이블에 포스팅 이력 기록
     // ---------------------------------------------------------------
-    const { error: historyError } = await supabase
-      .from("instagram_posts")
-      .insert({
-        media_id: mediaId,
-        content_queue_id: id,
-        report_date,
-        content_type,
+    try {
+      await db.insert(instagramPosts).values({
+        mediaId,
+        contentQueueId: id,
+        reportDate: report_date,
+        contentType: content_type,
         caption: fullCaption,
-        image_urls: imageUrls,
-        image_count: imageUrls.length,
-        post_type: imageUrls.length >= 2 ? "carousel" : "photo",
-        posted_at: new Date().toISOString(),
+        imageUrls,
+        imageCount: imageUrls.length,
+        postType: imageUrls.length >= 2 ? "carousel" : "photo",
+        postedAt: new Date(),
       });
-
-    if (historyError) {
+    } catch (historyError) {
       // Log but don't fail — the post was already published
       logger.error("Post-instagram failed to record history", { error: historyError, cron: "post-instagram" });
     }
@@ -114,22 +125,22 @@ export async function GET(request: Request) {
     // ---------------------------------------------------------------
     // 6. content_queue 상태 업데이트
     // ---------------------------------------------------------------
-    const { error: updateError } = await supabase
-      .from("content_queue")
-      .update({
-        status: "posted",
-        posted_at: new Date().toISOString(),
-        platform_id: mediaId,
-      })
-      .eq("id", id);
-
-    if (updateError) {
+    try {
+      await db
+        .update(contentQueue)
+        .set({
+          status: "posted",
+          postedAt: new Date(),
+          platformId: mediaId,
+        })
+        .where(eq(contentQueue.id, id));
+    } catch (updateError) {
       logger.error("Post-instagram failed to update queue", { error: updateError, cron: "post-instagram" });
-      await sendSlackAlert(`[post-instagram] Queue 업데이트 실패 (포스팅은 완료): ${updateError.message}`);
+      await sendSlackAlert(`[post-instagram] Queue 업데이트 실패 (포스팅은 완료): ${updateError instanceof Error ? updateError.message : String(updateError)}`);
       return NextResponse.json(
         {
           success: false,
-          error: `Post published (${mediaId}) but queue update failed: ${updateError.message}`,
+          error: `Post published (${mediaId}) but queue update failed`,
         },
         { status: 500 }
       );

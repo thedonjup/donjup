@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { dailyReports, pushSubscriptions } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import webpush from "web-push";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
@@ -29,16 +31,21 @@ export async function GET(request: Request) {
     process.env.VAPID_PRIVATE_KEY
   );
 
-  const supabase = createServiceClient();
   const today = new Date().toISOString().split("T")[0];
 
   try {
     // 1. 오늘의 데일리 리포트 조회
-    const { data: report } = await supabase
-      .from("daily_reports")
-      .select("title,summary,top_drops")
-      .eq("report_date", today)
-      .single();
+    const reportRows = await db
+      .select({
+        title: dailyReports.title,
+        summary: dailyReports.summary,
+        top_drops: dailyReports.topDrops,
+      })
+      .from(dailyReports)
+      .where(eq(dailyReports.reportDate, today))
+      .limit(1);
+
+    const report = reportRows[0];
 
     if (!report) {
       return NextResponse.json({
@@ -54,9 +61,13 @@ export async function GET(request: Request) {
       : null;
 
     // 3. 푸시 구독 목록 조회
-    const { data: subs } = await supabase
-      .from("push_subscriptions")
-      .select("endpoint,p256dh,auth");
+    const subs = await db
+      .select({
+        endpoint: pushSubscriptions.endpoint,
+        p256dh: pushSubscriptions.p256dh,
+        auth: pushSubscriptions.auth,
+      })
+      .from(pushSubscriptions);
 
     if (!subs || subs.length === 0) {
       return NextResponse.json({
@@ -77,7 +88,7 @@ export async function GET(request: Request) {
 
     // 5. 모든 구독자에게 푸시 발송
     const results = await Promise.allSettled(
-      subs.map((sub: any) =>
+      subs.map((sub) =>
         webpush
           .sendNotification(
             {
@@ -89,10 +100,9 @@ export async function GET(request: Request) {
           .catch(async (err) => {
             // 만료/해제된 구독 삭제
             if (err.statusCode === 410 || err.statusCode === 404) {
-              await supabase
-                .from("push_subscriptions")
-                .delete()
-                .eq("endpoint", sub.endpoint);
+              await db
+                .delete(pushSubscriptions)
+                .where(eq(pushSubscriptions.endpoint, sub.endpoint));
             }
             throw err;
           })

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptTransactions, financeRates, dailyReports } from "@/lib/db/schema";
+import { eq, desc, asc, gte } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
@@ -12,36 +14,59 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
   try {
     // 1. 폭락 TOP 10
-    const { data: topDrops } = await supabase
-      .from("apt_transactions")
-      .select("id,region_name,apt_name,size_sqm,trade_price,highest_price,change_rate,trade_date")
-      .eq("is_significant_drop", true)
-      .order("change_rate", { ascending: true })
+    const topDrops = await db
+      .select({
+        id: aptTransactions.id,
+        region_name: aptTransactions.regionName,
+        apt_name: aptTransactions.aptName,
+        size_sqm: aptTransactions.sizeSqm,
+        trade_price: aptTransactions.tradePrice,
+        highest_price: aptTransactions.highestPrice,
+        change_rate: aptTransactions.changeRate,
+        trade_date: aptTransactions.tradeDate,
+      })
+      .from(aptTransactions)
+      .where(eq(aptTransactions.isSignificantDrop, true))
+      .orderBy(asc(aptTransactions.changeRate))
       .limit(10);
 
     // 2. 신고가 TOP 10
-    const { data: topHighs } = await supabase
-      .from("apt_transactions")
-      .select("id,region_name,apt_name,size_sqm,trade_price,highest_price,change_rate,trade_date")
-      .eq("is_new_high", true)
-      .order("trade_date", { ascending: false })
+    const topHighs = await db
+      .select({
+        id: aptTransactions.id,
+        region_name: aptTransactions.regionName,
+        apt_name: aptTransactions.aptName,
+        size_sqm: aptTransactions.sizeSqm,
+        trade_price: aptTransactions.tradePrice,
+        highest_price: aptTransactions.highestPrice,
+        change_rate: aptTransactions.changeRate,
+        trade_date: aptTransactions.tradeDate,
+      })
+      .from(aptTransactions)
+      .where(eq(aptTransactions.isNewHigh, true))
+      .orderBy(desc(aptTransactions.tradeDate))
       .limit(10);
 
     // 3. 최신 금리 요약
-    const { data: latestRates } = await supabase
-      .from("finance_rates")
-      .select("rate_type,rate_value,prev_value,change_bp,base_date")
-      .order("base_date", { ascending: false })
+    const latestRates = await db
+      .select({
+        rate_type: financeRates.rateType,
+        rate_value: financeRates.rateValue,
+        prev_value: financeRates.prevValue,
+        change_bp: financeRates.changeBp,
+        base_date: financeRates.baseDate,
+      })
+      .from(financeRates)
+      .orderBy(desc(financeRates.baseDate))
       .limit(10);
 
     // 금리 타입별 최신 1건만
-    const rateMap = new Map<string, typeof latestRates extends (infer T)[] | null ? T : never>();
-    for (const r of latestRates ?? []) {
+    const rateMap = new Map<string, typeof latestRates[number]>();
+    for (const r of latestRates) {
       if (!rateMap.has(r.rate_type)) {
         rateMap.set(r.rate_type, r);
       }
@@ -53,14 +78,14 @@ export async function GET(request: Request) {
       .toISOString()
       .split("T")[0];
 
-    const { data: volumeData } = await supabase
-      .from("apt_transactions")
-      .select("region_name")
-      .gte("trade_date", thirtyDaysAgo);
+    const volumeData = await db
+      .select({ region_name: aptTransactions.regionName })
+      .from(aptTransactions)
+      .where(gte(aptTransactions.tradeDate, thirtyDaysAgo));
 
     // 지역별 거래 건수 집계
     const volumeMap = new Map<string, number>();
-    for (const row of volumeData ?? []) {
+    for (const row of volumeData) {
       // region_name에서 구 이름만 추출 (예: "강남구 역삼동" → "강남구")
       const gu = row.region_name?.split(" ")[0] ?? "기타";
       volumeMap.set(gu, (volumeMap.get(gu) ?? 0) + 1);
@@ -72,34 +97,34 @@ export async function GET(request: Request) {
       .slice(0, 10);
 
     // 5. 리포트 제목 생성
-    const topDrop = topDrops?.[0];
+    const topDrop = topDrops[0];
     const title = topDrop
-      ? `${topDrop.apt_name} ${Math.abs(topDrop.change_rate)}% 하락 외 | ${today} 돈줍 리포트`
+      ? `${topDrop.apt_name} ${Math.abs(Number(topDrop.change_rate))}% 하락 외 | ${today} 돈줍 리포트`
       : `${today} 돈줍 데일리 리포트`;
 
     const summary = generateSummary(topDrops, topHighs, rateSummary, volumeSummary);
 
     // 6. daily_reports에 UPSERT
-    const { error } = await supabase
-      .from("daily_reports")
-      .upsert(
-        {
-          report_date: today,
-          title,
-          summary,
-          top_drops: topDrops ?? [],
-          top_highs: topHighs ?? [],
-          rate_summary: rateSummary,
-          volume_summary: volumeSummary,
-        },
-        { onConflict: "report_date" }
-      );
-
-    if (error) {
-      logger.error("Generate-report DB upsert failed", { error, cron: "generate-report" });
-      await sendSlackAlert(`[generate-report] DB upsert 실패: ${error.message}`);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
+    await db.insert(dailyReports).values({
+      reportDate: today,
+      title,
+      summary,
+      topDrops,
+      topHighs,
+      rateSummary,
+      volumeSummary,
+    })
+    .onConflictDoUpdate({
+      target: dailyReports.reportDate,
+      set: {
+        title,
+        summary,
+        topDrops,
+        topHighs,
+        rateSummary,
+        volumeSummary,
+      },
+    });
 
     // 7. 웹푸시 발송 트리거
     let pushResult: { pushSent?: number; pushFailed?: number } = {};
@@ -123,8 +148,8 @@ export async function GET(request: Request) {
       reportDate: today,
       title,
       stats: {
-        drops: topDrops?.length ?? 0,
-        highs: topHighs?.length ?? 0,
+        drops: topDrops.length,
+        highs: topHighs.length,
         rates: rateSummary.length,
         volumeRegions: volumeSummary.length,
       },

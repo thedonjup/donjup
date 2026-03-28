@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { dailyReports, contentQueue } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { generateCardNews } from "@/lib/cardnews/render";
 import type { CardType, RankItem } from "@/lib/cardnews/types";
 import { logger } from "@/lib/logger";
@@ -13,7 +15,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
   const today = new Date().toISOString().split("T")[0];
   const dayOfWeek = new Date().getDay(); // 0=Sun, 1=Mon...
 
@@ -26,13 +27,15 @@ export async function GET(request: Request) {
 
   try {
     // daily_reports에서 오늘 데이터 조회
-    const { data: report, error: reportError } = await supabase
-      .from("daily_reports")
-      .select("top_drops,top_highs")
-      .eq("report_date", today)
-      .single();
+    const reportRows = await db
+      .select({ top_drops: dailyReports.topDrops, top_highs: dailyReports.topHighs })
+      .from(dailyReports)
+      .where(eq(dailyReports.reportDate, today))
+      .limit(1);
 
-    if (reportError || !report) {
+    const report = reportRows[0];
+
+    if (!report) {
       return NextResponse.json(
         { success: false, error: "No report found for today" },
         { status: 404 }
@@ -41,14 +44,14 @@ export async function GET(request: Request) {
 
     const rawItems = cardType === "drop" ? report.top_drops : report.top_highs;
 
-    if (!rawItems || rawItems.length === 0) {
+    if (!rawItems || (rawItems as unknown[]).length === 0) {
       return NextResponse.json(
         { success: true, skipped: true, reason: "no data" }
       );
     }
 
-    const items: RankItem[] = rawItems.slice(0, 3).map(
-      (item: Record<string, unknown>, i: number) => ({
+    const items: RankItem[] = (rawItems as Record<string, unknown>[]).slice(0, 3).map(
+      (item, i) => ({
         rank: i + 1,
         apt_name: item.apt_name as string,
         region_name: item.region_name as string,
@@ -91,23 +94,14 @@ export async function GET(request: Request) {
     ];
 
     // content_queue에 기록
-    const { error: queueError } = await supabase.from("content_queue").insert({
-      report_date: today,
-      content_type: `cardnews_${cardType}`,
-      storage_urls: storageUrls,
+    await db.insert(contentQueue).values({
+      reportDate: today,
+      contentType: `cardnews_${cardType}`,
+      storageUrls,
       caption,
       hashtags,
       status: "ready",
     });
-
-    if (queueError) {
-      logger.error("Generate-cardnews queue insert failed", { error: queueError, cron: "generate-cardnews" });
-      await sendSlackAlert(`[generate-cardnews] Queue insert 실패: ${queueError.message}`);
-      return NextResponse.json(
-        { success: false, error: `Queue insert failed: ${queueError.message}` },
-        { status: 500 }
-      );
-    }
 
     return NextResponse.json({
       success: true,

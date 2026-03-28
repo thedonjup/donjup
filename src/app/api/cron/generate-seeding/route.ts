@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { dailyReports, seedingQueue } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
@@ -287,17 +289,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
   const today = new Date().toISOString().split("T")[0];
 
   try {
-    const { data: report, error: reportError } = await supabase
-      .from("daily_reports")
-      .select("report_date,title,top_drops,top_highs,rate_summary,volume_summary")
-      .eq("report_date", today)
-      .single();
+    const reportRows = await db
+      .select({
+        report_date: dailyReports.reportDate,
+        title: dailyReports.title,
+        top_drops: dailyReports.topDrops,
+        top_highs: dailyReports.topHighs,
+        rate_summary: dailyReports.rateSummary,
+        volume_summary: dailyReports.volumeSummary,
+      })
+      .from(dailyReports)
+      .where(eq(dailyReports.reportDate, today))
+      .limit(1);
 
-    if (reportError || !report) {
+    const report = reportRows[0];
+
+    if (!report) {
       return NextResponse.json(
         { success: false, error: "No daily report found for today" },
         { status: 404 }
@@ -315,7 +325,7 @@ export async function GET(request: Request) {
     ];
 
     const rows = platforms.map((p) => ({
-      report_date: today,
+      reportDate: today,
       platform: p.platform,
       title: p.title,
       body: p.body,
@@ -324,23 +334,11 @@ export async function GET(request: Request) {
     }));
 
     // 오늘 기존 데이터 삭제 후 삽입 (중복 방지)
-    await supabase
-      .from("seeding_queue")
-      .delete()
-      .eq("report_date", today);
+    await db
+      .delete(seedingQueue)
+      .where(eq(seedingQueue.reportDate, today));
 
-    const { error: insertError } = await supabase
-      .from("seeding_queue")
-      .insert(rows);
-
-    if (insertError) {
-      logger.error("Generate-seeding insert failed", { error: insertError, cron: "generate-seeding" });
-      await sendSlackAlert(`[generate-seeding] DB insert 실패: ${insertError.message}`);
-      return NextResponse.json(
-        { success: false, error: insertError.message },
-        { status: 500 }
-      );
-    }
+    await db.insert(seedingQueue).values(rows);
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { createRentServiceClient } from "@/lib/db/rent-client";
-import { fetchAllIndices, type RebIndexItem } from "@/lib/api/reb";
+import { db } from "@/lib/db";
+import { rebPriceIndices } from "@/lib/db/schema";
+import { eq, and, lt, desc } from "drizzle-orm";
+import { fetchAllIndices } from "@/lib/api/reb";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
@@ -17,7 +19,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createRentServiceClient();
   const errors: string[] = [];
   let inserted = 0;
 
@@ -36,18 +37,21 @@ export async function GET(request: Request) {
       let changeRate = item.changeRate;
 
       if (prevValue === null) {
-        const { data: prevRow } = await supabase
-          .from("reb_price_indices")
-          .select("index_value")
-          .eq("index_type", item.indexType)
-          .eq("region_name", item.regionName)
-          .lt("base_date", item.baseDate)
-          .order("base_date", { ascending: false })
-          .limit(1)
-          .single();
+        const prevRows = await db
+          .select({ index_value: rebPriceIndices.indexValue })
+          .from(rebPriceIndices)
+          .where(
+            and(
+              eq(rebPriceIndices.indexType, item.indexType),
+              eq(rebPriceIndices.regionName, item.regionName),
+              lt(rebPriceIndices.baseDate, item.baseDate)
+            )
+          )
+          .orderBy(desc(rebPriceIndices.baseDate))
+          .limit(1);
 
-        if (prevRow) {
-          prevValue = prevRow.index_value;
+        if (prevRows[0]) {
+          prevValue = Number(prevRows[0].index_value);
           changeRate =
             prevValue !== null && prevValue !== 0
               ? Math.round(((item.indexValue - prevValue) / prevValue) * 10000) / 100
@@ -55,24 +59,27 @@ export async function GET(request: Request) {
         }
       }
 
-      const { error } = await supabase
-        .from("reb_price_indices")
-        .upsert(
-          {
-            index_type: item.indexType,
-            region_name: item.regionName,
-            index_value: item.indexValue,
-            base_date: item.baseDate,
-            prev_value: prevValue,
-            change_rate: changeRate,
+      try {
+        await db.insert(rebPriceIndices).values({
+          indexType: item.indexType,
+          regionName: item.regionName,
+          indexValue: String(item.indexValue),
+          baseDate: item.baseDate,
+          prevValue: prevValue !== null ? String(prevValue) : null,
+          changeRate: changeRate !== null ? String(changeRate) : null,
+        })
+        .onConflictDoUpdate({
+          target: [rebPriceIndices.indexType, rebPriceIndices.regionName, rebPriceIndices.baseDate],
+          set: {
+            indexValue: String(item.indexValue),
+            prevValue: prevValue !== null ? String(prevValue) : null,
+            changeRate: changeRate !== null ? String(changeRate) : null,
           },
-          { onConflict: "index_type,region_name,base_date" }
-        );
-
-      if (error) {
-        errors.push(`${item.regionName}/${item.indexType}: ${error.message}`);
-      } else {
+        });
         inserted++;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`${item.regionName}/${item.indexType}: ${msg}`);
       }
     }
   } catch (e) {

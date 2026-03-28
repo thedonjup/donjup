@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptTransactions, aptComplexes } from "@/lib/db/schema";
+import { eq, inArray, gte, desc } from "drizzle-orm";
 import { sendSlackAlert } from "@/lib/alert";
 import { logger } from "@/lib/logger";
 import { fetchTransactions, delay } from "@/lib/api/molit";
@@ -73,7 +75,6 @@ export async function GET(request: Request) {
     return handleMultiPropertyType(request, propertyType, batch, isCronBatch);
   }
 
-  const supabase = createServiceClient();
   const now = new Date();
 
   // cron 배치: 3개월, 수동 전체: 6개월
@@ -106,43 +107,39 @@ export async function GET(request: Request) {
         }
 
         // 각 거래에 대해 최고가 조회 및 변동률 계산
-        const enriched = await enrichTransactions(supabase, transactions, name);
+        const enriched = await enrichTransactions(transactions, name);
 
         // DB 삽입 (중복 무시)
-        const { data, error } = await supabase
-          .from("apt_transactions")
-          .upsert(
+        const inserted = await db
+          .insert(aptTransactions)
+          .values(
             enriched.map((t) => ({
-              region_code: t.regionCode,
-              region_name: `${name} ${t.dongName}`,
-              apt_name: t.aptName,
-              size_sqm: t.sizeSqm,
+              regionCode: t.regionCode,
+              regionName: `${name} ${t.dongName}`,
+              aptName: t.aptName,
+              sizeSqm: String(t.sizeSqm),
               floor: t.floor,
-              trade_price: t.tradePrice,
-              trade_date: t.tradeDate,
-              highest_price: t.highestPrice,
-              change_rate: t.changeRate,
-              is_new_high: t.isNewHigh,
-              is_significant_drop: t.isSignificantDrop,
-              drop_level: t.dropLevel,
-              deal_type: t.dealType,
-              raw_data: t.rawData,
-            })),
-            { onConflict: "apt_name,size_sqm,floor,trade_date,trade_price", ignoreDuplicates: true }
+              tradePrice: t.tradePrice,
+              tradeDate: t.tradeDate,
+              highestPrice: t.highestPrice,
+              changeRate: t.changeRate !== null ? String(t.changeRate) : null,
+              isNewHigh: t.isNewHigh,
+              isSignificantDrop: t.isSignificantDrop,
+              dropLevel: t.dropLevel,
+              dealType: t.dealType,
+              rawData: t.rawData,
+            }))
           )
-          .select("id");
+          .onConflictDoNothing()
+          .returning({ id: aptTransactions.id });
 
-        if (error) {
-          errors.push(`${name}(${dealYearMonth}): ${error.message}`);
-        } else {
-          const insertCount = data?.length ?? 0;
-          totalInserted += insertCount;
-          totalNewHigh += enriched.filter((t) => t.isNewHigh).length;
-          totalSignificantDrop += enriched.filter((t) => t.isSignificantDrop).length;
-        }
+        const insertCount = inserted.length;
+        totalInserted += insertCount;
+        totalNewHigh += enriched.filter((t) => t.isNewHigh).length;
+        totalSignificantDrop += enriched.filter((t) => t.isSignificantDrop).length;
 
         // 단지 마스터 UPSERT
-        await upsertComplexes(supabase, transactions, name);
+        await upsertComplexes(transactions, name);
 
         await delay(300); // API 부하 방지
       } catch (e) {
@@ -191,7 +188,6 @@ interface EnrichedTransaction extends ParsedTransaction {
 }
 
 async function enrichTransactions(
-  supabase: ReturnType<typeof createServiceClient>,
   transactions: ParsedTransaction[],
   regionName: string
 ): Promise<EnrichedTransaction[]> {
@@ -207,31 +203,40 @@ async function enrichTransactions(
   const aptNames = [...new Set(transactions.map((t) => t.aptName))];
 
   // 1회 쿼리로 해당 지역의 모든 거래 이력 가져오기 (최근 3년)
-  const { data: recentRows } = await supabase
-    .from("apt_transactions")
-    .select("apt_name,size_sqm,trade_price")
-    .in("apt_name", aptNames)
-    .gte("trade_date", threeYearsAgoStr)
-    .order("trade_price", { ascending: false });
+  const recentRows = await db
+    .select({
+      apt_name: aptTransactions.aptName,
+      size_sqm: aptTransactions.sizeSqm,
+      trade_price: aptTransactions.tradePrice,
+    })
+    .from(aptTransactions)
+    .where(
+      inArray(aptTransactions.aptName, aptNames)
+    )
+    .orderBy(desc(aptTransactions.tradePrice));
 
   // 1회 쿼리로 역대 최고가 가져오기 (fallback용)
-  const { data: allTimeRows } = await supabase
-    .from("apt_transactions")
-    .select("apt_name,size_sqm,trade_price")
-    .in("apt_name", aptNames)
-    .order("trade_price", { ascending: false });
+  const allTimeRows = await db
+    .select({
+      apt_name: aptTransactions.aptName,
+      size_sqm: aptTransactions.sizeSqm,
+      trade_price: aptTransactions.tradePrice,
+    })
+    .from(aptTransactions)
+    .where(inArray(aptTransactions.aptName, aptNames))
+    .orderBy(desc(aptTransactions.tradePrice));
 
   // 메모리에서 단지+면적별 최고가 맵 구성
   const recentMaxMap = new Map<string, number>();
-  for (const r of recentRows ?? []) {
+  for (const r of recentRows) {
     const key = `${r.apt_name}|${r.size_sqm}`;
-    if (!recentMaxMap.has(key)) recentMaxMap.set(key, r.trade_price);
+    if (!recentMaxMap.has(key)) recentMaxMap.set(key, Number(r.trade_price));
   }
 
   const allTimeMaxMap = new Map<string, number>();
-  for (const r of allTimeRows ?? []) {
+  for (const r of allTimeRows) {
     const key = `${r.apt_name}|${r.size_sqm}`;
-    if (!allTimeMaxMap.has(key)) allTimeMaxMap.set(key, r.trade_price);
+    if (!allTimeMaxMap.has(key)) allTimeMaxMap.set(key, Number(r.trade_price));
   }
 
   for (const t of transactions) {
@@ -272,7 +277,6 @@ async function enrichTransactions(
 }
 
 async function upsertComplexes(
-  supabase: ReturnType<typeof createServiceClient>,
   transactions: ParsedTransaction[],
   regionName: string
 ) {
@@ -288,19 +292,20 @@ async function upsertComplexes(
     const slug = `${t.regionCode}-${toSlug(t.aptName)}`;
 
     complexes.push({
-      region_code: t.regionCode,
-      region_name: regionName,
-      dong_name: t.dongName,
-      apt_name: t.aptName,
-      built_year: t.builtYear || null,
+      regionCode: t.regionCode,
+      regionName,
+      dongName: t.dongName,
+      aptName: t.aptName,
+      builtYear: t.builtYear || null,
       slug,
     });
   }
 
   if (complexes.length > 0) {
-    await supabase
-      .from("apt_complexes")
-      .upsert(complexes, { onConflict: "slug", ignoreDuplicates: true });
+    await db
+      .insert(aptComplexes)
+      .values(complexes)
+      .onConflictDoNothing();
   }
 }
 
@@ -325,7 +330,6 @@ async function handleMultiPropertyType(
   batch: number | null,
   isCronBatch: boolean
 ) {
-  const supabase = createServiceClient();
   const now = new Date();
   const typeLabel = PROPERTY_TYPE_LABELS[propertyType] ?? `type-${propertyType}`;
 
@@ -374,48 +378,41 @@ async function handleMultiPropertyType(
           rawData: t.rawData as unknown as ParsedTransaction["rawData"],
         }));
 
-        const enriched = await enrichTransactions(supabase, asParsed, name);
+        const enriched = await enrichTransactions(asParsed, name);
 
-        const { data, error } = await supabase
-          .from("apt_transactions")
-          .upsert(
+        const inserted = await db
+          .insert(aptTransactions)
+          .values(
             enriched.map((t) => ({
-              region_code: t.regionCode,
-              region_name: `${name} ${t.dongName}`,
-              apt_name: t.aptName,
-              size_sqm: t.sizeSqm,
+              regionCode: t.regionCode,
+              regionName: `${name} ${t.dongName}`,
+              aptName: t.aptName,
+              sizeSqm: String(t.sizeSqm),
               floor: t.floor,
-              trade_price: t.tradePrice,
-              trade_date: t.tradeDate,
-              highest_price: t.highestPrice,
-              change_rate: t.changeRate,
-              is_new_high: t.isNewHigh,
-              is_significant_drop: t.isSignificantDrop,
-              drop_level: t.dropLevel,
-              deal_type: t.dealType,
-              raw_data: t.rawData,
-              property_type: propertyType,
-            })),
-            {
-              onConflict: "apt_name,size_sqm,floor,trade_date,trade_price",
-              ignoreDuplicates: true,
-            }
+              tradePrice: t.tradePrice,
+              tradeDate: t.tradeDate,
+              highestPrice: t.highestPrice,
+              changeRate: t.changeRate !== null ? String(t.changeRate) : null,
+              isNewHigh: t.isNewHigh,
+              isSignificantDrop: t.isSignificantDrop,
+              dropLevel: t.dropLevel,
+              dealType: t.dealType,
+              rawData: t.rawData,
+              propertyType,
+            }))
           )
-          .select("id");
+          .onConflictDoNothing()
+          .returning({ id: aptTransactions.id });
 
-        if (error) {
-          errors.push(`${name}(${dealYearMonth}): ${error.message}`);
-        } else {
-          const insertCount = data?.length ?? 0;
-          totalInserted += insertCount;
-          totalNewHigh += enriched.filter((t) => t.isNewHigh).length;
-          totalSignificantDrop += enriched.filter(
-            (t) => t.isSignificantDrop
-          ).length;
-        }
+        const insertCount = inserted.length;
+        totalInserted += insertCount;
+        totalNewHigh += enriched.filter((t) => t.isNewHigh).length;
+        totalSignificantDrop += enriched.filter(
+          (t) => t.isSignificantDrop
+        ).length;
 
         // 단지 마스터 UPSERT
-        await upsertComplexes(supabase, asParsed, name);
+        await upsertComplexes(asParsed, name);
 
         await multiDelay(300);
       } catch (e) {
