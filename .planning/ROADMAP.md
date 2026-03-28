@@ -151,7 +151,12 @@ Plans:
   1. 차트 상단에 1개월/3개월/6개월/1년/전체 기간 탭이 존재하고 전환된다
   2. 면적별 차트에서 매매가 선과 전세가 선이 동시에 표시된다 (듀얼 라인)
   3. 전세가율 오버레이 라인을 차트에서 켜고 끌 수 있다 (2차 Y축)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — 기간 탭 + 날짜 필터링 + rentTrendLine/jeonseRatioLine 데이터 계산
+- [ ] 13-02-PLAN.md — PriceHistoryChart 듀얼 라인 + 듀얼 Y축 + JeonseRatioChart 삭제
+
 **UI hint**: yes
 
 ### Phase 14: 랭킹 정교화
@@ -194,7 +199,7 @@ Plans:
 | 10. 가격 정규화 엔진 | v1.1 | 3/3 | Complete   | 2026-03-27 |
 | 11. 전세가율·갭 분석 | v1.1 | 2/2 | Complete    | 2026-03-28 |
 | 12. 금리 표현 개선 | v1.1 | 2/2 | Complete    | 2026-03-28 |
-| 13. 차트 개선 | v1.1 | 0/? | Not started | - |
+| 13. 차트 개선 | v1.1 | 0/2 | Planning | - |
 | 14. 랭킹 정교화 | v1.1 | 0/? | Not started | - |
 | 15. 지역 지수 대시보드 | v1.1 | 0/? | Not started | - |
 
