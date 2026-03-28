@@ -205,7 +205,7 @@ Plans:
 
 Plans:
 - [x] 18-01-PLAN.md — Drizzle 설치 + 13 테이블 스키마 정의 + db 진입점 (ORM-01)
-- [ ] 18-02-PLAN.md — Server Component 페이지 17개 Drizzle 마이그레이션 (ORM-02, ORM-05)
+- [x] 18-02-PLAN.md — Server Component 페이지 17개 Drizzle 마이그레이션 (ORM-02, ORM-05)
 - [x] 18-03-PLAN.md — API 라우트 + 크론잡 27개 Drizzle 마이그레이션 (ORM-02, ORM-03, ORM-04, ORM-05)
 - [ ] 18-04-PLAN.md — Raw SQL 8개 마이그레이션 + 레거시 삭제 + 테스트 업데이트 (ORM-06)
 
@@ -242,7 +242,7 @@ Plans:
 | 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete | 2026-03-28 |
 | 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete    | 2026-03-28 |
 | 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete    | 2026-03-28 |
-| 18. Drizzle ORM 교체 | v1.2 | 2/4 | In Progress|  |
+| 18. Drizzle ORM 교체 | v1.2 | 3/4 | In Progress|  |
 | 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |
 
 ---

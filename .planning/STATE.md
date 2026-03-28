@@ -4,13 +4,13 @@ milestone: v1.2
 milestone_name: 코드 품질 강화
 current_phase: 18
 status: executing
-stopped_at: Completed 18-03-PLAN.md — all 27 API routes and cron jobs migrated to Drizzle
-last_updated: "2026-03-28T13:47:47.321Z"
+stopped_at: Completed 18-02-PLAN.md
+last_updated: "2026-03-28T13:52:26.052Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State: 돈줍
@@ -22,7 +22,7 @@ progress:
 ## Current Position
 
 Phase: 18 (drizzle-orm) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Active Phase
 
@@ -73,10 +73,12 @@ None.
 - [Phase 18-drizzle-orm]: casing:'snake_case' on drizzle instance preserves existing snake_case destructuring across all 35 call sites
 - [Phase 18-drizzle-orm]: pnpm used for drizzle install — npm has arborist bug with closure-net git dep
 - [Phase 18-drizzle-orm]: onConflictDoNothing for apt_transactions and apt_rent_transactions upserts; onConflictDoUpdate for financeRates and rebPriceIndices; crypto.randomUUID() defaultFn for auto-generated UUIDs in text PK schemas
+- [Phase 18-drizzle-orm]: Explicit snake_case aliases used for pages with snake_case downstream types; single db instance handles all tables
+- [Phase 18-drizzle-orm]: Supabase RPC get_monthly_volume removed; replaced with direct query + server-side JS aggregation
 
 ## Last Session
 
-Stopped at: Completed 18-03-PLAN.md — all 27 API routes and cron jobs migrated to Drizzle
+Stopped at: Completed 18-02-PLAN.md
 Last updated: 2026-03-28
 
 ---
