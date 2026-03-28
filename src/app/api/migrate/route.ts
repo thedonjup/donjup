@@ -10,20 +10,20 @@ export async function GET(request: Request) {
 
   const results: string[] = [];
 
-  const migrations = [
-    "ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS govt_complex_id TEXT UNIQUE",
-    "ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS property_type INTEGER DEFAULT 1",
-    "ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS sido_name TEXT",
-  ];
+  try {
+    await db.execute(sql`ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS govt_complex_id TEXT UNIQUE`);
+    results.push("OK: govt_complex_id");
+  } catch (e) { results.push(`FAIL govt_complex_id: ${e instanceof Error ? e.message : "?"}`); }
 
-  for (const m of migrations) {
-    try {
-      await db.execute(sql.raw(m));
-      results.push(`OK: ${m.substring(0, 60)}...`);
-    } catch (e) {
-      results.push(`FAIL: ${m.substring(0, 40)}... — ${e instanceof Error ? e.message : "unknown"}`);
-    }
-  }
+  try {
+    await db.execute(sql`ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS property_type INTEGER DEFAULT 1`);
+    results.push("OK: property_type");
+  } catch (e) { results.push(`FAIL property_type: ${e instanceof Error ? e.message : "?"}`); }
+
+  try {
+    await db.execute(sql`ALTER TABLE apt_complexes ADD COLUMN IF NOT EXISTS sido_name TEXT`);
+    results.push("OK: sido_name");
+  } catch (e) { results.push(`FAIL sido_name: ${e instanceof Error ? e.message : "?"}`); }
 
   return NextResponse.json({ ok: true, results });
 }
