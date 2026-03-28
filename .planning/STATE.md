@@ -4,13 +4,13 @@ milestone: v1.2
 milestone_name: 코드 품질 강화
 current_phase: 18
 status: executing
-stopped_at: Completed 18-01-PLAN.md — Drizzle install + all 13 schemas defined
-last_updated: "2026-03-28T13:32:21.076Z"
+stopped_at: Completed 18-03-PLAN.md — all 27 API routes and cron jobs migrated to Drizzle
+last_updated: "2026-03-28T13:47:47.321Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State: 돈줍
@@ -22,7 +22,7 @@ progress:
 ## Current Position
 
 Phase: 18 (drizzle-orm) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Active Phase
 
@@ -72,10 +72,11 @@ None.
 - [Phase 17-integration-e2e-tests]: Playwright chromium-only project, webServer dev mode with reuseExistingServer
 - [Phase 18-drizzle-orm]: casing:'snake_case' on drizzle instance preserves existing snake_case destructuring across all 35 call sites
 - [Phase 18-drizzle-orm]: pnpm used for drizzle install — npm has arborist bug with closure-net git dep
+- [Phase 18-drizzle-orm]: onConflictDoNothing for apt_transactions and apt_rent_transactions upserts; onConflictDoUpdate for financeRates and rebPriceIndices; crypto.randomUUID() defaultFn for auto-generated UUIDs in text PK schemas
 
 ## Last Session
 
-Stopped at: Completed 18-01-PLAN.md — Drizzle install + all 13 schemas defined
+Stopped at: Completed 18-03-PLAN.md — all 27 API routes and cron jobs migrated to Drizzle
 Last updated: 2026-03-28
 
 ---
