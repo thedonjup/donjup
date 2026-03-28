@@ -13,9 +13,9 @@
 
 ## 차트 개선 (CHART)
 
-- [ ] **CHART-01**: 기간 선택 탭(1개월/3개월/6개월/1년/전체)을 차트에 추가한다
-- [ ] **CHART-02**: 면적별 차트에서 매매가 + 전세가를 동시에 표시한다 (듀얼 라인)
-- [ ] **CHART-03**: 전세가율(매매가 대비 전세 비율) 오버레이 라인을 차트에 추가한다
+- [x] **CHART-01**: 기간 선택 탭(1개월/3개월/6개월/1년/전체)을 차트에 추가한다
+- [x] **CHART-02**: 면적별 차트에서 매매가 + 전세가를 동시에 표시한다 (듀얼 라인)
+- [x] **CHART-03**: 전세가율(매매가 대비 전세 비율) 오버레이 라인을 차트에 추가한다
 
 ## 랭킹 정교화 (RANK)
 
@@ -57,9 +57,9 @@
 | RATE-01 | Phase 12 | Complete |
 | RATE-02 | Phase 12 | Complete |
 | RATE-03 | Phase 12 | Complete |
-| CHART-01 | Phase 13 | Pending |
-| CHART-02 | Phase 13 | Pending |
-| CHART-03 | Phase 13 | Pending |
+| CHART-01 | Phase 13 | Complete |
+| CHART-02 | Phase 13 | Complete |
+| CHART-03 | Phase 13 | Complete |
 | RANK-01 | Phase 14 | Pending |
 | RANK-02 | Phase 14 | Pending |
 | RANK-03 | Phase 14 | Pending |

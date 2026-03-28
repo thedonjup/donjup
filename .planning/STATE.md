@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: 데이터 분석 고도화
 current_phase: 13
-status: planning
-stopped_at: Phase 13 context gathered
-last_updated: "2026-03-28T03:37:36.323Z"
+status: executing
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-28T03:54:51.045Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 13
 **Milestone:** v1.1 — 데이터 분석 고도화
-**Status:** Ready to plan
+**Status:** Ready to execute
 
 ## Current Position
 
-Phase: 12 (rate-display-improvement) — EXECUTING
-Plan: Not started
+Phase: 13 (chart-improvement) — EXECUTING
+Plan: 2 of 2
 
 ## Active Phase
 
@@ -80,10 +80,11 @@ None.
 - [Phase 11]: Recharts Tooltip formatter uses any type — ValueType | undefined widening requires runtime guard
 - [Phase 12-rate-display-improvement]: CSS max-height transition for accordion animation (no library); desktop expand uses conditional tr row with colSpan=4
 - [Phase 12-rate-display-improvement]: Filter BANK_UNKNOWN before computing avgRate on /rate hero card — avoids catch-all skewing average
+- [Phase 13]: RatioPoint exported from AptDetailClient; recentMedian kept on unfiltered saleTxns; showJeonseRatio default OFF
 
 ## Last Session
 
-Stopped at: Phase 13 context gathered
+Stopped at: Completed 13-01-PLAN.md
 Last updated: 2026-03-28T18:13:00Z
 
 ---
