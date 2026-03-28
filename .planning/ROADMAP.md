@@ -157,7 +157,7 @@ Plans:
 **Milestone Goal:** 테스트 인프라 구축 + ORM 교체 + 코드 품질 기반 정비로 장기 유지보수성을 확보한다
 
 - [x] **Phase 16: 테스트 인프라 기반** - Vitest 설정 + 핵심 유틸 유닛 테스트 (completed 2026-03-28)
-- [ ] **Phase 17: 통합 테스트 & E2E** - API 통합 테스트 + Playwright E2E 기반
+- [x] **Phase 17: 통합 테스트 & E2E** - API 통합 테스트 + Playwright E2E 기반 (completed 2026-03-28)
 - [ ] **Phase 18: Drizzle ORM 교체** - 전체 DB 접근 Drizzle 단일 패턴으로 교체
 - [ ] **Phase 19: 코드 정리** - as any 제거, 미사용 import 0건, 연결 패턴 통일
 
@@ -189,8 +189,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — API 통합 테스트: fetch-bank-rates, fetch-rents, fetch-transactions (TEST-04)
-- [ ] 17-02-PLAN.md — Playwright E2E 설치 + 홈 로드 + 기본 네비게이션 테스트 (TEST-05)
+- [x] 17-01-PLAN.md — API 통합 테스트: fetch-bank-rates, fetch-rents, fetch-transactions (TEST-04)
+- [x] 17-02-PLAN.md — Playwright E2E 설치 + 홈 로드 + 기본 네비게이션 테스트 (TEST-05)
 
 ### Phase 18: Drizzle ORM 교체
 **Goal**: 모든 DB 접근이 타입 안전한 Drizzle 쿼리로 통일되어 raw SQL과 복수 클라이언트 패턴이 제거된다
@@ -235,7 +235,7 @@ Plans:
 | 14. 랭킹 정교화 | v1.1 | 1/1 | Complete | 2026-03-28 |
 | 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete | 2026-03-28 |
 | 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete    | 2026-03-28 |
-| 17. 통합 테스트 & E2E | v1.2 | 0/2 | Planning | - |
+| 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete   | 2026-03-28 |
 | 18. Drizzle ORM 교체 | v1.2 | 0/TBD | Not started | - |
 | 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |
 

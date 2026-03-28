@@ -8,7 +8,7 @@
 - [x] **TEST-01**: Vitest가 설치·설정되어 `npm test`로 전체 테스트를 실행할 수 있다
 - [x] **TEST-02**: price-normalization.ts의 모든 exported 함수에 유닛 테스트가 존재한다
 - [x] **TEST-03**: cluster-index.ts의 computeClusterIndex에 유닛 테스트가 존재한다
-- [ ] **TEST-04**: 주요 API 라우트(fetch-transactions, fetch-rents, fetch-bank-rates)에 통합 테스트가 존재한다
+- [x] **TEST-04**: 주요 API 라우트(fetch-transactions, fetch-rents, fetch-bank-rates)에 통합 테스트가 존재한다
 - [ ] **TEST-05**: Playwright가 설치되어 홈 페이지 로드 + 기본 네비게이션 E2E 테스트가 동작한다
 
 ## ORM 교체 (ORM)
@@ -33,7 +33,7 @@
 | TEST-01 | Phase 16 | Complete |
 | TEST-02 | Phase 16 | Complete |
 | TEST-03 | Phase 16 | Complete |
-| TEST-04 | Phase 17 | Pending |
+| TEST-04 | Phase 17 | Complete |
 | TEST-05 | Phase 17 | Pending |
 | ORM-01 | Phase 18 | Pending |
 | ORM-02 | Phase 18 | Pending |

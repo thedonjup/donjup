@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: 코드 품질 강화
 current_phase: 17
-status: planning
-stopped_at: Completed 16-02-PLAN.md — computeClusterIndex unit tests
-last_updated: "2026-03-28T12:50:05.530Z"
+status: verifying
+stopped_at: Completed 17-01-PLAN.md — integration tests for fetch-bank-rates, fetch-rents, fetch-transactions
+last_updated: "2026-03-28T13:06:05.157Z"
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 17
 **Milestone:** v1.2 — 코드 품질 강화
-**Status:** Ready to plan
+**Status:** Phase complete — ready for verification
 
 ## Current Position
 
-Phase: 16 (test-infrastructure) — EXECUTING
-Plan: Not started
+Phase: 17 (integration-e2e-tests) — EXECUTING
+Plan: 2 of 2
 
 ## Active Phase
 
@@ -67,10 +67,13 @@ None.
 
 - [Phase 16]: vitest globals:false + environment:node for strict TypeScript safety in server-side unit tests
 - [Phase 16]: vi.mock('@/lib/db/client') hoisted by Vitest; mockPoolQuery helper centralizes Pool mock setup
+- [Phase 17-integration-e2e-tests]: vi.mock(@/lib/db/client) covers both createServiceClient and createRentServiceClient since both delegate to createDbClient
+- [Phase 17-integration-e2e-tests]: makeMockDb() thenable chain pattern established for QueryBuilder mock in integration tests
+- [Phase 17-integration-e2e-tests]: Playwright chromium-only project, webServer dev mode with reuseExistingServer
 
 ## Last Session
 
-Stopped at: Completed 16-02-PLAN.md — computeClusterIndex unit tests
+Stopped at: Completed 17-01-PLAN.md — integration tests for fetch-bank-rates, fetch-rents, fetch-transactions
 Last updated: 2026-03-28
 
 ---
