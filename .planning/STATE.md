@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: 데이터 분석 고도화
 current_phase: 14
-status: planning
-stopped_at: Phase 14 context gathered
-last_updated: "2026-03-28T04:10:10.267Z"
+status: verifying
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-03-28T04:26:17.774Z"
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 5
+  total_plans: 10
+  completed_plans: 10
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 14
 **Milestone:** v1.1 — 데이터 분석 고도화
-**Status:** Ready to plan
+**Status:** Phase complete — ready for verification
 
 ## Current Position
 
-Phase: 13 (chart-improvement) — EXECUTING
-Plan: Not started
+Phase: 14 (ranking-refinement) — EXECUTING
+Plan: 1 of 1
 
 ## Active Phase
 
@@ -83,10 +83,12 @@ None.
 - [Phase 13]: RatioPoint exported from AptDetailClient; recentMedian kept on unfiltered saleTxns; showJeonseRatio default OFF
 - [Phase 13-chart-improvement]: yAxisId=0 (numeric) on all existing chart elements to preserve DirectDealConnectors yAxisMap[0] access
 - [Phase 13-chart-improvement]: hasRatioOverlay guards both showJeonseRatio flag AND data length to avoid empty right axis render
+- [Phase 14-ranking-refinement]: Use highest_price as median proxy for suspicious direct deal detection in ranking context (no per-complex median available)
+- [Phase 14-ranking-refinement]: Re-sort drops by change_rate ASC after applyRankingNormalization so adjusted rankings reflect true severity order
 
 ## Last Session
 
-Stopped at: Phase 14 context gathered
+Stopped at: Completed 14-01-PLAN.md
 Last updated: 2026-03-28T18:13:00Z
 
 ---

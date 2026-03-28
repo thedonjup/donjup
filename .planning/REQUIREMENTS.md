@@ -19,9 +19,9 @@
 
 ## 랭킹 정교화 (RANK)
 
-- [ ] **RANK-01**: 폭락/신고가 변동률을 층별 보정 후 가격 기준으로 산출한다 (저층 노이즈 제거)
-- [ ] **RANK-02**: 이상거래(직거래 저가, 친족 거래 추정)를 랭킹 산정에서 자동 제외한다
-- [ ] **RANK-03**: 랭킹 리스트에서 저층 거래는 "저층" 라벨을 표시하되, 변동률은 고층 환산 기준으로 산출한다
+- [x] **RANK-01**: 폭락/신고가 변동률을 층별 보정 후 가격 기준으로 산출한다 (저층 노이즈 제거)
+- [x] **RANK-02**: 이상거래(직거래 저가, 친족 거래 추정)를 랭킹 산정에서 자동 제외한다
+- [x] **RANK-03**: 랭킹 리스트에서 저층 거래는 "저층" 라벨을 표시하되, 변동률은 고층 환산 기준으로 산출한다
 
 ## 지역 지수 (INDEX)
 
@@ -60,9 +60,9 @@
 | CHART-01 | Phase 13 | Complete |
 | CHART-02 | Phase 13 | Complete |
 | CHART-03 | Phase 13 | Complete |
-| RANK-01 | Phase 14 | Pending |
-| RANK-02 | Phase 14 | Pending |
-| RANK-03 | Phase 14 | Pending |
+| RANK-01 | Phase 14 | Complete |
+| RANK-02 | Phase 14 | Complete |
+| RANK-03 | Phase 14 | Complete |
 | INDEX-01 | Phase 15 | Pending |
 | INDEX-02 | Phase 15 | Pending |
 | INDEX-03 | Phase 15 | Pending |
