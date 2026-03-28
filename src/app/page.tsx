@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { homepageCache, aptTransactions, financeRates, pageViews } from "@/lib/db/schema";
-import { eq, desc, asc, lt, isNotNull, isNull, gte, and, sql } from "drizzle-orm";
+import { eq, desc, asc, lt, isNotNull, gte, and, sql } from "drizzle-orm";
 import AdSlot from "@/components/ads/AdSlot";
 import CoupangBanner from "@/components/CoupangBanner";
 import { RATE_ORDER } from "@/lib/format";

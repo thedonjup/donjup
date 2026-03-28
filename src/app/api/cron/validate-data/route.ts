@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { aptTransactions } from "@/lib/db/schema";
-import { eq, isNull, lte, not, or, gt, lt, sql } from "drizzle-orm";
+import { eq, isNull, lte, or, gt, lt, sql } from "drizzle-orm";
 import { sendSlackAlert } from "@/lib/alert";
-import { logger } from "@/lib/logger";
 
 export const maxDuration = 300; // 5분
 

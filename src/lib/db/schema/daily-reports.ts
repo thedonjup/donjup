@@ -3,7 +3,6 @@ import {
   text,
   jsonb,
   timestamp,
-  unique,
 } from "drizzle-orm/pg-core";
 
 export const dailyReports = pgTable("daily_reports", {

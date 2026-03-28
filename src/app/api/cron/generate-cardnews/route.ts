@@ -64,7 +64,7 @@ export async function GET(request: Request) {
 
     // 카드뉴스 생성 (표지 + 3장 + CTA = 5장)
     const dateStr = today.replace(/-/g, ".");
-    const buffers = await generateCardNews(dateStr, cardType, items);
+    await generateCardNews(dateStr, cardType, items);
 
     // Storage upload not available — cards are generated but not persisted
     // TODO: wire up an actual storage provider when available

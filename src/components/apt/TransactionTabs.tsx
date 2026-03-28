@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import type { AptTransaction, AptRentTransaction } from "@/components/apt/AptDetailClient";
 
 type Transaction = AptTransaction;

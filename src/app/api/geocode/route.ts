@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     cache.set(address, { lat, lng, ts: Date.now() });
 
     return NextResponse.json({ lat, lng });
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: "지오코딩 요청 실패" },
       { status: 500 },

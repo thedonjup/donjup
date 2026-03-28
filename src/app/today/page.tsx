@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { aptTransactions } from "@/lib/db/schema";
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, sqmToPyeong } from "@/lib/format";

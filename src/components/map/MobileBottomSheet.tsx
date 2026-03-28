@@ -15,7 +15,6 @@ interface MobileBottomSheetProps {
 
 export default function MobileBottomSheet({
   transactions,
-  activeId,
   filter,
   setFilter,
   onItemClick,

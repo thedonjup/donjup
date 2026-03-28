@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { aptComplexes, aptTransactions } from "@/lib/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export const runtime = "nodejs";
 export const alt = "돈줍 아파트 실거래가";

@@ -4,7 +4,7 @@ import { eq, desc, asc, lt, isNotNull, and, sql } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { REGION_HIERARCHY, getSidoBySlug, getSidoForCode } from "@/lib/constants/region-codes";
+import { REGION_HIERARCHY, getSidoBySlug } from "@/lib/constants/region-codes";
 import AdSlot from "@/components/ads/AdSlot";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";

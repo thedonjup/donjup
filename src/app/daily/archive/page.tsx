@@ -3,7 +3,6 @@ import { dailyReports } from "@/lib/db/schema";
 import { desc, sql } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
-import type { DailyReport } from "@/types/db";
 
 export const metadata: Metadata = {
   title: "데일리 리포트 아카이브",

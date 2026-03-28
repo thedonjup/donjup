@@ -166,7 +166,7 @@ export default async function AptDetailPage({
   const decodedSlug = decodeURIComponent(slug);
 
   // Try exact slug match first
-  let complexRows = await db.select().from(aptComplexes)
+  const complexRows = await db.select().from(aptComplexes)
     .where(eq(aptComplexes.slug, decodedSlug))
     .limit(1);
 

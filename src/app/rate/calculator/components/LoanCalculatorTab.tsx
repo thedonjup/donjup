@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { formatKrw, formatPrice } from "@/lib/format";
+import { formatKrw } from "@/lib/format";
 import CoupangBanner from "@/components/CoupangBanner";
 import { trackCalculate } from "@/lib/analytics/events";
 import {

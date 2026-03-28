@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { aptTransactions, aptComplexes } from "@/lib/db/schema";
-import { eq, inArray, gte, desc } from "drizzle-orm";
+import { inArray, desc } from "drizzle-orm";
 import { sendSlackAlert } from "@/lib/alert";
-import { logger } from "@/lib/logger";
 import { fetchTransactions, delay } from "@/lib/api/molit";
 import {
   fetchMultiTransactions,
   delay as multiDelay,
-  type ParsedMultiTransaction,
 } from "@/lib/api/molit-multi";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import {
@@ -189,15 +187,14 @@ interface EnrichedTransaction extends ParsedTransaction {
 
 async function enrichTransactions(
   transactions: ParsedTransaction[],
-  regionName: string
+  _regionName: string
 ): Promise<EnrichedTransaction[]> {
   const enriched: EnrichedTransaction[] = [];
   if (transactions.length === 0) return enriched;
 
-  // 최근 3년 기준일
+  // 최근 3년 기준일 (for comment context — filtering is done in-memory)
   const threeYearsAgo = new Date();
   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-  const threeYearsAgoStr = threeYearsAgo.toISOString().split("T")[0];
 
   // 해당 지역의 고유 단지명 목록
   const aptNames = [...new Set(transactions.map((t) => t.aptName))];

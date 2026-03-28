@@ -2,7 +2,6 @@ import {
   pgTable,
   text,
   timestamp,
-  unique,
 } from "drizzle-orm/pg-core";
 
 export const pushSubscriptions = pgTable("push_subscriptions", {

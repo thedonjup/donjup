@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { financeRates } from "@/lib/db/schema";
-import { desc, like, ne } from "drizzle-orm";
+import { desc, ne } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";

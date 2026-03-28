@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { pageViews } from "@/lib/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
-    const { pagePath, pageType, regionCode, complexId, utmSource, utmMedium, utmCampaign } = await request.json();
+    const { pagePath, pageType } = await request.json();
 
     if (!pagePath) {
       return NextResponse.json(

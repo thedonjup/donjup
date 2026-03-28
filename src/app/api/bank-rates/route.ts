@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { financeRates } from "@/lib/db/schema";
-import { like, ne, desc } from "drizzle-orm";
+import { ne, desc } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 
 /**

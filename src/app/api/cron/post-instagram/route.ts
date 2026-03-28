@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { contentQueue, instagramPosts } from "@/lib/db/schema";
-import { eq, like, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   publishPhoto,
   publishCarousel,

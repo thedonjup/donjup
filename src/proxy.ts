@@ -6,7 +6,7 @@ import type { NextRequest } from "next/server";
 // for production rate limiting instead.
 // See: https://vercel.com/docs/security/vercel-waf
 
-export function proxy(request: NextRequest) {
+export function proxy(_request: NextRequest) {
   return NextResponse.next();
 }
 

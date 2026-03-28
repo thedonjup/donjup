@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { financeRates } from "@/lib/db/schema";
-import { eq, lt, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   fetchAllMortgageProducts,
   bankNameToRateType,

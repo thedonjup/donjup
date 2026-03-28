@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { aptComplexes, aptTransactions } from "@/lib/db/schema";
-import { desc, asc, isNotNull, lte, gte } from "drizzle-orm";
+import { desc, asc, lte, gte } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice } from "@/lib/format";

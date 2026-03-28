@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase/config";
 import {
-  collection,
   query,
   orderBy,
   limit,

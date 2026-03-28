@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { aptTransactions, aptComplexes } from "@/lib/db/schema";
+import { aptTransactions } from "@/lib/db/schema";
 import { eq, desc, asc, lt, isNotNull, gte, and, inArray, sql } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";

@@ -1,13 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import SearchTracker from "@/components/analytics/SearchTracker";
 import { PricePresets, SizePresets, YearPresets } from "@/components/search/FilterPresets";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
-import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 
 type SearchPageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
