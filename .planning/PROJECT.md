@@ -34,6 +34,8 @@
 - ✓ 보안 강화 (CSP, SSL, 인증) — v1.0 Phase 8
 - ✓ 모바일 UI 전면 개편 — v1.0 Phase 9
 - ✓ 기존 기능 전체 (실거래가, 금리, 검색, 지도, 계산기 등)
+- ✓ 가격 정규화 엔진 — v1.1 Phase 10
+- ✓ 전세가율/갭 분석 — v1.1 Phase 11
 
 ### Active
 
@@ -90,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 — v1.1 milestone started*
+*Last updated: 2026-03-28 — Phase 11 complete, Phase 12 next*
