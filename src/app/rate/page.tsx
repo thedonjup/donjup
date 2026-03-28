@@ -3,9 +3,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";
 import { RATE_LABELS, RATE_DESCRIPTIONS, RATE_ORDER } from "@/lib/format";
-import MiniAreaChart from "@/components/charts/MiniAreaChartWrapper";
 import { FaqJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import type { FinanceRate } from "@/types/db";
+import RateIndicatorAccordion from "@/components/rate/RateIndicatorAccordion";
+import type { IndicatorItem } from "@/components/rate/RateIndicatorAccordion";
+import BankRateExpandable from "@/components/rate/BankRateExpandable";
+import type { BankRateItem } from "@/components/rate/BankRateExpandable";
 
 export const metadata: Metadata = {
   title: "금리 현황",
@@ -110,6 +113,44 @@ export default async function RateDashboardPage() {
 
   const hasData = latestByType.size > 0;
 
+  // Hero card computation — filter out BANK_UNKNOWN per D-02
+  const validBanks = sortedBankRates.filter(r => r.rate_type !== "BANK_UNKNOWN");
+  const avgRate = validBanks.length > 0
+    ? parseFloat((validBanks.reduce((s, r) => s + r.rate_value, 0) / validBanks.length).toFixed(2))
+    : null;
+  const minRate = validBanks[0]?.rate_value ?? null;
+  const maxRate = validBanks[validBanks.length - 1]?.rate_value ?? null;
+  const heroBaseDate = validBanks[0]?.base_date ?? "";
+  const bpItems = validBanks.filter(r => r.change_bp !== null).map(r => r.change_bp!);
+  const avgChangeBp = bpItems.length > 0
+    ? Math.round(bpItems.reduce((s, v) => s + v, 0) / bpItems.length)
+    : null;
+
+  // Props for RateIndicatorAccordion
+  const indicators: IndicatorItem[] = RATE_ORDER.map((type) => {
+    const rate = latestByType.get(type);
+    return {
+      type,
+      label: RATE_LABELS[type] ?? type,
+      description: RATE_DESCRIPTIONS[type] ?? "",
+      rateValue: rate?.rate_value ?? null,
+      prevValue: rate?.prev_value ?? null,
+      changeBp: rate?.change_bp ?? null,
+      baseDate: String(rate?.base_date ?? ""),
+      history: (historyByType.get(type) ?? []).slice().reverse().slice(-12).map(h => ({ value: h.value })),
+    };
+  });
+
+  // Props for BankRateExpandable
+  const bankItems: BankRateItem[] = sortedBankRates.map(b => ({
+    rate_type: b.rate_type,
+    label: BANK_LABELS[b.rate_type] ?? b.rate_type.replace(/^BANK_/, "").replace(/_/g, " "),
+    rate_value: b.rate_value,
+    prev_value: b.prev_value,
+    change_bp: b.change_bp,
+    base_date: b.base_date,
+  }));
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <BreadcrumbJsonLd items={[{ name: "홈", href: "/" }, { name: "금리 현황", href: "/rate" }]} />
@@ -144,189 +185,43 @@ export default async function RateDashboardPage() {
 
       {hasData ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {RATE_ORDER.map((type) => {
-              const rate = latestByType.get(type);
-              if (!rate) return null;
-              return (
-                <RateDetailCard
-                  key={type}
-                  label={RATE_LABELS[type] ?? type}
-                  description={RATE_DESCRIPTIONS[type] ?? ""}
-                  value={rate.rate_value}
-                  changeBp={rate.change_bp}
-                  baseDate={rate.base_date}
-                  history={historyByType.get(type)?.reverse() ?? []}
-                />
-              );
-            })}
-          </div>
+          {/* Hero card — D-01/D-03/D-04 */}
+          {avgRate !== null && (
+            <div className="rounded-2xl border-2 brand-tint-border brand-tint t-card p-6 mb-6">
+              <p className="text-sm font-medium t-text-secondary">시중 주담대 평균금리</p>
+              <div className="flex items-end gap-3 mt-2">
+                <p className="text-5xl font-extrabold tabular-nums t-text">{avgRate}%</p>
+                {avgChangeBp !== null && avgChangeBp !== 0 && (
+                  <span className={`mb-1 inline-flex items-center rounded-full px-2 py-1 text-sm font-bold ${
+                    avgChangeBp > 0 ? "t-drop-bg t-drop" : "t-rise-bg t-rise"
+                  }`}>
+                    {avgChangeBp > 0 ? "+" : ""}{avgChangeBp}bp
+                  </span>
+                )}
+              </div>
+              {minRate !== null && maxRate !== null && (
+                <p className="mt-2 text-sm t-text-secondary">
+                  은행 최저 {minRate}% ~ 최고 {maxRate}%
+                </p>
+              )}
+              <p className="mt-1 text-xs t-text-tertiary">기준일: {heroBaseDate}</p>
+            </div>
+          )}
+
+          {/* Accordion section — D-05/D-08 */}
+          <section className="mb-6">
+            <h2 className="mb-3 text-lg font-bold t-text">주요 금리 지표</h2>
+            <RateIndicatorAccordion indicators={indicators} />
+          </section>
 
           <AdSlot slotId="rate-mid-banner" format="banner" />
 
-          {/* 은행별 주담대 금리 */}
-          {sortedBankRates.length > 0 && (
+          {/* Bank rates section — D-09 */}
+          {bankItems.length > 0 && (
             <section className="mt-10">
-              <h2 className="mb-4 text-lg font-bold t-text">은행별 주담대 금리</h2>
-              <p className="mb-3 text-xs t-text-tertiary">
-                금융감독원 금융상품한눈에 기준 | {sortedBankRates[0]?.base_date}
-              </p>
-              {/* Mobile: Card layout */}
-              <div className="space-y-2 sm:hidden">
-                {sortedBankRates.map((bank) => (
-                  <div key={bank.rate_type} className="rounded-xl border t-border t-card px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium t-text text-sm">
-                        {BANK_LABELS[bank.rate_type] ?? bank.rate_type.replace(/^BANK_/, "").replace(/_/g, " ")}
-                      </p>
-                      <p className="text-sm font-bold tabular-nums t-text shrink-0">{bank.rate_value}%</p>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-xs t-text-tertiary">
-                      <span>기준일 {bank.base_date}</span>
-                      {bank.change_bp !== null && bank.change_bp !== 0 && (
-                        <span
-                          className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                            bank.change_bp > 0 ? "t-drop-bg t-drop" : "t-rise-bg t-rise"
-                          }`}
-                        >
-                          {bank.change_bp > 0 ? "+" : ""}{bank.change_bp}bp
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop: Table layout */}
-              <div className="hidden sm:block rounded-2xl border t-border t-card overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b t-elevated text-left text-xs t-text-secondary">
-                      <th className="px-4 py-3">은행명</th>
-                      <th className="px-4 py-3 text-right">최저금리</th>
-                      <th className="px-4 py-3 text-right">변동</th>
-                      <th className="px-4 py-3 text-right">기준일</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedBankRates.map((bank) => (
-                      <tr key={bank.rate_type} className="border-b t-border last:border-0">
-                        <td className="px-4 py-3 font-medium t-text">
-                          {BANK_LABELS[bank.rate_type] ?? bank.rate_type.replace(/^BANK_/, "").replace(/_/g, " ")}
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold tabular-nums t-text">
-                          {bank.rate_value}%
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {bank.change_bp !== null && bank.change_bp !== 0 ? (
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
-                                bank.change_bp > 0
-                                  ? "t-drop-bg t-drop"
-                                  : "t-rise-bg t-rise"
-                              }`}
-                            >
-                              {bank.change_bp > 0 ? "+" : ""}{bank.change_bp}bp
-                            </span>
-                          ) : (
-                            <span className="t-text-tertiary">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right t-text-tertiary">
-                          {bank.base_date}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <BankRateExpandable banks={bankItems} sourceDate={sortedBankRates[0]?.base_date ?? ""} />
             </section>
           )}
-
-          <section className="mt-10">
-            <h2 className="mb-4 text-lg font-bold t-text">최근 금리 변동 이력</h2>
-            {/* Mobile: Card layout */}
-            <div className="space-y-2 sm:hidden">
-              {RATE_ORDER.map((type) => {
-                const rate = latestByType.get(type);
-                if (!rate) return null;
-                return (
-                  <div key={type} className="rounded-xl border t-border t-card px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium t-text text-sm">{RATE_LABELS[type]}</p>
-                      <p className="text-sm font-bold tabular-nums t-text shrink-0">{rate.rate_value}%</p>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-xs t-text-tertiary">
-                      <span>이전 {rate.prev_value !== null ? `${rate.prev_value}%` : "-"}</span>
-                      {rate.change_bp !== null && rate.change_bp !== 0 && (
-                        <span
-                          className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                            rate.change_bp > 0 ? "t-drop-bg t-drop" : "t-rise-bg t-rise"
-                          }`}
-                        >
-                          {rate.change_bp > 0 ? "▲" : "▼"} {Math.abs(rate.change_bp)}bp
-                        </span>
-                      )}
-                      <span className="ml-auto">{rate.base_date}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Desktop: Table layout */}
-            <div className="hidden sm:block rounded-2xl border t-border t-card overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b t-elevated text-left text-xs t-text-secondary">
-                    <th className="px-4 py-3">지표</th>
-                    <th className="px-4 py-3 text-right">현재</th>
-                    <th className="px-4 py-3 text-right">이전</th>
-                    <th className="px-4 py-3 text-right">변동</th>
-                    <th className="px-4 py-3 text-right">기준일</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {RATE_ORDER.map((type) => {
-                    const rate = latestByType.get(type);
-                    if (!rate) return null;
-                    return (
-                      <tr key={type} className="border-b t-border last:border-0">
-                        <td className="px-4 py-3 font-medium t-text">
-                          {RATE_LABELS[type]}
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold tabular-nums t-text">
-                          {rate.rate_value}%
-                        </td>
-                        <td className="px-4 py-3 text-right t-text-tertiary tabular-nums">
-                          {rate.prev_value !== null ? `${rate.prev_value}%` : "-"}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {rate.change_bp !== null && rate.change_bp !== 0 ? (
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
-                                rate.change_bp > 0
-                                  ? "t-drop-bg t-drop"
-                                  : "t-rise-bg t-rise"
-                              }`}
-                            >
-                              {rate.change_bp > 0 ? "▲" : "▼"}{" "}
-                              {Math.abs(rate.change_bp)}bp
-                            </span>
-                          ) : (
-                            <span className="t-text-tertiary">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right t-text-tertiary">
-                          {rate.base_date}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
         </>
       ) : (
         <div className="rounded-2xl border-2 border-dashed t-border p-12 text-center">
@@ -412,54 +307,6 @@ export default async function RateDashboardPage() {
           </div>
         </Link>
       </div>
-    </div>
-  );
-}
-
-function RateDetailCard({
-  label,
-  description,
-  value,
-  changeBp,
-  baseDate,
-  history,
-}: {
-  label: string;
-  description: string;
-  value: number;
-  changeBp: number | null;
-  baseDate: string;
-  history: Array<{ date: string; value: number }>;
-}) {
-  return (
-    <div className="card-hover rounded-2xl border t-border t-card p-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium t-text-secondary">{label}</p>
-          <p className="mt-1 text-3xl font-extrabold tabular-nums t-text">{value}%</p>
-        </div>
-        {changeBp !== null && changeBp !== 0 && (
-          <span
-            className={`mt-1 inline-flex items-center rounded-full px-2 py-1 text-xs font-bold ${
-              changeBp > 0 ? "t-drop-bg t-drop" : "t-rise-bg t-rise"
-            }`}
-          >
-            {changeBp > 0 ? "▲" : "▼"} {Math.abs(changeBp)}bp
-          </span>
-        )}
-      </div>
-      <p className="mt-1 text-xs t-text-tertiary">{description}</p>
-      <p className="mt-0.5 text-[11px] t-text-tertiary">기준일: {baseDate}</p>
-
-      {history.length > 1 && (
-        <div className="mt-3">
-          <MiniAreaChart
-            data={history.slice(-12).map((h) => ({ value: h.value }))}
-            color={changeBp !== null && changeBp > 0 ? "#ef4444" : "#059669"}
-            height={48}
-          />
-        </div>
-      )}
     </div>
   );
 }
