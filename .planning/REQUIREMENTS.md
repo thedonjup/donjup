@@ -25,10 +25,10 @@
 
 ## 지역 지수 (INDEX)
 
-- [ ] **INDEX-01**: 지역 군집(강남3구, 마용성, 노도강, 수도권 주요 등)을 정의하고 군집별 중위가 지수를 산출한다
-- [ ] **INDEX-02**: 군집별 지수의 시계열 차트를 제공한다 (기준시점 = 데이터 최초일 100)
+- [x] **INDEX-01**: 지역 군집(강남3구, 마용성, 노도강, 수도권 주요 등)을 정의하고 군집별 중위가 지수를 산출한다
+- [x] **INDEX-02**: 군집별 지수의 시계열 차트를 제공한다 (기준시점 = 데이터 최초일 100)
 - [x] **INDEX-03**: 시도/시군구 단위 평균 매매가·중위가를 지역별 시세 페이지에 표시한다
-- [ ] **INDEX-04**: 군집 지수 페이지를 신규 생성하여 S&P500 스타일 대시보드를 제공한다
+- [x] **INDEX-04**: 군집 지수 페이지를 신규 생성하여 S&P500 스타일 대시보드를 제공한다
 
 ## 금리 표현 (RATE)
 
@@ -63,10 +63,10 @@
 | RANK-01 | Phase 14 | Complete |
 | RANK-02 | Phase 14 | Complete |
 | RANK-03 | Phase 14 | Complete |
-| INDEX-01 | Phase 15 | Pending |
-| INDEX-02 | Phase 15 | Pending |
+| INDEX-01 | Phase 15 | Complete |
+| INDEX-02 | Phase 15 | Complete |
 | INDEX-03 | Phase 15 | Complete |
-| INDEX-04 | Phase 15 | Pending |
+| INDEX-04 | Phase 15 | Complete |
 
 ## Future Requirements (v1.2+)
 

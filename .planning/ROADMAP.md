@@ -111,7 +111,7 @@ Plans:
 
 
 Plans:
-- [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
+- [x] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
 - [x] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
 
 **UI hint**: yes
@@ -133,7 +133,7 @@ Plans:
 
 Plans:
 - [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
-- [ ] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
+- [x] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
 
 **UI hint**: yes
 
@@ -225,7 +225,7 @@ Plans:
 | 12. 금리 표현 개선 | v1.1 | 2/2 | Complete    | 2026-03-28 |
 | 13. 차트 개선 | v1.1 | 2/2 | Complete    | 2026-03-28 |
 | 14. 랭킹 정교화 | v1.1 | 1/1 | Complete    | 2026-03-28 |
-| 15. 지역 지수 대시보드 | v1.1 | 1/2 | In Progress|  |
+| 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete   | 2026-03-28 |
 
 ---
 *Roadmap created: 2026-03-26 (v1.0)*

@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: 데이터 분석 고도화
 current_phase: 15
-status: executing
-stopped_at: Completed 15-02-PLAN.md
-last_updated: "2026-03-28T04:54:11.015Z"
+status: verifying
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-03-28T04:56:51.874Z"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 15
 **Milestone:** v1.1 — 데이터 분석 고도화
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 
 ## Current Position
 
@@ -86,10 +86,12 @@ None.
 - [Phase 14-ranking-refinement]: Use highest_price as median proxy for suspicious direct deal detection in ranking context (no per-complex median available)
 - [Phase 14-ranking-refinement]: Re-sort drops by change_rate ASC after applyRankingNormalization so adjusted rankings reflect true severity order
 - [Phase 15]: PriceRow typed locally in market pages to satisfy strict no-implicit-any TypeScript config
+- [Phase 15]: CLUSTER_DEFINITIONS 4 clusters: gangnam3/mayongseong/nodogang/sudobukmain with correct 수지구=41465
+- [Phase 15]: computeClusterIndex: isDirectDeal() filter only at cluster level (no floor adjust needed)
 
 ## Last Session
 
-Stopped at: Completed 15-02-PLAN.md
+Stopped at: Completed 15-01-PLAN.md
 Last updated: 2026-03-28T18:13:00Z
 
 ---
