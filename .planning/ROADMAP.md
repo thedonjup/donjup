@@ -123,7 +123,7 @@ Plans:
 
 Plans:
 - [x] 11-01-PLAN.md — sizePriceMap 확장 + GAP 지표 카드 + Row 2 StatCard 제거
-- [ ] 11-02-PLAN.md — 전세가율 추이 차트 (JeonseRatioChart 컴포넌트)
+- [x] 11-02-PLAN.md — 전세가율 추이 차트 (JeonseRatioChart 컴포넌트)
 
 **UI hint**: yes
 
@@ -187,7 +187,7 @@ Plans:
 | 8. 보안 강화 | v1.0 | 2/2 | Complete | 2026-03-27 |
 | 9. 모바일 UI 전면 개편 | v1.0 | 3/3 | Complete | 2026-03-28 |
 | 10. 가격 정규화 엔진 | v1.1 | 3/3 | Complete   | 2026-03-27 |
-| 11. 전세가율·갭 분석 | v1.1 | 1/2 | In Progress|  |
+| 11. 전세가율·갭 분석 | v1.1 | 2/2 | Complete   | 2026-03-28 |
 | 12. 금리 표현 개선 | v1.1 | 0/? | Not started | - |
 | 13. 차트 개선 | v1.1 | 0/? | Not started | - |
 | 14. 랭킹 정교화 | v1.1 | 0/? | Not started | - |
