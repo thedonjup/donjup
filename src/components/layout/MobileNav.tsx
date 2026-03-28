@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/today", label: "오늘의 거래" },
   { href: "/new-highs", label: "오늘의 신고가" },
   { href: "/market", label: "지역별 시세" },
+  { href: "/index", label: "지역 지수" },
   { href: "/rent", label: "전월세" },
   { href: "/trend", label: "트렌드" },
   { href: "/rate", label: "금리 현황" },
