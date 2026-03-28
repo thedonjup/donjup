@@ -217,7 +217,10 @@ Plans:
   1. 프로덕션 코드(`src/` 내)에서 `as any` 캐스트가 5개 미만이다
   2. ESLint `no-unused-vars` / `no-unused-imports` 규칙 위반이 0건이다
   3. DB 연결 패턴이 Drizzle 단일 패턴으로 통일되어 createClient, createRentServiceClient, getPool 패턴이 코드베이스에 존재하지 않는다
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 19-01-PLAN.md — unused imports 제거 + as any 수정 + 레거시 DB 패턴 확인 (CLEAN-01, CLEAN-02, CLEAN-03)
 
 ---
 
@@ -243,7 +246,7 @@ Plans:
 | 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete    | 2026-03-28 |
 | 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete    | 2026-03-28 |
 | 18. Drizzle ORM 교체 | v1.2 | 4/4 | Complete    | 2026-03-28 |
-| 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |
+| 19. 코드 정리 | v1.2 | 0/1 | Planning    | - |
 
 ---
 *Roadmap created: 2026-03-26 (v1.0)*
