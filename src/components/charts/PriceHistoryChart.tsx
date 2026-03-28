@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Customized,
 } from "recharts";
+import type { RatioPoint } from "@/components/apt/AptDetailClient";
 
 // ────────────────────────────────────────────────────────────────
 // Types
@@ -36,6 +37,9 @@ interface PriceHistoryChartProps {
   normalDots: ChartTransaction[];
   directDealDots: ChartTransaction[];
   trendLine: TrendPoint[];
+  rentTrendLine?: TrendPoint[];       // jeonse trend line
+  jeonseRatioLine?: RatioPoint[];     // ratio overlay
+  showJeonseRatio?: boolean;          // overlay toggle
   sizeUnit?: "sqm" | "pyeong";
 }
 
@@ -151,6 +155,17 @@ function dashedTrendData(trendLine: TrendPoint[]) {
   }));
 }
 
+// Map jeonse ratio points to chart-compatible format
+function ratioLineData(ratioPoints: RatioPoint[]) {
+  return ratioPoints.map((p) => ({
+    x: `${p.month}-15`,
+    y: p.ratio,
+    month: p.month,
+    isLowConfidence: p.isLowConfidence,
+    ratio: p.ratio,
+  }));
+}
+
 // ────────────────────────────────────────────────────────────────
 // Tooltip
 // ────────────────────────────────────────────────────────────────
@@ -158,6 +173,7 @@ function dashedTrendData(trendLine: TrendPoint[]) {
 interface TooltipPayloadEntry {
   name?: string;
   dataKey?: string;
+  stroke?: string;
   payload?: {
     trade_date?: string;
     trade_price?: number;
@@ -170,6 +186,7 @@ interface TooltipPayloadEntry {
     count?: number;
     isLowConfidence?: boolean;
     month?: string;
+    ratio?: number;
   };
   value?: number;
 }
@@ -216,9 +233,31 @@ function CustomTooltip({
     );
   }
 
+  // Ratio tooltip (orange line — entry stroke is #F97316)
+  if (data.month && data.ratio !== undefined) {
+    const confidenceLabel = data.isLowConfidence ? " (낮은 신뢰도)" : "";
+    return (
+      <div
+        className="rounded-xl px-3 py-2 text-xs shadow-lg"
+        style={{
+          background: "var(--color-surface-card)",
+          border: "1px solid var(--color-border)",
+        }}
+      >
+        <p style={{ color: "var(--color-text-tertiary)" }}>
+          {data.month}{confidenceLabel}
+        </p>
+        <p className="mt-0.5 font-bold" style={{ color: "#F97316" }}>
+          전세가율: {data.ratio.toFixed(1)}%
+        </p>
+      </div>
+    );
+  }
+
   // Trend line tooltip
   if (data.month) {
     const confidenceLabel = data.isLowConfidence ? " (낮은 신뢰도)" : "";
+    const isRentLine = entry.stroke === "#3B82F6";
     return (
       <div
         className="rounded-xl px-3 py-2 text-xs shadow-lg"
@@ -231,7 +270,7 @@ function CustomTooltip({
           {data.month} · {data.count}건{confidenceLabel}
         </p>
         <p className="mt-0.5 font-bold" style={{ color: "var(--color-text-primary)" }}>
-          3개월 이동중위가: {formatPrice(data.median ?? 0)}
+          {isRentLine ? "전세 이동중위가" : "3개월 이동중위가"}: {formatPrice(data.median ?? 0)}
         </p>
       </div>
     );
@@ -248,10 +287,16 @@ export default function PriceHistoryChart({
   normalDots,
   directDealDots,
   trendLine,
+  rentTrendLine,
+  jeonseRatioLine,
+  showJeonseRatio = false,
   sizeUnit = "sqm",
 }: PriceHistoryChartProps) {
   const allDots = [...normalDots, ...directDealDots];
   if (allDots.length < 2 && trendLine.length < 2) return null;
+
+  const hasRentTrend = (rentTrendLine?.length ?? 0) >= 2;
+  const hasRatioOverlay = showJeonseRatio && (jeonseRatioLine?.length ?? 0) >= 2;
 
   // Compute Y domain from all prices
   const allPrices = [
@@ -259,6 +304,7 @@ export default function PriceHistoryChart({
     ...directDealDots.map((d) => d.trade_price),
     ...directDealDots.filter((d) => d.prevPrice).map((d) => d.prevPrice as number),
     ...trendLine.map((d) => d.median),
+    ...(rentTrendLine ?? []).map((d) => d.median),
   ].filter(Boolean);
 
   const minP = allPrices.length ? Math.min(...allPrices) : 0;
@@ -272,6 +318,9 @@ export default function PriceHistoryChart({
   // Build unified X-axis tick pool (all dates + trend mid-month dates)
   const solidData = solidTrendData(trendLine);
   const dashedData = dashedTrendData(trendLine);
+  const solidRentData = hasRentTrend ? solidTrendData(rentTrendLine!) : [];
+  const dashedRentData = hasRentTrend ? dashedTrendData(rentTrendLine!) : [];
+  const ratioChartData = hasRatioOverlay ? ratioLineData(jeonseRatioLine!) : [];
 
   // Determine chart area accessibility summary
   const firstDate = allDots.length
@@ -293,12 +342,21 @@ export default function PriceHistoryChart({
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold t-text">가격 추이</h2>
-        <span
-          className="text-[10px]"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          3개월 이동중위가
-        </span>
+        <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-0.5 bg-[#059669]" />매매 추이
+          </span>
+          {hasRentTrend && (
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-0.5 bg-[#3B82F6]" />전세 추이
+            </span>
+          )}
+          {hasRatioOverlay && (
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-0.5 border-t-2 border-dashed border-[#F97316]" />전세가율
+            </span>
+          )}
+        </div>
       </div>
 
       <p className="sr-only">
@@ -307,7 +365,7 @@ export default function PriceHistoryChart({
 
       <div className="h-[280px] sm:h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+          <ComposedChart margin={{ top: 5, right: hasRatioOverlay ? 45 : 5, bottom: 5, left: 5 }}>
             <XAxis
               dataKey="trade_date"
               type="category"
@@ -319,6 +377,7 @@ export default function PriceHistoryChart({
               tickFormatter={formatDateLabel}
             />
             <YAxis
+              yAxisId={0}
               tick={{ fontSize: 11, fill: "var(--color-text-tertiary)" }}
               axisLine={false}
               tickLine={false}
@@ -326,10 +385,23 @@ export default function PriceHistoryChart({
               width={60}
               domain={yDomain}
             />
+            {showJeonseRatio && (
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                domain={[0, 100]}
+                tickFormatter={(v: number) => `${v}%`}
+                tick={{ fontSize: 11, fill: "var(--color-text-tertiary)" }}
+                axisLine={false}
+                tickLine={false}
+                width={40}
+              />
+            )}
             <Tooltip content={<CustomTooltip sizeUnit={sizeUnit} />} />
 
             {/* Normal transaction dots — green */}
             <Scatter
+              yAxisId={0}
               data={normalDots}
               fill="#059669"
               opacity={0.7}
@@ -338,14 +410,16 @@ export default function PriceHistoryChart({
 
             {/* Direct deal dots — gray transparent */}
             <Scatter
+              yAxisId={0}
               data={directDealDots}
               fill="#9CA3AF"
               opacity={0.4}
               shape={<circle r={3} />}
             />
 
-            {/* Trend line solid segments (high-confidence months) */}
+            {/* Sale trend line solid segments (high-confidence months) */}
             <Line
+              yAxisId={0}
               data={solidData}
               type="monotone"
               dataKey="y"
@@ -357,8 +431,9 @@ export default function PriceHistoryChart({
               isAnimationActive={false}
             />
 
-            {/* Trend line dashed segments (low-confidence months) */}
+            {/* Sale trend line dashed segments (low-confidence months) */}
             <Line
+              yAxisId={0}
               data={dashedData}
               type="monotone"
               dataKey="y"
@@ -370,6 +445,55 @@ export default function PriceHistoryChart({
               connectNulls={false}
               isAnimationActive={false}
             />
+
+            {/* Rent trend line solid segments (high-confidence months) */}
+            {hasRentTrend && (
+              <Line
+                yAxisId={0}
+                data={solidRentData}
+                type="monotone"
+                dataKey="y"
+                stroke="#3B82F6"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 5, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            )}
+
+            {/* Rent trend line dashed segments (low-confidence months) */}
+            {hasRentTrend && (
+              <Line
+                yAxisId={0}
+                data={dashedRentData}
+                type="monotone"
+                dataKey="y"
+                stroke="#3B82F6"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                activeDot={false}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            )}
+
+            {/* Jeonse ratio overlay (orange dashed, right Y-axis) */}
+            {hasRatioOverlay && (
+              <Line
+                data={ratioChartData}
+                yAxisId="right"
+                type="monotone"
+                dataKey="y"
+                stroke="#F97316"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            )}
 
             {/* Direct deal connectors — dashed gray vertical lines */}
             <Customized
