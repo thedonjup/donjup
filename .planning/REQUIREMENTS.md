@@ -30,20 +30,20 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| TEST-01 | TBD | Pending |
-| TEST-02 | TBD | Pending |
-| TEST-03 | TBD | Pending |
-| TEST-04 | TBD | Pending |
-| TEST-05 | TBD | Pending |
-| ORM-01 | TBD | Pending |
-| ORM-02 | TBD | Pending |
-| ORM-03 | TBD | Pending |
-| ORM-04 | TBD | Pending |
-| ORM-05 | TBD | Pending |
-| ORM-06 | TBD | Pending |
-| CLEAN-01 | TBD | Pending |
-| CLEAN-02 | TBD | Pending |
-| CLEAN-03 | TBD | Pending |
+| TEST-01 | Phase 16 | Pending |
+| TEST-02 | Phase 16 | Pending |
+| TEST-03 | Phase 16 | Pending |
+| TEST-04 | Phase 17 | Pending |
+| TEST-05 | Phase 17 | Pending |
+| ORM-01 | Phase 18 | Pending |
+| ORM-02 | Phase 18 | Pending |
+| ORM-03 | Phase 18 | Pending |
+| ORM-04 | Phase 18 | Pending |
+| ORM-05 | Phase 18 | Pending |
+| ORM-06 | Phase 18 | Pending |
+| CLEAN-01 | Phase 19 | Pending |
+| CLEAN-02 | Phase 19 | Pending |
+| CLEAN-03 | Phase 19 | Pending |
 
 ## Future Requirements (v2.0+)
 

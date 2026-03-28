@@ -4,6 +4,7 @@
 
 - ✅ **v1.0 사이트 안정화** - Phases 1-9 (shipped 2026-03-28)
 - ✅ **v1.1 데이터 분석 고도화** - Phases 10-15 (shipped 2026-03-28)
+- 🚧 **v1.2 코드 품질 강화** - Phases 16-19 (in progress)
 
 ## Phases
 
@@ -84,106 +85,55 @@ Plans:
 
 </details>
 
----
-
-### v1.1 데이터 분석 고도화 (In Progress)
-
-**Milestone Goal:** 가격 노이즈 제거 + 일관된 추이/지수 제공 + 업계 기본 지표 추가로 사용자가 시장을 정확히 읽게 한다
-
-## Phase Details
+<details>
+<summary>✅ v1.1 데이터 분석 고도화 (Phases 10-15) - SHIPPED 2026-03-28</summary>
 
 ### Phase 10: 가격 정규화 엔진
 **Goal**: 차트가 노이즈 없는 정확한 가격 추이를 보여준다 — 저층 거래 보정, 이상거래 자동 제거, 3개월 이동중위가 기반
 **Depends on**: Phase 9 (v1.0 완료)
 **Requirements**: NORM-01, NORM-02, NORM-03, NORM-04, NORM-05
-**Success Criteria** (what must be TRUE):
-  1. 차트에서 "전체 면적" 탭이 사라지고 면적별 탭만 표시된다
-  2. 저층 거래는 기본적으로 고층 환산가로 보정되어 차트에 반영된다
-  3. "저층 포함/제외" 토글로 저층 거래 원가를 다시 볼 수 있다
-  4. 차트 추이선이 원 거래가 점이 아닌 3개월 이동중위가 기반 선으로 표시된다
-  5. 직거래 + 시세 대비 30% 이상 저가 거래는 차트에서 자동으로 제외된다
-**Plans**: 3 plans
+**Plans**: 3/3 plans complete
 
 Plans:
 - [x] 10-01-PLAN.md — 가격 정규화 유틸 모듈 + 전체 면적 탭 제거
 - [x] 10-02-PLAN.md — 차트 재구성 (거래점+추이선+직거래 표시) + 저층 토글
 - [x] 10-03-PLAN.md — [GAP] NORM-02 저층 거래 고층 환산가 보정
 
-
-Plans:
-- [x] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
-- [x] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
-
-**UI hint**: yes
-
 ### Phase 11: 전세가율·갭 분석
 **Goal**: 아파트 상세 페이지에서 투자자가 갭 리스크를 즉시 파악할 수 있다
 **Depends on**: Phase 9 (v1.0 완료, 독립적)
 **Requirements**: GAP-01, GAP-02, GAP-03
-**Success Criteria** (what must be TRUE):
-  1. 아파트 상세 페이지에서 면적별 전세가율(%) 수치가 표시된다
-  2. 아파트 상세 페이지에서 면적별 갭 금액(매매가 - 전세가)이 표시된다
-  3. 면적별 전세가율 추이 차트를 볼 수 있다
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
 - [x] 11-01-PLAN.md — sizePriceMap 확장 + GAP 지표 카드 + Row 2 StatCard 제거
 - [x] 11-02-PLAN.md — 전세가율 추이 차트 (JeonseRatioChart 컴포넌트)
 
-
-Plans:
-- [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
-- [x] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
-
-**UI hint**: yes
-
 ### Phase 12: 금리 표현 개선
 **Goal**: 금리 페이지가 핵심 정보를 즉시 보여주고 상세는 요청 시에만 펼쳐진다
 **Depends on**: Phase 9 (v1.0 완료, 독립적)
 **Requirements**: RATE-01, RATE-02, RATE-03
-**Success Criteria** (what must be TRUE):
-  1. 금리 페이지 초기 화면에 시중금리 평균값 1개만 대표로 표시된다
-  2. 기준금리·COFIX 등 세부 지표는 펼침(accordion) 또는 상세 영역으로 분리된다
-  3. 은행별 상세 금리는 터치/클릭 시 확장되는 형태로 표시된다
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
 - [x] 12-01-PLAN.md — RateIndicatorAccordion + BankRateExpandable 클라이언트 컴포넌트 생성
 - [x] 12-02-PLAN.md — page.tsx 재구성: 히어로 카드 + accordion + 확장 은행 테이블
 
-
-Plans:
-- [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
-- [ ] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
-
-**UI hint**: yes
-
 ### Phase 13: 차트 개선
 **Goal**: 사용자가 원하는 기간과 지표 조합으로 가격 추이를 분석할 수 있다
 **Depends on**: Phase 10 (정규화 엔진 완료 후 차트에 적용)
 **Requirements**: CHART-01, CHART-02, CHART-03
-**Success Criteria** (what must be TRUE):
-  1. 차트 상단에 1개월/3개월/6개월/1년/전체 기간 탭이 존재하고 전환된다
-  2. 면적별 차트에서 매매가 선과 전세가 선이 동시에 표시된다 (듀얼 라인)
-  3. 전세가율 오버레이 라인을 차트에서 켜고 끌 수 있다 (2차 Y축)
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
 - [x] 13-01-PLAN.md — 기간 탭 + 날짜 필터링 + rentTrendLine/jeonseRatioLine 데이터 계산
 - [x] 13-02-PLAN.md — PriceHistoryChart 듀얼 라인 + 듀얼 Y축 + JeonseRatioChart 삭제
 
-**UI hint**: yes
-
-
 ### Phase 14: 랭킹 정교화
 **Goal**: 폭락·신고가 랭킹이 저층 노이즈와 이상거래를 제거한 신뢰할 수 있는 순위를 보여준다
 **Depends on**: Phase 10 (층별 보정 로직 완료 후 랭킹에 적용)
 **Requirements**: RANK-01, RANK-02, RANK-03
-**Success Criteria** (what must be TRUE):
-  1. 랭킹의 변동률이 층별 보정 후 고층 환산 기준으로 산출된다
-  2. 직거래 저가·이상거래로 의심되는 거래는 랭킹 산정에서 자동 제외된다
-  3. 랭킹 리스트에서 저층 거래는 "저층" 라벨이 표시되고 변동률은 고층 환산값으로 보인다
-**Plans**: 1 plan
+**Plans**: 1/1 plans complete
 
 Plans:
 - [x] 14-01-PLAN.md — 랭킹 정규화 (고층 환산 + 이상거래 필터 + 저층 뱃지)
@@ -192,18 +142,68 @@ Plans:
 **Goal**: 사용자가 강남3구·마용성·노도강 등 군집별 가격 흐름을 S&P500 스타일 대시보드로 파악할 수 있다
 **Depends on**: Phase 10 (정규화 로직 — 저층 제외, 이상거래 필터 공유)
 **Requirements**: INDEX-01, INDEX-02, INDEX-03, INDEX-04
-**Success Criteria** (what must be TRUE):
-  1. 강남3구·마용성·노도강 등 군집별 중위가 지수가 기준시점 100으로 산출된다
-  2. 군집별 지수의 시계열 차트(월별)를 볼 수 있다
-  3. 시도·시군구 단위 평균 매매가·중위가가 지역별 시세 페이지에 표시된다
-  4. 신규 지역 지수 페이지(`/index` 또는 `/market`)가 존재하고 대시보드 형태로 모든 군집 지수를 보여준다
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
-- [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
-- [ ] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
+- [x] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
+- [x] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
 
-**UI hint**: yes
+</details>
+
+---
+
+### 🚧 v1.2 코드 품질 강화 (In Progress)
+
+**Milestone Goal:** 테스트 인프라 구축 + ORM 교체 + 코드 품질 기반 정비로 장기 유지보수성을 확보한다
+
+- [ ] **Phase 16: 테스트 인프라 기반** - Vitest 설정 + 핵심 유틸 유닛 테스트
+- [ ] **Phase 17: 통합 테스트 & E2E** - API 통합 테스트 + Playwright E2E 기반
+- [ ] **Phase 18: Drizzle ORM 교체** - 전체 DB 접근 Drizzle 단일 패턴으로 교체
+- [ ] **Phase 19: 코드 정리** - as any 제거, 미사용 import 0건, 연결 패턴 통일
+
+## Phase Details
+
+### Phase 16: 테스트 인프라 기반
+**Goal**: 개발자가 `npm test`로 핵심 비즈니스 로직의 정확성을 즉시 검증할 수 있다
+**Depends on**: Phase 15 (v1.1 완료)
+**Requirements**: TEST-01, TEST-02, TEST-03
+**Success Criteria** (what must be TRUE):
+  1. `npm test`를 실행하면 Vitest가 동작하고 전체 테스트 결과가 터미널에 출력된다
+  2. price-normalization.ts의 adjustFloorPrice, filterTransactions 등 exported 함수 각각에 대해 입력/출력을 검증하는 유닛 테스트가 존재한다
+  3. computeClusterIndex 함수에 대해 군집 계산 결과를 검증하는 유닛 테스트가 존재한다
+  4. CI 환경에서 테스트가 실패하면 빌드도 실패한다 (test script이 non-zero exit)
+**Plans**: TBD
+
+### Phase 17: 통합 테스트 & E2E
+**Goal**: API 라우트가 실제 DB 응답을 올바르게 처리하는지 검증되고, 브라우저에서 기본 사용자 흐름이 자동 테스트된다
+**Depends on**: Phase 16 (Vitest 환경 확립 후)
+**Requirements**: TEST-04, TEST-05
+**Success Criteria** (what must be TRUE):
+  1. fetch-transactions, fetch-rents, fetch-bank-rates API 라우트 각각에 대해 응답 구조와 에러 케이스를 검증하는 통합 테스트가 존재한다
+  2. Playwright가 설치되어 홈 페이지(`/`)가 성공적으로 로드되는 E2E 테스트가 `npm run test:e2e`로 실행된다
+  3. 홈 → 검색 → 아파트 상세 기본 네비게이션이 E2E 테스트로 커버된다
+**Plans**: TBD
+
+### Phase 18: Drizzle ORM 교체
+**Goal**: 모든 DB 접근이 타입 안전한 Drizzle 쿼리로 통일되어 raw SQL과 복수 클라이언트 패턴이 제거된다
+**Depends on**: Phase 15 (v1.1 완료, Phase 16/17과 병렬 가능)
+**Requirements**: ORM-01, ORM-02, ORM-03, ORM-04, ORM-05, ORM-06
+**Success Criteria** (what must be TRUE):
+  1. `import { db } from '@/lib/db'` 단일 진입점으로 모든 DB 쿼리가 실행된다
+  2. apt_transactions, apt_rent_transactions, finance_rates, apt_complexes 테이블 각각에 대해 Drizzle 스키마가 정의되어 있다
+  3. 코드베이스에서 `getPool().query(`, `createClient(`, `createRentServiceClient(` 호출이 0건이다
+  4. 기존과 동일한 데이터를 반환하면서 모든 페이지가 정상 동작한다 (배포 후 회귀 없음)
+**Plans**: TBD
+
+### Phase 19: 코드 정리
+**Goal**: 프로덕션 코드에서 타입 안전하지 않은 패턴과 미사용 코드가 제거되어 코드베이스가 깔끔하다
+**Depends on**: Phase 18 (ORM 교체 완료 후 — CLEAN-03이 ORM 단일화에 의존)
+**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03
+**Success Criteria** (what must be TRUE):
+  1. 프로덕션 코드(`src/` 내)에서 `as any` 캐스트가 5개 미만이다
+  2. ESLint `no-unused-vars` / `no-unused-imports` 규칙 위반이 0건이다
+  3. DB 연결 패턴이 Drizzle 단일 패턴으로 통일되어 createClient, createRentServiceClient, getPool 패턴이 코드베이스에 존재하지 않는다
+**Plans**: TBD
 
 ---
 
@@ -220,13 +220,18 @@ Plans:
 | 7. 접근성 (a11y) | v1.0 | 2/2 | Complete | 2026-03-27 |
 | 8. 보안 강화 | v1.0 | 2/2 | Complete | 2026-03-27 |
 | 9. 모바일 UI 전면 개편 | v1.0 | 3/3 | Complete | 2026-03-28 |
-| 10. 가격 정규화 엔진 | v1.1 | 3/3 | Complete   | 2026-03-27 |
-| 11. 전세가율·갭 분석 | v1.1 | 2/2 | Complete    | 2026-03-28 |
-| 12. 금리 표현 개선 | v1.1 | 2/2 | Complete    | 2026-03-28 |
-| 13. 차트 개선 | v1.1 | 2/2 | Complete    | 2026-03-28 |
-| 14. 랭킹 정교화 | v1.1 | 1/1 | Complete    | 2026-03-28 |
-| 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete    | 2026-03-28 |
+| 10. 가격 정규화 엔진 | v1.1 | 3/3 | Complete | 2026-03-27 |
+| 11. 전세가율·갭 분석 | v1.1 | 2/2 | Complete | 2026-03-28 |
+| 12. 금리 표현 개선 | v1.1 | 2/2 | Complete | 2026-03-28 |
+| 13. 차트 개선 | v1.1 | 2/2 | Complete | 2026-03-28 |
+| 14. 랭킹 정교화 | v1.1 | 1/1 | Complete | 2026-03-28 |
+| 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete | 2026-03-28 |
+| 16. 테스트 인프라 기반 | v1.2 | 0/TBD | Not started | - |
+| 17. 통합 테스트 & E2E | v1.2 | 0/TBD | Not started | - |
+| 18. Drizzle ORM 교체 | v1.2 | 0/TBD | Not started | - |
+| 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-26 (v1.0)*
 *v1.1 phases added: 2026-03-28*
+*v1.2 phases added: 2026-03-28*
