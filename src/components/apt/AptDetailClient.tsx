@@ -2,6 +2,7 @@
 
 import { useState, useMemo, createContext, useContext } from "react";
 import PriceHistoryChart from "@/components/charts/PriceHistoryChart";
+import JeonseRatioChart from "@/components/charts/JeonseRatioChart";
 import TransactionTabs from "@/components/apt/TransactionTabs";
 import {
   filterTransactions,
@@ -213,6 +214,17 @@ export default function AptDetailClient({
     });
   }, [directDeals, normal]);
 
+  // Size-filtered txns for JeonseRatioChart (reduces chart re-computation)
+  const selectedSizeRentTxns = useMemo(() => {
+    if (!selectedSize) return [];
+    return rentTxns.filter((t) => t.size_sqm === selectedSize);
+  }, [rentTxns, selectedSize]);
+
+  const selectedSizeSaleTxns = useMemo(() => {
+    if (!selectedSize) return [];
+    return saleTxns.filter((t) => t.size_sqm === selectedSize);
+  }, [saleTxns, selectedSize]);
+
   function getJeonseRatioColor(ratio: number | null): string {
     if (ratio === null) return "var(--color-text-primary)";
     if (ratio >= 70) return "var(--color-semantic-drop)";     // red per D-09
@@ -342,6 +354,16 @@ export default function AptDetailClient({
               />
             </label>
           </div>
+        </div>
+      )}
+
+      {/* 전세가율 추이 차트 (D-10) */}
+      {selectedSize && selectedSizeRentTxns.length > 0 && (
+        <div className="mb-8">
+          <JeonseRatioChart
+            saleTxns={selectedSizeSaleTxns}
+            rentTxns={selectedSizeRentTxns}
+          />
         </div>
       )}
 
