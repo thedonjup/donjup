@@ -156,7 +156,7 @@ Plans:
 
 **Milestone Goal:** 테스트 인프라 구축 + ORM 교체 + 코드 품질 기반 정비로 장기 유지보수성을 확보한다
 
-- [ ] **Phase 16: 테스트 인프라 기반** - Vitest 설정 + 핵심 유틸 유닛 테스트
+- [x] **Phase 16: 테스트 인프라 기반** - Vitest 설정 + 핵심 유틸 유닛 테스트 (completed 2026-03-28)
 - [ ] **Phase 17: 통합 테스트 & E2E** - API 통합 테스트 + Playwright E2E 기반
 - [ ] **Phase 18: Drizzle ORM 교체** - 전체 DB 접근 Drizzle 단일 패턴으로 교체
 - [ ] **Phase 19: 코드 정리** - as any 제거, 미사용 import 0건, 연결 패턴 통일
@@ -176,7 +176,7 @@ Plans:
 
 Plans:
 - [x] 16-01-PLAN.md — Vitest 설치/설정 + price-normalization 유닛 테스트 (TEST-01, TEST-02)
-- [ ] 16-02-PLAN.md — computeClusterIndex 유닛 테스트 (TEST-03)
+- [x] 16-02-PLAN.md — computeClusterIndex 유닛 테스트 (TEST-03)
 
 ### Phase 17: 통합 테스트 & E2E
 **Goal**: API 라우트가 실제 DB 응답을 올바르게 처리하는지 검증되고, 브라우저에서 기본 사용자 흐름이 자동 테스트된다
@@ -230,7 +230,7 @@ Plans:
 | 13. 차트 개선 | v1.1 | 2/2 | Complete | 2026-03-28 |
 | 14. 랭킹 정교화 | v1.1 | 1/1 | Complete | 2026-03-28 |
 | 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete | 2026-03-28 |
-| 16. 테스트 인프라 기반 | v1.2 | 1/2 | In Progress|  |
+| 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete   | 2026-03-28 |
 | 17. 통합 테스트 & E2E | v1.2 | 0/TBD | Not started | - |
 | 18. Drizzle ORM 교체 | v1.2 | 0/TBD | Not started | - |
 | 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |

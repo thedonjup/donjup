@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: 코드 품질 강화
 current_phase: 16
-status: executing
-stopped_at: Completed 16-01-PLAN.md — vitest setup + price-normalization unit tests
-last_updated: "2026-03-28T12:44:30.546Z"
+status: verifying
+stopped_at: Completed 16-02-PLAN.md — computeClusterIndex unit tests
+last_updated: "2026-03-28T12:47:02.516Z"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 16
 **Milestone:** v1.2 — 코드 품질 강화
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 
 ## Current Position
 
@@ -66,10 +66,11 @@ None.
 (v1.1 decisions archived — see PROJECT.md Key Decisions)
 
 - [Phase 16]: vitest globals:false + environment:node for strict TypeScript safety in server-side unit tests
+- [Phase 16]: vi.mock('@/lib/db/client') hoisted by Vitest; mockPoolQuery helper centralizes Pool mock setup
 
 ## Last Session
 
-Stopped at: Completed 16-01-PLAN.md — vitest setup + price-normalization unit tests
+Stopped at: Completed 16-02-PLAN.md — computeClusterIndex unit tests
 Last updated: 2026-03-28
 
 ---
