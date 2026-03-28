@@ -32,7 +32,7 @@
 
 ## 금리 표현 (RATE)
 
-- [ ] **RATE-01**: 금리 초기 화면에 시중금리 평균값 1개만 대표로 표시한다 (은행별 주담대 평균)
+- [x] **RATE-01**: 금리 초기 화면에 시중금리 평균값 1개만 대표로 표시한다 (은행별 주담대 평균)
 - [x] **RATE-02**: 기준금리·COFIX 등 세부 지표는 펼침(accordion) 또는 상세 페이지로 이동한다
 - [x] **RATE-03**: 은행별 상세 금리는 터치/클릭 시 확장되는 형태로 변경한다
 
@@ -54,7 +54,7 @@
 | GAP-01 | Phase 11 | Complete |
 | GAP-02 | Phase 11 | Complete |
 | GAP-03 | Phase 11 | Complete |
-| RATE-01 | Phase 12 | Pending |
+| RATE-01 | Phase 12 | Complete |
 | RATE-02 | Phase 12 | Complete |
 | RATE-03 | Phase 12 | Complete |
 | CHART-01 | Phase 13 | Pending |
