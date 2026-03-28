@@ -201,7 +201,13 @@ Plans:
   2. apt_transactions, apt_rent_transactions, finance_rates, apt_complexes 테이블 각각에 대해 Drizzle 스키마가 정의되어 있다
   3. 코드베이스에서 `getPool().query(`, `createClient(`, `createRentServiceClient(` 호출이 0건이다
   4. 기존과 동일한 데이터를 반환하면서 모든 페이지가 정상 동작한다 (배포 후 회귀 없음)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Drizzle 설치 + 13 테이블 스키마 정의 + db 진입점 (ORM-01)
+- [ ] 18-02-PLAN.md — Server Component 페이지 17개 Drizzle 마이그레이션 (ORM-02, ORM-05)
+- [ ] 18-03-PLAN.md — API 라우트 + 크론잡 27개 Drizzle 마이그레이션 (ORM-02, ORM-03, ORM-04, ORM-05)
+- [ ] 18-04-PLAN.md — Raw SQL 8개 마이그레이션 + 레거시 삭제 + 테스트 업데이트 (ORM-06)
 
 ### Phase 19: 코드 정리
 **Goal**: 프로덕션 코드에서 타입 안전하지 않은 패턴과 미사용 코드가 제거되어 코드베이스가 깔끔하다
@@ -236,7 +242,7 @@ Plans:
 | 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete | 2026-03-28 |
 | 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete    | 2026-03-28 |
 | 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete    | 2026-03-28 |
-| 18. Drizzle ORM 교체 | v1.2 | 0/TBD | Not started | - |
+| 18. Drizzle ORM 교체 | v1.2 | 0/4 | Planning | - |
 | 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |
 
 ---
