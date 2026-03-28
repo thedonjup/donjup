@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: 데이터 분석 고도화
 current_phase: 15
-status: planning
-stopped_at: Phase 15 context gathered
-last_updated: "2026-03-28T04:34:11.604Z"
+status: executing
+stopped_at: Completed 15-02-PLAN.md
+last_updated: "2026-03-28T04:54:11.015Z"
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 12
+  completed_plans: 11
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 15
 **Milestone:** v1.1 — 데이터 분석 고도화
-**Status:** Ready to plan
+**Status:** Ready to execute
 
 ## Current Position
 
-Phase: 14 (ranking-refinement) — EXECUTING
-Plan: Not started
+Phase: 15 (regional-index-dashboard) — EXECUTING
+Plan: 2 of 2
 
 ## Active Phase
 
@@ -85,10 +85,11 @@ None.
 - [Phase 13-chart-improvement]: hasRatioOverlay guards both showJeonseRatio flag AND data length to avoid empty right axis render
 - [Phase 14-ranking-refinement]: Use highest_price as median proxy for suspicious direct deal detection in ranking context (no per-complex median available)
 - [Phase 14-ranking-refinement]: Re-sort drops by change_rate ASC after applyRankingNormalization so adjusted rankings reflect true severity order
+- [Phase 15]: PriceRow typed locally in market pages to satisfy strict no-implicit-any TypeScript config
 
 ## Last Session
 
-Stopped at: Phase 15 context gathered
+Stopped at: Completed 15-02-PLAN.md
 Last updated: 2026-03-28T18:13:00Z
 
 ---
