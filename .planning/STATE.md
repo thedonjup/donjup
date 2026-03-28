@@ -4,8 +4,8 @@ milestone: v1.2
 milestone_name: 코드 품질 강화
 current_phase: 17
 status: verifying
-stopped_at: Completed 17-01-PLAN.md — integration tests for fetch-bank-rates, fetch-rents, fetch-transactions
-last_updated: "2026-03-28T13:06:05.157Z"
+stopped_at: Completed 17-02-PLAN.md — Playwright E2E setup done
+last_updated: "2026-03-28T13:06:12.864Z"
 progress:
   total_phases: 4
   completed_phases: 2
@@ -73,7 +73,7 @@ None.
 
 ## Last Session
 
-Stopped at: Completed 17-01-PLAN.md — integration tests for fetch-bank-rates, fetch-rents, fetch-transactions
+Stopped at: Completed 17-02-PLAN.md — Playwright E2E setup done
 Last updated: 2026-03-28
 
 ---
