@@ -109,6 +109,11 @@ Plans:
 - [x] 10-02-PLAN.md — 차트 재구성 (거래점+추이선+직거래 표시) + 저층 토글
 - [x] 10-03-PLAN.md — [GAP] NORM-02 저층 거래 고층 환산가 보정
 
+
+Plans:
+- [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
+- [ ] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
+
 **UI hint**: yes
 
 ### Phase 11: 전세가율·갭 분석
@@ -125,6 +130,11 @@ Plans:
 - [x] 11-01-PLAN.md — sizePriceMap 확장 + GAP 지표 카드 + Row 2 StatCard 제거
 - [x] 11-02-PLAN.md — 전세가율 추이 차트 (JeonseRatioChart 컴포넌트)
 
+
+Plans:
+- [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
+- [ ] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
+
 **UI hint**: yes
 
 ### Phase 12: 금리 표현 개선
@@ -140,6 +150,11 @@ Plans:
 Plans:
 - [x] 12-01-PLAN.md — RateIndicatorAccordion + BankRateExpandable 클라이언트 컴포넌트 생성
 - [x] 12-02-PLAN.md — page.tsx 재구성: 히어로 카드 + accordion + 확장 은행 테이블
+
+
+Plans:
+- [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
+- [ ] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
 
 **UI hint**: yes
 
@@ -158,6 +173,7 @@ Plans:
 - [x] 13-02-PLAN.md — PriceHistoryChart 듀얼 라인 + 듀얼 Y축 + JeonseRatioChart 삭제
 
 **UI hint**: yes
+
 
 ### Phase 14: 랭킹 정교화
 **Goal**: 폭락·신고가 랭킹이 저층 노이즈와 이상거래를 제거한 신뢰할 수 있는 순위를 보여준다
@@ -181,7 +197,12 @@ Plans:
   2. 군집별 지수의 시계열 차트(월별)를 볼 수 있다
   3. 시도·시군구 단위 평균 매매가·중위가가 지역별 시세 페이지에 표시된다
   4. 신규 지역 지수 페이지(`/index` 또는 `/market`)가 존재하고 대시보드 형태로 모든 군집 지수를 보여준다
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — 군집 지수 엔진 + 대시보드 페이지 (INDEX-01, INDEX-02, INDEX-04)
+- [ ] 15-02-PLAN.md — market 페이지 중위가/평균가 추가 (INDEX-03)
+
 **UI hint**: yes
 
 ---
@@ -204,7 +225,7 @@ Plans:
 | 12. 금리 표현 개선 | v1.1 | 2/2 | Complete    | 2026-03-28 |
 | 13. 차트 개선 | v1.1 | 2/2 | Complete    | 2026-03-28 |
 | 14. 랭킹 정교화 | v1.1 | 1/1 | Complete    | 2026-03-28 |
-| 15. 지역 지수 대시보드 | v1.1 | 0/? | Not started | - |
+| 15. 지역 지수 대시보드 | v1.1 | 0/2 | Planning | - |
 
 ---
 *Roadmap created: 2026-03-26 (v1.0)*
