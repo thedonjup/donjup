@@ -155,7 +155,7 @@ Plans:
 
 Plans:
 - [x] 13-01-PLAN.md — 기간 탭 + 날짜 필터링 + rentTrendLine/jeonseRatioLine 데이터 계산
-- [ ] 13-02-PLAN.md — PriceHistoryChart 듀얼 라인 + 듀얼 Y축 + JeonseRatioChart 삭제
+- [x] 13-02-PLAN.md — PriceHistoryChart 듀얼 라인 + 듀얼 Y축 + JeonseRatioChart 삭제
 
 **UI hint**: yes
 
@@ -199,7 +199,7 @@ Plans:
 | 10. 가격 정규화 엔진 | v1.1 | 3/3 | Complete   | 2026-03-27 |
 | 11. 전세가율·갭 분석 | v1.1 | 2/2 | Complete    | 2026-03-28 |
 | 12. 금리 표현 개선 | v1.1 | 2/2 | Complete    | 2026-03-28 |
-| 13. 차트 개선 | v1.1 | 1/2 | In Progress|  |
+| 13. 차트 개선 | v1.1 | 2/2 | Complete   | 2026-03-28 |
 | 14. 랭킹 정교화 | v1.1 | 0/? | Not started | - |
 | 15. 지역 지수 대시보드 | v1.1 | 0/? | Not started | - |
 

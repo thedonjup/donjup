@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: 데이터 분석 고도화
 current_phase: 13
-status: executing
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-03-28T03:54:51.045Z"
+status: verifying
+stopped_at: Completed 13-02-PLAN.md
+last_updated: "2026-03-28T04:03:50.839Z"
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 13
 **Milestone:** v1.1 — 데이터 분석 고도화
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 
 ## Current Position
 
@@ -81,10 +81,12 @@ None.
 - [Phase 12-rate-display-improvement]: CSS max-height transition for accordion animation (no library); desktop expand uses conditional tr row with colSpan=4
 - [Phase 12-rate-display-improvement]: Filter BANK_UNKNOWN before computing avgRate on /rate hero card — avoids catch-all skewing average
 - [Phase 13]: RatioPoint exported from AptDetailClient; recentMedian kept on unfiltered saleTxns; showJeonseRatio default OFF
+- [Phase 13-chart-improvement]: yAxisId=0 (numeric) on all existing chart elements to preserve DirectDealConnectors yAxisMap[0] access
+- [Phase 13-chart-improvement]: hasRatioOverlay guards both showJeonseRatio flag AND data length to avoid empty right axis render
 
 ## Last Session
 
-Stopped at: Completed 13-01-PLAN.md
+Stopped at: Completed 13-02-PLAN.md
 Last updated: 2026-03-28T18:13:00Z
 
 ---
