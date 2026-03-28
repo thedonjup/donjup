@@ -98,16 +98,34 @@ export default function AptDetailClient({
   }, [saleTxns, rentTxns]);
 
   const sizePriceMap = useMemo(() => {
-    const map = new Map<number, { highFloorSale: number | null; lowFloorSale: number | null; latestJeonse: number | null }>();
+    const map = new Map<number, {
+      highFloorSale: number | null;
+      lowFloorSale: number | null;
+      latestJeonse: number | null;
+      latestSale: number | null;
+      gapAmount: number | null;
+      jeonseRatio: number | null;
+    }>();
     for (const size of sizeOptions) {
       const sizeMatches = saleTxns.filter((t) => t.size_sqm === size);
       const highFloorTx = sizeMatches.find((t) => t.floor > LOW_FLOOR_MAX);
       const lowFloorTx = sizeMatches.find((t) => t.floor <= LOW_FLOOR_MAX);
-      const jeonseTx = rentTxns.find((t) => t.size_sqm === size && t.rent_type === "전세");
+      const jeonseTx = rentTxns.find(
+        (t) => t.size_sqm === size && t.rent_type === "전세" && t.monthly_rent === 0
+      );
+      const latestSale = sizeMatches[0]?.trade_price ?? null;
+      const latestJeonse = jeonseTx?.deposit ?? null;
+      const gapAmount = (latestSale !== null && latestJeonse !== null) ? latestSale - latestJeonse : null;
+      const jeonseRatio = (latestSale !== null && latestJeonse !== null && latestSale > 0)
+        ? Math.round((latestJeonse / latestSale) * 1000) / 10
+        : null;
       map.set(size, {
         highFloorSale: highFloorTx?.trade_price ?? null,
         lowFloorSale: lowFloorTx?.trade_price ?? null,
-        latestJeonse: jeonseTx?.deposit ?? null,
+        latestJeonse,
+        latestSale,
+        gapAmount,
+        jeonseRatio,
       });
     }
     return map;
@@ -195,6 +213,13 @@ export default function AptDetailClient({
     });
   }, [directDeals, normal]);
 
+  function getJeonseRatioColor(ratio: number | null): string {
+    if (ratio === null) return "var(--color-text-primary)";
+    if (ratio >= 70) return "var(--color-semantic-drop)";     // red per D-09
+    if (ratio >= 60) return "#F59E0B";                         // amber per D-09
+    return "var(--color-semantic-rise)";                       // green per D-09
+  }
+
   const ctxValue: SizeUnitContextType = {
     sizeUnit,
     setSizeUnit,
@@ -255,6 +280,36 @@ export default function AptDetailClient({
           </div>
         </div>
       )}
+
+      {/* GAP 지표 카드 — 전세가율 / 갭 금액 (D-07, D-08) */}
+      {selectedSize && (() => {
+        const info = sizePriceMap.get(selectedSize);
+        const ratio = info?.jeonseRatio ?? null;
+        const gap = info?.gapAmount ?? null;
+        const ratioColor = getJeonseRatioColor(ratio);
+        return (
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="rounded-2xl border p-4" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
+              <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>최근 전세가</p>
+              <p className="mt-1 text-xl font-extrabold tabular-nums t-text">
+                {info?.latestJeonse ? formatPriceShort(info.latestJeonse) : "-"}
+              </p>
+            </div>
+            <div className="rounded-2xl border p-4" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
+              <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>전세가율</p>
+              <p className="mt-1 text-xl font-extrabold tabular-nums" style={{ color: ratioColor }}>
+                {ratio !== null ? `${ratio.toFixed(1)}%` : "-"}
+              </p>
+            </div>
+            <div className="rounded-2xl border p-4" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
+              <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>갭 금액</p>
+              <p className="mt-1 text-xl font-extrabold tabular-nums t-text">
+                {gap !== null ? formatPriceShort(gap) : "-"}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 가격 추이 차트 — 정규화된 데이터 */}
       {saleTxns.length >= 2 && (
