@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: 코드 품질 강화
 current_phase: 19
-status: planning
-stopped_at: Completed 18-04-PLAN.md
-last_updated: "2026-03-28T14:05:48.567Z"
+status: verifying
+stopped_at: Completed 19-01-PLAN.md
+last_updated: "2026-03-28T14:23:29.371Z"
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 19
 **Milestone:** v1.2 — 코드 품질 강화
-**Status:** Ready to plan
+**Status:** Phase complete — ready for verification
 
 ## Current Position
 
-Phase: 18 (drizzle-orm) — EXECUTING
-Plan: Not started
+Phase: 19 (code-cleanup) — EXECUTING
+Plan: 1 of 1
 
 ## Active Phase
 
@@ -77,10 +77,12 @@ None.
 - [Phase 18-drizzle-orm]: Supabase RPC get_monthly_volume removed; replaced with direct query + server-side JS aggregation
 - [Phase 18-drizzle-orm]: db.execute(sql tagged template) for search/page dynamic WHERE — sql.join() with individually constructed sql chunks handles multi-part OR conditions with shared parameter values
 - [Phase 18-drizzle-orm]: Legacy DB files (client.ts, server.ts, rent-client.ts) deleted — codebase now has single db entry point at src/lib/db/index.ts
+- [Phase 19]: argsIgnorePattern: ^_ added to ESLint config so _-prefixed unused function parameters are ignored
+- [Phase 19]: dynamic<Props>() used in PriceHistoryChartWrapper to type dynamic import without as any
 
 ## Last Session
 
-Stopped at: Completed 18-04-PLAN.md
+Stopped at: Completed 19-01-PLAN.md
 Last updated: 2026-03-28
 
 ---

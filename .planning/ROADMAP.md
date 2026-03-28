@@ -159,7 +159,7 @@ Plans:
 - [x] **Phase 16: 테스트 인프라 기반** - Vitest 설정 + 핵심 유틸 유닛 테스트 (completed 2026-03-28)
 - [x] **Phase 17: 통합 테스트 & E2E** - API 통합 테스트 + Playwright E2E 기반 (completed 2026-03-28)
 - [x] **Phase 18: Drizzle ORM 교체** - 전체 DB 접근 Drizzle 단일 패턴으로 교체 (completed 2026-03-28)
-- [ ] **Phase 19: 코드 정리** - as any 제거, 미사용 import 0건, 연결 패턴 통일
+- [x] **Phase 19: 코드 정리** - as any 제거, 미사용 import 0건, 연결 패턴 통일 (completed 2026-03-28)
 
 ## Phase Details
 
@@ -220,7 +220,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 19-01-PLAN.md — unused imports 제거 + as any 수정 + 레거시 DB 패턴 확인 (CLEAN-01, CLEAN-02, CLEAN-03)
+- [x] 19-01-PLAN.md — unused imports 제거 + as any 수정 + 레거시 DB 패턴 확인 (CLEAN-01, CLEAN-02, CLEAN-03)
 
 ---
 
@@ -246,7 +246,7 @@ Plans:
 | 16. 테스트 인프라 기반 | v1.2 | 2/2 | Complete    | 2026-03-28 |
 | 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete    | 2026-03-28 |
 | 18. Drizzle ORM 교체 | v1.2 | 4/4 | Complete    | 2026-03-28 |
-| 19. 코드 정리 | v1.2 | 0/1 | Planning    | - |
+| 19. 코드 정리 | v1.2 | 1/1 | Complete   | 2026-03-28 |
 
 ---
 *Roadmap created: 2026-03-26 (v1.0)*

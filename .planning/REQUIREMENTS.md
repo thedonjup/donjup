@@ -22,9 +22,9 @@
 
 ## 코드 정리 (CLEAN)
 
-- [ ] **CLEAN-01**: `as any` 타입 캐스트가 프로덕션 코드에서 제거되거나 최소화된다 (5개 미만)
-- [ ] **CLEAN-02**: 미사용 import/변수가 프로덕션 코드에서 0건이 된다
-- [ ] **CLEAN-03**: 중복된 DB 연결 패턴(createClient, createRentServiceClient, getPool)이 Drizzle 단일 패턴으로 통일된다
+- [x] **CLEAN-01**: `as any` 타입 캐스트가 프로덕션 코드에서 제거되거나 최소화된다 (5개 미만)
+- [x] **CLEAN-02**: 미사용 import/변수가 프로덕션 코드에서 0건이 된다
+- [x] **CLEAN-03**: 중복된 DB 연결 패턴(createClient, createRentServiceClient, getPool)이 Drizzle 단일 패턴으로 통일된다
 
 ## Traceability
 
@@ -41,9 +41,9 @@
 | ORM-04 | Phase 18 | Complete |
 | ORM-05 | Phase 18 | Complete |
 | ORM-06 | Phase 18 | Complete |
-| CLEAN-01 | Phase 19 | Pending |
-| CLEAN-02 | Phase 19 | Pending |
-| CLEAN-03 | Phase 19 | Pending |
+| CLEAN-01 | Phase 19 | Complete |
+| CLEAN-02 | Phase 19 | Complete |
+| CLEAN-03 | Phase 19 | Complete |
 
 ## Future Requirements (v2.0+)
 
