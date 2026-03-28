@@ -172,7 +172,11 @@ Plans:
   2. price-normalization.ts의 adjustFloorPrice, filterTransactions 등 exported 함수 각각에 대해 입력/출력을 검증하는 유닛 테스트가 존재한다
   3. computeClusterIndex 함수에 대해 군집 계산 결과를 검증하는 유닛 테스트가 존재한다
   4. CI 환경에서 테스트가 실패하면 빌드도 실패한다 (test script이 non-zero exit)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — Vitest 설치/설정 + price-normalization 유닛 테스트 (TEST-01, TEST-02)
+- [ ] 16-02-PLAN.md — computeClusterIndex 유닛 테스트 (TEST-03)
 
 ### Phase 17: 통합 테스트 & E2E
 **Goal**: API 라우트가 실제 DB 응답을 올바르게 처리하는지 검증되고, 브라우저에서 기본 사용자 흐름이 자동 테스트된다
@@ -226,7 +230,7 @@ Plans:
 | 13. 차트 개선 | v1.1 | 2/2 | Complete | 2026-03-28 |
 | 14. 랭킹 정교화 | v1.1 | 1/1 | Complete | 2026-03-28 |
 | 15. 지역 지수 대시보드 | v1.1 | 2/2 | Complete | 2026-03-28 |
-| 16. 테스트 인프라 기반 | v1.2 | 0/TBD | Not started | - |
+| 16. 테스트 인프라 기반 | v1.2 | 0/2 | Not started | - |
 | 17. 통합 테스트 & E2E | v1.2 | 0/TBD | Not started | - |
 | 18. Drizzle ORM 교체 | v1.2 | 0/TBD | Not started | - |
 | 19. 코드 정리 | v1.2 | 0/TBD | Not started | - |
