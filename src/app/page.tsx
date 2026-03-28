@@ -15,6 +15,7 @@ import PopularComplexes from "@/components/home/PopularComplexes";
 import SidebarRateCard from "@/components/home/SidebarRateCard";
 import type { Metadata } from "next";
 import type { AptTransaction, FinanceRate } from "@/types/db";
+import { adjustFloorPrice, isDirectDeal, LOW_FLOOR_MAX } from "@/lib/price-normalization";
 
 export const revalidate = 300;
 
@@ -46,6 +47,49 @@ function filterByType<T extends { property_type: number }>(rows: T[], validType:
   return rows.filter((r) => r.property_type === validType);
 }
 
+type DropLevel = "normal" | "decline" | "crash" | "severe";
+function calcDropLevel(changeRate: number | null): DropLevel {
+  if (changeRate === null) return "normal";
+  if (changeRate <= -25) return "severe";
+  if (changeRate <= -15) return "crash";
+  if (changeRate <= -10) return "decline";
+  return "normal";
+}
+
+function applyRankingNormalization(txns: AptTransaction[]): AptTransaction[] {
+  return txns
+    .filter((t) => {
+      // RANK-02: exclude suspicious direct deals
+      // Use highest_price as median proxy (no per-complex median in ranking context)
+      if (
+        isDirectDeal(t.deal_type) &&
+        t.highest_price !== null &&
+        t.highest_price > 0 &&
+        t.trade_price < t.highest_price * 0.70
+      ) {
+        return false;
+      }
+      return true;
+    })
+    .map((t) => {
+      // RANK-01: recompute change_rate for low-floor trades
+      if (
+        t.floor !== null &&
+        t.floor > 0 &&
+        t.floor <= LOW_FLOOR_MAX &&
+        t.highest_price !== null &&
+        t.highest_price > 0
+      ) {
+        const adjustedPrice = adjustFloorPrice(t.trade_price, t.floor);
+        const newRate = parseFloat(
+          (((adjustedPrice - t.highest_price) / t.highest_price) * 100).toFixed(2)
+        );
+        return { ...t, change_rate: newRate, drop_level: calcDropLevel(newRate) };
+      }
+      return t;
+    });
+}
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -73,13 +117,17 @@ export default async function HomePage({
       .single();
 
     if (cache && cache.drops) {
-      const allDrops = typeof cache.drops === "string" ? JSON.parse(cache.drops) : cache.drops;
-      const allHighs = typeof cache.highs === "string" ? JSON.parse(cache.highs) : cache.highs;
+      const rawDrops = ((typeof cache.drops === "string" ? JSON.parse(cache.drops) : cache.drops) ?? []) as AptTransaction[];
+      const rawHighs = ((typeof cache.highs === "string" ? JSON.parse(cache.highs) : cache.highs) ?? []) as AptTransaction[];
       const allVolume = typeof cache.volume === "string" ? JSON.parse(cache.volume) : cache.volume;
       const allRecent = typeof cache.recent === "string" ? JSON.parse(cache.recent) : cache.recent;
 
-      drops = filterByType((allDrops ?? []) as AptTransaction[], validType).slice(0, 10);
-      highs = filterByType((allHighs ?? []) as AptTransaction[], validType).slice(0, 10);
+      const normalizedDrops = applyRankingNormalization(rawDrops);
+      normalizedDrops.sort((a, b) => (a.change_rate ?? 0) - (b.change_rate ?? 0));
+      const normalizedHighs = applyRankingNormalization(rawHighs);
+
+      drops = filterByType(normalizedDrops, validType).slice(0, 10);
+      highs = filterByType(normalizedHighs, validType).slice(0, 10);
       volume = filterByType((allVolume ?? []) as AptTransaction[], validType).slice(0, 10);
       recent = filterByType((allRecent ?? []) as AptTransaction[], validType).slice(0, 10);
       rates = typeof cache.rates === "string" ? JSON.parse(cache.rates) : (cache.rates ?? []);
@@ -105,8 +153,15 @@ export default async function HomePage({
 
       clearTimeout(timer);
 
-      drops = dropsRes.status === "fulfilled" ? dropsRes.value.data ?? [] : [];
-      highs = highsRes.status === "fulfilled" ? highsRes.value.data ?? [] : [];
+      const rawDropsFallback: AptTransaction[] = dropsRes.status === "fulfilled" ? dropsRes.value.data ?? [] : [];
+      const rawHighsFallback: AptTransaction[] = highsRes.status === "fulfilled" ? highsRes.value.data ?? [] : [];
+
+      const normDrops = applyRankingNormalization(rawDropsFallback);
+      normDrops.sort((a, b) => (a.change_rate ?? 0) - (b.change_rate ?? 0));
+      drops = normDrops.slice(0, 10);
+
+      const normHighs = applyRankingNormalization(rawHighsFallback);
+      highs = normHighs.slice(0, 10);
       volume = volumeRes.status === "fulfilled" ? volumeRes.value.data ?? [] : [];
       recent = recentRes.status === "fulfilled" ? recentRes.value.data ?? [] : [];
       rates = ratesRes.status === "fulfilled" ? ratesRes.value.data ?? [] : [];
