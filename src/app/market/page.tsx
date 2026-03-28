@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptTransactions, aptComplexes } from "@/lib/db/schema";
+import { eq, desc, asc, lt, isNotNull, gte, and, inArray, sql } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
@@ -50,61 +52,61 @@ export default async function MarketIndexPage({
   }[] = [];
 
   try {
-    const supabase = await createClient();
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
-
-    const applyTypeFilter = <Q extends { eq: (col: string, val: number) => Q }>(q: Q): Q =>
-      validType !== 0 ? q.eq("property_type", validType) : q;
-
     sidoStats = await Promise.all(
       sidoEntries.map(async ([sidoCode, sido]) => {
         const sigunguCodes = Object.keys(sido.sigungu);
+        const typeFilter = validType !== 0 ? eq(aptTransactions.propertyType, validType) : undefined;
 
         const [countResult, dropResult, highResult, priceResult] = await Promise.all([
-          applyTypeFilter(
-            supabase
-              .from("apt_transactions")
-              .select("id", { count: "exact", head: true })
-              .in("region_code", sigunguCodes)
-          ).abortSignal(ac.signal),
-          applyTypeFilter(
-            supabase
-              .from("apt_transactions")
-              .select("apt_name,change_rate,trade_price")
-              .in("region_code", sigunguCodes)
-              .not("change_rate", "is", null)
-              .lt("change_rate", 0)
-          ).order("change_rate", { ascending: true })
-            .limit(1)
-            .abortSignal(ac.signal),
-          applyTypeFilter(
-            supabase
-              .from("apt_transactions")
-              .select("apt_name,trade_price")
-              .in("region_code", sigunguCodes)
-              .eq("is_new_high", true)
-          ).order("trade_date", { ascending: false })
-            .limit(1)
-            .abortSignal(ac.signal),
-          applyTypeFilter(
-            supabase
-              .from("apt_transactions")
-              .select("trade_price,deal_type")
-              .in("region_code", sigunguCodes)
-              .gte("trade_date", cutoff)
-          ).abortSignal(ac.signal),
+          db.select({ count: sql<number>`count(*)` }).from(aptTransactions)
+            .where(and(inArray(aptTransactions.regionCode, sigunguCodes), typeFilter)),
+          db.select({
+            apt_name: aptTransactions.aptName,
+            change_rate: aptTransactions.changeRate,
+            trade_price: aptTransactions.tradePrice,
+          }).from(aptTransactions)
+            .where(and(
+              inArray(aptTransactions.regionCode, sigunguCodes),
+              isNotNull(aptTransactions.changeRate),
+              lt(aptTransactions.changeRate, "0"),
+              typeFilter,
+            ))
+            .orderBy(asc(aptTransactions.changeRate))
+            .limit(1),
+          db.select({
+            apt_name: aptTransactions.aptName,
+            trade_price: aptTransactions.tradePrice,
+          }).from(aptTransactions)
+            .where(and(
+              inArray(aptTransactions.regionCode, sigunguCodes),
+              eq(aptTransactions.isNewHigh, true),
+              typeFilter,
+            ))
+            .orderBy(desc(aptTransactions.tradeDate))
+            .limit(1),
+          db.select({
+            trade_price: aptTransactions.tradePrice,
+            deal_type: aptTransactions.dealType,
+          }).from(aptTransactions)
+            .where(and(
+              inArray(aptTransactions.regionCode, sigunguCodes),
+              gte(aptTransactions.tradeDate, cutoff),
+              typeFilter,
+            )),
         ]);
 
         type PriceRow = { trade_price: number; deal_type: string | null };
-        const priceRows: PriceRow[] = (priceResult.data ?? []) as PriceRow[];
+        const priceRows: PriceRow[] = priceResult as PriceRow[];
         const validPrices: number[] = priceRows
           .filter((t) => !isDirectDeal(t.deal_type))
-          .map((t) => t.trade_price);
+          .map((t) => Number(t.trade_price));
         const medianPrice = computeMedianPrice(validPrices);
         const avgPrice = validPrices.length
           ? Math.round(validPrices.reduce((a: number, b: number) => a + b, 0) / validPrices.length)
           : 0;
+
+        const topDropRaw = dropResult[0] ?? null;
+        const topHighRaw = highResult[0] ?? null;
 
         return {
           code: sidoCode,
@@ -112,16 +114,21 @@ export default async function MarketIndexPage({
           shortName: sido.shortName,
           slug: sido.slug,
           sigunguCount: sigunguCodes.length,
-          count: countResult.count ?? 0,
-          topDrop: dropResult.data?.[0] ?? null,
-          topHigh: highResult.data?.[0] ?? null,
+          count: Number(countResult[0]?.count ?? 0),
+          topDrop: topDropRaw ? {
+            apt_name: topDropRaw.apt_name,
+            change_rate: Number(topDropRaw.change_rate),
+            trade_price: Number(topDropRaw.trade_price),
+          } : null,
+          topHigh: topHighRaw ? {
+            apt_name: topHighRaw.apt_name,
+            trade_price: Number(topHighRaw.trade_price),
+          } : null,
           medianPrice,
           avgPrice,
         };
       })
     );
-
-    clearTimeout(timer);
   } catch (error) {
     console.error("시도별 통계 조회 실패:", error);
   }

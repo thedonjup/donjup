@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptComplexes, aptTransactions } from "@/lib/db/schema";
+import { eq, desc, and } from "drizzle-orm";
 
 export const runtime = "nodejs";
 export const alt = "돈줍 아파트 실거래가";
@@ -22,13 +24,19 @@ export default async function OgImage({
 }) {
   const { slug } = await params;
   const decodedSlug = decodeURIComponent(slug);
-  const supabase = await createClient();
 
-  let { data: complex } = await supabase
-    .from("apt_complexes")
-    .select("apt_name,region_name,dong_name,slug")
-    .eq("slug", decodedSlug)
-    .single();
+  let complex: { apt_name: string; region_name: string; dong_name: string | null; slug: string } | null = null;
+
+  const exactMatch = await db.select({
+    apt_name: aptComplexes.aptName,
+    region_name: aptComplexes.regionName,
+    dong_name: aptComplexes.dongName,
+    slug: aptComplexes.slug,
+  }).from(aptComplexes).where(eq(aptComplexes.slug, decodedSlug)).limit(1);
+
+  if (exactMatch[0]) {
+    complex = exactMatch[0];
+  }
 
   // Fallback lookup by region_code + apt slug part
   if (!complex) {
@@ -36,35 +44,39 @@ export default async function OgImage({
     if (dashIdx > 0) {
       const regionCode = decodedSlug.substring(0, dashIdx);
       const aptSlugPart = decodedSlug.substring(dashIdx + 1);
-      const { data: fallbackList } = await supabase
-        .from("apt_complexes")
-        .select("apt_name,region_name,dong_name,slug")
-        .eq("region_code", regionCode)
-        .limit(50);
+      const fallbackList = await db.select({
+        apt_name: aptComplexes.aptName,
+        region_name: aptComplexes.regionName,
+        dong_name: aptComplexes.dongName,
+        slug: aptComplexes.slug,
+      }).from(aptComplexes).where(eq(aptComplexes.regionCode, regionCode)).limit(50);
 
-      if (fallbackList && fallbackList.length > 0) {
-        complex = fallbackList.find((c: Record<string, unknown>) => {
-          const s = String(c.slug ?? "");
+      if (fallbackList.length > 0) {
+        const found = fallbackList.find((c) => {
+          const s = c.slug ?? "";
           const dbDash = s.indexOf("-");
           const dbSuffix = dbDash > 0 ? s.substring(dbDash + 1) : s;
           return dbSuffix === aptSlugPart || s === decodedSlug;
-        }) ?? null;
+        });
+        if (found) complex = found;
       }
     }
   }
 
-  const { data: latest } = await supabase
-    .from("apt_transactions")
-    .select("trade_price,change_rate")
-    .eq("apt_name", complex?.apt_name ?? "")
-    .order("trade_date", { ascending: false })
-    .limit(1)
-    .single();
+  const latestRows = await db.select({
+    trade_price: aptTransactions.tradePrice,
+    change_rate: aptTransactions.changeRate,
+  }).from(aptTransactions)
+    .where(eq(aptTransactions.aptName, complex?.apt_name ?? ""))
+    .orderBy(desc(aptTransactions.tradeDate))
+    .limit(1);
+
+  const latest = latestRows[0] ?? null;
 
   const aptName = complex?.apt_name ?? "아파트";
   const region = complex?.region_name ?? "";
-  const price = latest?.trade_price ? formatPrice(latest.trade_price) : "-";
-  const rate = latest?.change_rate;
+  const price = latest?.trade_price ? formatPrice(Number(latest.trade_price)) : "-";
+  const rate = latest?.change_rate ? Number(latest.change_rate) : null;
 
   return new ImageResponse(
     (

@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/db/server";
-import { createRentServiceClient } from "@/lib/db/rent-client";
+import { db } from "@/lib/db";
+import { aptTransactions, aptComplexes, aptRentTransactions } from "@/lib/db/schema";
+import { eq, desc, and, ne } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -27,13 +28,21 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug, region } = await params;
   const decodedSlug = decodeURIComponent(slug);
-  const supabase = await createClient();
 
-  let { data: complex } = await supabase
-    .from("apt_complexes")
-    .select("apt_name,region_name,dong_name,region_code")
-    .eq("slug", decodedSlug)
-    .single();
+  type MetaComplex = { apt_name: string; region_name: string; dong_name: string | null; region_code: string; slug: string };
+  let complex: MetaComplex | null = null;
+
+  const exactMatch = await db.select({
+    apt_name: aptComplexes.aptName,
+    region_name: aptComplexes.regionName,
+    dong_name: aptComplexes.dongName,
+    region_code: aptComplexes.regionCode,
+    slug: aptComplexes.slug,
+  }).from(aptComplexes).where(eq(aptComplexes.slug, decodedSlug)).limit(1);
+
+  if (exactMatch[0]) {
+    complex = exactMatch[0];
+  }
 
   // Fallback: parse region_code from slug and search by region
   if (!complex) {
@@ -41,19 +50,22 @@ export async function generateMetadata({
     if (dashIdx > 0) {
       const regionCode = decodedSlug.substring(0, dashIdx);
       const aptSlugPart = decodedSlug.substring(dashIdx + 1);
-      const { data: fallbackList } = await supabase
-        .from("apt_complexes")
-        .select("apt_name,region_name,dong_name,slug,region_code")
-        .eq("region_code", regionCode)
-        .limit(50);
+      const fallbackList = await db.select({
+        apt_name: aptComplexes.aptName,
+        region_name: aptComplexes.regionName,
+        dong_name: aptComplexes.dongName,
+        slug: aptComplexes.slug,
+        region_code: aptComplexes.regionCode,
+      }).from(aptComplexes).where(eq(aptComplexes.regionCode, regionCode)).limit(50);
 
-      if (fallbackList && fallbackList.length > 0) {
-        complex = fallbackList.find((c: Record<string, unknown>) => {
-          const s = String(c.slug ?? "");
+      if (fallbackList.length > 0) {
+        const found = fallbackList.find((c) => {
+          const s = c.slug ?? "";
           const dbDash = s.indexOf("-");
           const dbSuffix = dbDash > 0 ? s.substring(dbDash + 1) : s;
           return dbSuffix === aptSlugPart || s === decodedSlug;
-        }) ?? null;
+        });
+        if (found) complex = found;
       }
     }
   }
@@ -63,52 +75,60 @@ export async function generateMetadata({
   }
 
   // 최근 거래가 및 최고가 조회 (OG 태그에 가격 변동 정보 포함)
-  const { data: latestTxn } = await supabase
-    .from("apt_transactions")
-    .select("trade_price,highest_price,change_rate")
-    .eq("apt_name", complex.apt_name)
-    .eq("region_code", complex.region_code)
-    .order("trade_date", { ascending: false })
-    .limit(1)
-    .single();
+  const latestTxnRows = await db.select({
+    trade_price: aptTransactions.tradePrice,
+    highest_price: aptTransactions.highestPrice,
+    change_rate: aptTransactions.changeRate,
+  }).from(aptTransactions)
+    .where(and(
+      eq(aptTransactions.aptName, complex.apt_name),
+      eq(aptTransactions.regionCode, complex.region_code),
+    ))
+    .orderBy(desc(aptTransactions.tradeDate))
+    .limit(1);
 
-  const changeRate = latestTxn?.change_rate;
-  const tradePrice = latestTxn?.trade_price;
-  const highestPrice = latestTxn?.highest_price;
+  const latestTxn = latestTxnRows[0] ?? null;
+  const changeRate = latestTxn ? Number(latestTxn.change_rate) : null;
+  const tradePrice = latestTxn ? Number(latestTxn.trade_price) : null;
+  const highestPrice = latestTxn ? latestTxn.highest_price : null;
 
-  // 감정 자극형 타이틀: "래미안 퍼스티지 -15% 폭락 | 돈줍" or "래미안 퍼스티지 신고가 경신 | 돈줍"
+  const complexAptName = complex.apt_name;
+  const complexRegionName = complex.region_name;
+  const complexDongName = complex.dong_name;
+
+  // 감정 자극형 타이틀
   const priceLabel = tradePrice ? formatPrice(tradePrice) : "";
-  const highLabel = highestPrice ? formatPrice(highestPrice) : "";
+  const highLabel = highestPrice ? formatPrice(Number(highestPrice)) : "";
 
   let ogTitle: string;
   let ogDescription: string;
 
-  if (changeRate !== null && changeRate !== undefined && changeRate < 0) {
-    ogTitle = `${complex.apt_name} ${changeRate.toFixed(1)}% 폭락 | 돈줍`;
+  if (changeRate !== null && changeRate < 0) {
+    ogTitle = `${complexAptName} ${changeRate.toFixed(1)}% 폭락 | 돈줍`;
     ogDescription = highLabel && priceLabel
       ? `최고가 ${highLabel} → 현재 ${priceLabel} | 매일 업데이트되는 실거래가`
-      : `${complex.apt_name} 아파트 실거래가 시세를 확인하세요 | 돈줍`;
+      : `${complexAptName} 아파트 실거래가 시세를 확인하세요 | 돈줍`;
   } else if (priceLabel) {
-    ogTitle = `${complex.apt_name} ${priceLabel} | 돈줍`;
-    ogDescription = `${complex.region_name} ${complex.dong_name ?? ""} · 매일 업데이트되는 실거래가`;
+    ogTitle = `${complexAptName} ${priceLabel} | 돈줍`;
+    ogDescription = `${complexRegionName} ${complexDongName ?? ""} · 매일 업데이트되는 실거래가`;
   } else {
-    ogTitle = `${complex.apt_name} 실거래가 | 돈줍`;
-    ogDescription = `${complex.region_name} ${complex.dong_name ?? ""} 아파트 실거래가 시세를 확인하세요`;
+    ogTitle = `${complexAptName} 실거래가 | 돈줍`;
+    ogDescription = `${complexRegionName} ${complexDongName ?? ""} 아파트 실거래가 시세를 확인하세요`;
   }
 
   const pageUrl = `https://donjup.com/apt/${region}/${slug}`;
   const ogImageUrl = `https://donjup.com/apt/${region}/${slug}/opengraph-image`;
 
-  const seoTitle = `${complex.apt_name} 실거래가 - ${complex.region_name} ${complex.dong_name ?? ""}`;
+  const seoTitle = `${complexAptName} 실거래가 - ${complexRegionName} ${complexDongName ?? ""}`;
   return {
     title: seoTitle,
-    description: `${complex.apt_name} 아파트 실거래가 시세, 최고가 대비 변동률, 거래 이력을 확인하세요. ${complex.region_name} ${complex.dong_name ?? ""} 매매·전월세 시세 비교.`,
+    description: `${complexAptName} 아파트 실거래가 시세, 최고가 대비 변동률, 거래 이력을 확인하세요. ${complexRegionName} ${complexDongName ?? ""} 매매·전월세 시세 비교.`,
     alternates: { canonical: `/apt/${region}/${slug}` },
     keywords: [
-      `${complex.apt_name} 실거래가`,
-      `${complex.apt_name} 시세`,
-      `${complex.apt_name} 아파트`,
-      `${complex.region_name} 아파트`,
+      `${complexAptName} 실거래가`,
+      `${complexAptName} 시세`,
+      `${complexAptName} 아파트`,
+      `${complexRegionName} 아파트`,
       "아파트 실거래가",
       "아파트 시세 조회",
     ],
@@ -144,22 +164,13 @@ export default async function AptDetailPage({
 }) {
   const { slug, region } = await params;
   const decodedSlug = decodeURIComponent(slug);
-  const supabase = await createClient();
-
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), 30000);
 
   // Try exact slug match first
-  let { data: complex, error: complexError } = await supabase
-    .from("apt_complexes")
-    .select("*")
-    .eq("slug", decodedSlug)
-    .abortSignal(ac.signal)
-    .single();
+  let complexRows = await db.select().from(aptComplexes)
+    .where(eq(aptComplexes.slug, decodedSlug))
+    .limit(1);
 
-  if (complexError) {
-    console.error("[apt-detail] DB error:", complexError.message, "slug:", decodedSlug);
-  }
+  let complex = complexRows[0] ?? null;
 
   // Fallback: parse region_code and apt_name from slug and query by those
   if (!complex) {
@@ -167,29 +178,23 @@ export default async function AptDetailPage({
     if (dashIdx > 0) {
       const regionCode = decodedSlug.substring(0, dashIdx);
       const aptSlugPart = decodedSlug.substring(dashIdx + 1);
-      // Search by region_code and use ilike on slug for partial match
-      const { data: fallbackList } = await supabase
-        .from("apt_complexes")
-        .select("*")
-        .eq("region_code", regionCode)
-        .abortSignal(ac.signal)
+      const fallbackList = await db.select().from(aptComplexes)
+        .where(eq(aptComplexes.regionCode, regionCode))
         .limit(50);
 
-      if (fallbackList && fallbackList.length > 0) {
-        // Find best match by comparing slug suffix
-        complex = fallbackList.find((c: Record<string, unknown>) => {
-          const s = String(c.slug ?? "");
-          // Check if the slug in DB matches when we strip leading region code
+      if (fallbackList.length > 0) {
+        const found = fallbackList.find((c) => {
+          const s = c.slug ?? "";
           const dbDash = s.indexOf("-");
           const dbSuffix = dbDash > 0 ? s.substring(dbDash + 1) : s;
           return dbSuffix === aptSlugPart || s === decodedSlug;
-        }) ?? null;
+        });
+        if (found) complex = found;
       }
     }
   }
 
   if (!complex) {
-    clearTimeout(timer);
     notFound();
   }
 
@@ -198,48 +203,70 @@ export default async function AptDetailPage({
   let nearbyComplexes: { slug: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; total_units: number | null }[] = [];
 
   try {
-    const { data: transactions } = await supabase
-      .from("apt_transactions")
-      .select("id,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level")
-      .eq("apt_name", complex.apt_name)
-      .eq("region_code", complex.region_code)
-      .order("trade_date", { ascending: false })
-      .limit(50)
-      .abortSignal(ac.signal);
+    const transactions = await db.select({
+      id: aptTransactions.id,
+      size_sqm: aptTransactions.sizeSqm,
+      floor: aptTransactions.floor,
+      trade_price: aptTransactions.tradePrice,
+      trade_date: aptTransactions.tradeDate,
+      highest_price: aptTransactions.highestPrice,
+      change_rate: aptTransactions.changeRate,
+      is_new_high: aptTransactions.isNewHigh,
+      is_significant_drop: aptTransactions.isSignificantDrop,
+      deal_type: aptTransactions.dealType,
+      drop_level: aptTransactions.dropLevel,
+    }).from(aptTransactions)
+      .where(and(
+        eq(aptTransactions.aptName, complex.aptName),
+        eq(aptTransactions.regionCode, complex.regionCode),
+      ))
+      .orderBy(desc(aptTransactions.tradeDate))
+      .limit(50);
 
-    txns = (transactions ?? []) as Transaction[];
+    txns = transactions as unknown as Transaction[];
 
-    // 전월세 이력 조회 (보조 DB)
+    // 전월세 이력 조회 — same db instance handles all tables
     try {
-      const rentDb = createRentServiceClient();
-      const { data: rentData } = await rentDb
-        .from("apt_rent_transactions")
-        .select("id,size_sqm,floor,deposit,monthly_rent,rent_type,contract_type,trade_date")
-        .eq("apt_name", complex.apt_name)
-        .eq("region_code", complex.region_code)
-        .order("trade_date", { ascending: false })
-        .limit(200)
-        .abortSignal(ac.signal);
-      rentTxns = (rentData ?? []) as RentTransaction[];
+      const rentData = await db.select({
+        id: aptRentTransactions.id,
+        size_sqm: aptRentTransactions.sizeSqm,
+        floor: aptRentTransactions.floor,
+        deposit: aptRentTransactions.deposit,
+        monthly_rent: aptRentTransactions.monthlyRent,
+        rent_type: aptRentTransactions.rentType,
+        contract_type: aptRentTransactions.contractType,
+        trade_date: aptRentTransactions.tradeDate,
+      }).from(aptRentTransactions)
+        .where(and(
+          eq(aptRentTransactions.aptName, complex.aptName),
+          eq(aptRentTransactions.regionCode, complex.regionCode),
+        ))
+        .orderBy(desc(aptRentTransactions.tradeDate))
+        .limit(200);
+      rentTxns = rentData as unknown as RentTransaction[];
     } catch {
-      // rent DB 미설정 시 무시
+      // rent data unavailable — ignore
     }
 
     // 같은 동네 다른 단지 조회
-    if (complex.dong_name) {
-      const { data: nearby } = await supabase
-        .from("apt_complexes")
-        .select("slug,apt_name,region_code,region_name,dong_name,built_year,total_units")
-        .eq("dong_name", complex.dong_name)
-        .neq("slug", slug)
-        .limit(5)
-        .abortSignal(ac.signal);
-      nearbyComplexes = nearby ?? [];
+    if (complex.dongName) {
+      const nearby = await db.select({
+        slug: aptComplexes.slug,
+        apt_name: aptComplexes.aptName,
+        region_code: aptComplexes.regionCode,
+        region_name: aptComplexes.regionName,
+        dong_name: aptComplexes.dongName,
+        built_year: aptComplexes.builtYear,
+        total_units: aptComplexes.totalUnits,
+      }).from(aptComplexes)
+        .where(and(
+          eq(aptComplexes.dongName, complex.dongName),
+          ne(aptComplexes.slug, slug),
+        ))
+        .limit(5);
+      nearbyComplexes = nearby as unknown as typeof nearbyComplexes;
     }
-
-    clearTimeout(timer);
   } catch {
-    clearTimeout(timer);
     // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
   }
 
@@ -270,8 +297,8 @@ export default async function AptDetailPage({
   const aptJsonLd = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
-    name: `${complex.apt_name} 아파트`,
-    description: `${complex.apt_name} - ${complex.region_name} ${complex.dong_name ?? ""} 아파트 실거래가 및 시세 정보`,
+    name: `${complex.aptName} 아파트`,
+    description: `${complex.aptName} - ${complex.regionName} ${complex.dongName ?? ""} 아파트 실거래가 및 시세 정보`,
     url: `https://donjup.com/apt/${region}/${slug}`,
     ...(latestPrice > 0 && {
       offers: {
@@ -282,11 +309,11 @@ export default async function AptDetailPage({
     }),
     address: {
       "@type": "PostalAddress",
-      addressLocality: complex.region_name,
-      addressRegion: complex.sido_name ?? "",
+      addressLocality: complex.regionName,
+      addressRegion: complex.sidoName ?? "",
       addressCountry: "KR",
     },
-    ...(complex.built_year && { yearBuilt: complex.built_year }),
+    ...(complex.builtYear && { yearBuilt: complex.builtYear }),
   };
 
   return (
@@ -302,11 +329,11 @@ export default async function AptDetailPage({
         {" > "}
         <Link href="/market" className="hover:opacity-80">지역별</Link>
         {" > "}
-        <span style={{ color: "var(--color-text-secondary)" }}>{complex.region_name}</span>
-        {complex.dong_name && (
+        <span style={{ color: "var(--color-text-secondary)" }}>{complex.regionName}</span>
+        {complex.dongName && (
           <>
             {" > "}
-            <span style={{ color: "var(--color-text-secondary)" }}>{complex.dong_name}</span>
+            <span style={{ color: "var(--color-text-secondary)" }}>{complex.dongName}</span>
           </>
         )}
       </div>
@@ -316,33 +343,33 @@ export default async function AptDetailPage({
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-            <h1 className="text-2xl font-extrabold t-text">{complex.apt_name}</h1>
+            <h1 className="text-2xl font-extrabold t-text">{complex.aptName}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <FavoriteButton slug={slug} aptName={complex.apt_name} regionName={complex.region_name} />
-            <NotifyButton aptName={complex.apt_name} />
+            <FavoriteButton slug={slug} aptName={complex.aptName} regionName={complex.regionName} />
+            <NotifyButton aptName={complex.aptName} />
             <ShareButtons
               url={`https://donjup.com/apt/${region}/${slug}`}
-              title={`${complex.apt_name} 실거래가`}
-              description={`${complex.apt_name} 최근 거래가 ${formatPrice(latestPrice)} | 돈줍`}
+              title={`${complex.aptName} 실거래가`}
+              description={`${complex.aptName} 최근 거래가 ${formatPrice(latestPrice)} | 돈줍`}
             />
           </div>
         </div>
         <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-          {complex.region_name} {complex.dong_name ?? ""}
-          {complex.built_year ? ` · ${complex.built_year}년 준공` : ""}
-          {complex.total_units ? ` · ${complex.total_units}세대` : ""}
-          {complex.floor_count ? ` · ${complex.floor_count}층` : ""}
-          {complex.parking_count ? ` · 주차 ${complex.parking_count}대` : ""}
-          {complex.heating_method ? ` · ${complex.heating_method}` : ""}
+          {complex.regionName} {complex.dongName ?? ""}
+          {complex.builtYear ? ` · ${complex.builtYear}년 준공` : ""}
+          {complex.totalUnits ? ` · ${complex.totalUnits}세대` : ""}
+          {complex.floorCount ? ` · ${complex.floorCount}층` : ""}
+          {complex.parkingCount ? ` · 주차 ${complex.parkingCount}대` : ""}
+          {complex.heatingMethod ? ` · ${complex.heatingMethod}` : ""}
         </p>
 
         {/* 건축물 상세 정보 */}
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-          {complex.built_year && (() => {
+          {complex.builtYear && (() => {
             const currentYear = new Date().getFullYear();
-            const age = currentYear - complex.built_year;
-            const reconstructionYear = complex.built_year + 30;
+            const age = currentYear - complex.builtYear!;
+            const reconstructionYear = complex.builtYear! + 30;
             const yearsUntilReconstruction = reconstructionYear - currentYear;
             return (
               <>
@@ -356,12 +383,12 @@ export default async function AptDetailPage({
               </>
             );
           })()}
-          {complex.floor_area_ratio && <span>용적률 {complex.floor_area_ratio}%</span>}
-          {complex.building_coverage && <span>건폐율 {complex.building_coverage}%</span>}
-          {complex.energy_grade && <span>에너지등급 {complex.energy_grade}</span>}
-          {complex.elevator_count && <span>승강기 {complex.elevator_count}대</span>}
-          {complex.land_area && <span>대지면적 {Number(complex.land_area).toLocaleString()}㎡</span>}
-          {complex.total_floor_area && <span>연면적 {Number(complex.total_floor_area).toLocaleString()}㎡</span>}
+          {complex.floorAreaRatio && <span>용적률 {complex.floorAreaRatio}%</span>}
+          {complex.buildingCoverage && <span>건폐율 {complex.buildingCoverage}%</span>}
+          {complex.energyGrade && <span>에너지등급 {complex.energyGrade}</span>}
+          {complex.elevatorCount && <span>승강기 {complex.elevatorCount}대</span>}
+          {complex.landArea && <span>대지면적 {Number(complex.landArea).toLocaleString()}㎡</span>}
+          {complex.totalFloorArea && <span>연면적 {Number(complex.totalFloorArea).toLocaleString()}㎡</span>}
         </div>
       </div>
 
@@ -433,7 +460,7 @@ export default async function AptDetailPage({
 
       {/* 관련 뉴스 */}
       <div className="mt-8">
-        <AptNews aptName={complex.apt_name} regionName={complex.region_name} />
+        <AptNews aptName={complex.aptName} regionName={complex.regionName} />
       </div>
 
       {/* 댓글 */}

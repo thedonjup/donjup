@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { createRentServiceClient } from "@/lib/db/rent-client";
+import { db } from "@/lib/db";
+import { aptRentTransactions } from "@/lib/db/schema";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
@@ -53,54 +55,48 @@ export default async function RentPage({
   const { sido } = await searchParams;
   const sidoFilter = typeof sido === "string" ? sido : undefined;
 
-  const rentDb = createRentServiceClient();
-
   // 지역 필터용 region_code 목록
   let regionFilter: string[] | undefined;
   if (sidoFilter && SLUG_TO_CODES[sidoFilter]) {
     regionFilter = SLUG_TO_CODES[sidoFilter];
   }
 
-  // 전세 TOP: 보증금 높은순
-  let jeonseQuery = rentDb
-    .from("apt_rent_transactions")
-    .select("apt_name,region_code,region_name,size_sqm,floor,deposit,monthly_rent,rent_type,contract_type,trade_date")
-    .eq("rent_type", "전세")
-    .order("deposit", { ascending: false })
-    .limit(20);
-
-  if (regionFilter) {
-    jeonseQuery = jeonseQuery.in("region_code", regionFilter);
-  }
-
-  // 월세 TOP: 최근 월세 거래
-  let wolseQuery = rentDb
-    .from("apt_rent_transactions")
-    .select("apt_name,region_code,region_name,size_sqm,floor,deposit,monthly_rent,rent_type,contract_type,trade_date")
-    .eq("rent_type", "월세")
-    .order("trade_date", { ascending: false })
-    .limit(20);
-
-  if (regionFilter) {
-    wolseQuery = wolseQuery.in("region_code", regionFilter);
-  }
+  const rentFields = {
+    apt_name: aptRentTransactions.aptName,
+    region_code: aptRentTransactions.regionCode,
+    region_name: aptRentTransactions.regionName,
+    size_sqm: aptRentTransactions.sizeSqm,
+    floor: aptRentTransactions.floor,
+    deposit: aptRentTransactions.deposit,
+    monthly_rent: aptRentTransactions.monthlyRent,
+    rent_type: aptRentTransactions.rentType,
+    contract_type: aptRentTransactions.contractType,
+    trade_date: aptRentTransactions.tradeDate,
+  };
 
   let jeonseItems: Record<string, unknown>[] = [];
   let wolseItems: Record<string, unknown>[] = [];
 
   try {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
-
     const [jeonseResult, wolseResult] = await Promise.all([
-      jeonseQuery.abortSignal(ac.signal),
-      wolseQuery.abortSignal(ac.signal),
+      db.select(rentFields).from(aptRentTransactions)
+        .where(and(
+          eq(aptRentTransactions.rentType, "전세"),
+          regionFilter ? inArray(aptRentTransactions.regionCode, regionFilter) : undefined,
+        ))
+        .orderBy(desc(aptRentTransactions.deposit))
+        .limit(20),
+      db.select(rentFields).from(aptRentTransactions)
+        .where(and(
+          eq(aptRentTransactions.rentType, "월세"),
+          regionFilter ? inArray(aptRentTransactions.regionCode, regionFilter) : undefined,
+        ))
+        .orderBy(desc(aptRentTransactions.tradeDate))
+        .limit(20),
     ]);
 
-    clearTimeout(timer);
-
-    jeonseItems = jeonseResult.data ?? [];
-    wolseItems = wolseResult.data ?? [];
+    jeonseItems = jeonseResult as unknown as Record<string, unknown>[];
+    wolseItems = wolseResult as unknown as Record<string, unknown>[];
   } catch (error) {
     console.error("전월세 데이터 조회 실패:", error);
   }

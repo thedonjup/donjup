@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { dailyReports } from "@/lib/db/schema";
+import { desc, sql } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { DailyReport } from "@/types/db";
@@ -22,20 +24,21 @@ export default async function DailyArchivePage({
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10));
   const offset = (currentPage - 1) * PAGE_SIZE;
 
-  const supabase = await createClient();
-
-  const [{ data: reports }, { count }] = await Promise.all([
-    supabase
-      .from("daily_reports")
-      .select("id,report_date,title,summary")
-      .order("report_date", { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1),
-    supabase
-      .from("daily_reports")
-      .select("id", { count: "exact", head: true }),
+  const [reports, countResult] = await Promise.all([
+    db.select({
+      id: dailyReports.id,
+      report_date: dailyReports.reportDate,
+      title: dailyReports.title,
+      summary: dailyReports.summary,
+    }).from(dailyReports)
+      .orderBy(desc(dailyReports.reportDate))
+      .offset(offset)
+      .limit(PAGE_SIZE),
+    db.select({ count: sql<number>`count(*)` }).from(dailyReports),
   ]);
 
-  const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE);
+  const count = Number(countResult[0]?.count ?? 0);
+  const totalPages = Math.ceil(count / PAGE_SIZE);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -51,7 +54,7 @@ export default async function DailyArchivePage({
       <div className="mt-8">
         {reports && reports.length > 0 ? (
           <div className="space-y-2">
-            {reports.map((r: DailyReport) => (
+            {reports.map((r) => (
               <Link
                 key={r.id}
                 href={`/daily/${r.report_date}`}

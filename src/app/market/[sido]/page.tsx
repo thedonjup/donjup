@@ -1,5 +1,7 @@
 import React from "react";
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptTransactions } from "@/lib/db/schema";
+import { eq, desc, asc, lt, isNotNull, gte, and, sql } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -56,7 +58,6 @@ export default async function MarketSidoPage({
   const sido = getSidoBySlug(sidoSlug);
   if (!sido) notFound();
 
-  const supabase = await createClient();
   const sigunguEntries = Object.entries(sido.sigungu);
 
   const threeMonthsAgo = new Date();
@@ -74,66 +75,75 @@ export default async function MarketSidoPage({
   }[] = [];
 
   try {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
-
     sigunguStats = await Promise.all(
       sigunguEntries.map(async ([code, name]) => {
         const [countResult, dropResult, highResult, priceResult] = await Promise.all([
-          supabase
-            .from("apt_transactions")
-            .select("id", { count: "exact", head: true })
-            .eq("region_code", code)
-            .abortSignal(ac.signal),
-          supabase
-            .from("apt_transactions")
-            .select("apt_name,change_rate,trade_price")
-            .eq("region_code", code)
-            .not("change_rate", "is", null)
-            .lt("change_rate", 0)
-            .order("change_rate", { ascending: true })
-            .limit(1)
-            .abortSignal(ac.signal),
-          supabase
-            .from("apt_transactions")
-            .select("apt_name,trade_price")
-            .eq("region_code", code)
-            .eq("is_new_high", true)
-            .order("trade_date", { ascending: false })
-            .limit(1)
-            .abortSignal(ac.signal),
-          supabase
-            .from("apt_transactions")
-            .select("trade_price,deal_type")
-            .eq("region_code", code)
-            .gte("trade_date", cutoff)
-            .eq("property_type", 1)
-            .abortSignal(ac.signal),
+          db.select({ count: sql<number>`count(*)` }).from(aptTransactions)
+            .where(eq(aptTransactions.regionCode, code)),
+          db.select({
+            apt_name: aptTransactions.aptName,
+            change_rate: aptTransactions.changeRate,
+            trade_price: aptTransactions.tradePrice,
+          }).from(aptTransactions)
+            .where(and(
+              eq(aptTransactions.regionCode, code),
+              isNotNull(aptTransactions.changeRate),
+              lt(aptTransactions.changeRate, "0"),
+            ))
+            .orderBy(asc(aptTransactions.changeRate))
+            .limit(1),
+          db.select({
+            apt_name: aptTransactions.aptName,
+            trade_price: aptTransactions.tradePrice,
+          }).from(aptTransactions)
+            .where(and(
+              eq(aptTransactions.regionCode, code),
+              eq(aptTransactions.isNewHigh, true),
+            ))
+            .orderBy(desc(aptTransactions.tradeDate))
+            .limit(1),
+          db.select({
+            trade_price: aptTransactions.tradePrice,
+            deal_type: aptTransactions.dealType,
+          }).from(aptTransactions)
+            .where(and(
+              eq(aptTransactions.regionCode, code),
+              gte(aptTransactions.tradeDate, cutoff),
+              eq(aptTransactions.propertyType, 1),
+            )),
         ]);
 
         type PriceRow = { trade_price: number; deal_type: string | null };
-        const priceRows: PriceRow[] = (priceResult.data ?? []) as PriceRow[];
+        const priceRows: PriceRow[] = priceResult as unknown as PriceRow[];
         const validPrices: number[] = priceRows
           .filter((t) => !isDirectDeal(t.deal_type))
-          .map((t) => t.trade_price);
+          .map((t) => Number(t.trade_price));
         const medianPrice = computeMedianPrice(validPrices);
         const avgPrice = validPrices.length
           ? Math.round(validPrices.reduce((a: number, b: number) => a + b, 0) / validPrices.length)
           : 0;
 
+        const topDropRaw = dropResult[0] ?? null;
+        const topHighRaw = highResult[0] ?? null;
+
         return {
           code,
           name,
-          count: countResult.count ?? 0,
-          topDrop: dropResult.data?.[0] ?? null,
-          topHigh: highResult.data?.[0] ?? null,
+          count: Number(countResult[0]?.count ?? 0),
+          topDrop: topDropRaw ? {
+            apt_name: topDropRaw.apt_name,
+            change_rate: Number(topDropRaw.change_rate),
+            trade_price: Number(topDropRaw.trade_price),
+          } : null,
+          topHigh: topHighRaw ? {
+            apt_name: topHighRaw.apt_name,
+            trade_price: Number(topHighRaw.trade_price),
+          } : null,
           medianPrice,
           avgPrice,
         };
       })
     );
-
-    clearTimeout(timer);
   } catch {
     // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
   }

@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { homepageCache, aptTransactions, financeRates, pageViews } from "@/lib/db/schema";
+import { eq, desc, asc, lt, isNotNull, isNull, gte, and, sql } from "drizzle-orm";
 import AdSlot from "@/components/ads/AdSlot";
 import CoupangBanner from "@/components/CoupangBanner";
 import { RATE_ORDER } from "@/lib/format";
@@ -108,13 +110,21 @@ export default async function HomePage({
   let popularItems: { page_path: string; page_type: string | null; view_count: number }[] = [];
 
   try {
-    const supabase = await createClient();
+    const cacheRows = await db
+      .select({
+        drops: homepageCache.drops,
+        highs: homepageCache.highs,
+        volume: homepageCache.volume,
+        recent: homepageCache.recent,
+        rates: homepageCache.rates,
+        totalTransactions: homepageCache.totalTransactions,
+        totalComplexes: homepageCache.totalComplexes,
+      })
+      .from(homepageCache)
+      .where(eq(homepageCache.id, 1))
+      .limit(1);
 
-    const { data: cache } = await supabase
-      .from("homepage_cache")
-      .select("drops,highs,volume,recent,rates,total_transactions,total_complexes,updated_at")
-      .eq("id", 1)
-      .single();
+    const cache = cacheRows[0] ?? null;
 
     if (cache && cache.drops) {
       const rawDrops = ((typeof cache.drops === "string" ? JSON.parse(cache.drops) : cache.drops) ?? []) as AptTransaction[];
@@ -131,30 +141,62 @@ export default async function HomePage({
       volume = filterByType((allVolume ?? []) as AptTransaction[], validType).slice(0, 10);
       recent = filterByType((allRecent ?? []) as AptTransaction[], validType).slice(0, 10);
       rates = typeof cache.rates === "string" ? JSON.parse(cache.rates) : (cache.rates ?? []);
-      totalTxns = Number(cache.total_transactions) || 0;
-      totalComplexes = Number(cache.total_complexes) || 0;
+      totalTxns = Number(cache.totalTransactions) || 0;
+      totalComplexes = Number(cache.totalComplexes) || 0;
     } else {
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), 30000);
+      const txFields = {
+        id: aptTransactions.id,
+        region_code: aptTransactions.regionCode,
+        region_name: aptTransactions.regionName,
+        apt_name: aptTransactions.aptName,
+        size_sqm: aptTransactions.sizeSqm,
+        floor: aptTransactions.floor,
+        trade_price: aptTransactions.tradePrice,
+        trade_date: aptTransactions.tradeDate,
+        highest_price: aptTransactions.highestPrice,
+        change_rate: aptTransactions.changeRate,
+        is_new_high: aptTransactions.isNewHigh,
+        is_significant_drop: aptTransactions.isSignificantDrop,
+        deal_type: aptTransactions.dealType,
+        drop_level: aptTransactions.dropLevel,
+        property_type: aptTransactions.propertyType,
+      };
 
-      const txFields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level,property_type";
-      const applyTypeFilter = <Q extends { eq: (col: string, val: number) => Q }>(q: Q): Q =>
-        validType !== 0 ? q.eq("property_type", validType) : q;
+      const typeFilter = validType !== 0 ? eq(aptTransactions.propertyType, validType) : undefined;
 
       const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount] = await Promise.allSettled([
-        applyTypeFilter(supabase.from("apt_transactions").select(txFields).not("change_rate", "is", null).lt("change_rate", 0)).order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
-        applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("is_new_high", true)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-        applyTypeFilter(supabase.from("apt_transactions").select(txFields)).order("trade_date", { ascending: false }).order("trade_price", { ascending: false }).limit(10).abortSignal(ac.signal),
-        applyTypeFilter(supabase.from("apt_transactions").select(txFields)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-        supabase.from("finance_rates").select("rate_type,rate_value,prev_value,change_bp,base_date,source").order("base_date", { ascending: false }).limit(5).abortSignal(ac.signal),
-        supabase.from("apt_transactions").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
-        supabase.from("apt_complexes").select("id", { count: "exact", head: true }).abortSignal(ac.signal),
+        db.select(txFields).from(aptTransactions)
+          .where(and(isNotNull(aptTransactions.changeRate), lt(aptTransactions.changeRate, "0"), typeFilter))
+          .orderBy(asc(aptTransactions.changeRate))
+          .limit(10),
+        db.select(txFields).from(aptTransactions)
+          .where(and(eq(aptTransactions.isNewHigh, true), typeFilter))
+          .orderBy(desc(aptTransactions.tradeDate))
+          .limit(10),
+        db.select(txFields).from(aptTransactions)
+          .where(typeFilter)
+          .orderBy(desc(aptTransactions.tradeDate), desc(aptTransactions.tradePrice))
+          .limit(10),
+        db.select(txFields).from(aptTransactions)
+          .where(typeFilter)
+          .orderBy(desc(aptTransactions.tradeDate))
+          .limit(10),
+        db.select({
+          rate_type: financeRates.rateType,
+          rate_value: financeRates.rateValue,
+          prev_value: financeRates.prevValue,
+          change_bp: financeRates.changeBp,
+          base_date: financeRates.baseDate,
+          source: financeRates.source,
+        }).from(financeRates)
+          .orderBy(desc(financeRates.baseDate))
+          .limit(5),
+        db.select({ count: sql<number>`count(*)` }).from(aptTransactions),
+        db.select({ count: sql<number>`count(*)` }).from(aptTransactions),
       ]);
 
-      clearTimeout(timer);
-
-      const rawDropsFallback: AptTransaction[] = dropsRes.status === "fulfilled" ? dropsRes.value.data ?? [] : [];
-      const rawHighsFallback: AptTransaction[] = highsRes.status === "fulfilled" ? highsRes.value.data ?? [] : [];
+      const rawDropsFallback: AptTransaction[] = dropsRes.status === "fulfilled" ? dropsRes.value as unknown as AptTransaction[] : [];
+      const rawHighsFallback: AptTransaction[] = highsRes.status === "fulfilled" ? highsRes.value as unknown as AptTransaction[] : [];
 
       const normDrops = applyRankingNormalization(rawDropsFallback);
       normDrops.sort((a, b) => (a.change_rate ?? 0) - (b.change_rate ?? 0));
@@ -162,25 +204,26 @@ export default async function HomePage({
 
       const normHighs = applyRankingNormalization(rawHighsFallback);
       highs = normHighs.slice(0, 10);
-      volume = volumeRes.status === "fulfilled" ? volumeRes.value.data ?? [] : [];
-      recent = recentRes.status === "fulfilled" ? recentRes.value.data ?? [] : [];
-      rates = ratesRes.status === "fulfilled" ? ratesRes.value.data ?? [] : [];
-      totalTxns = txnCount.status === "fulfilled" ? (txnCount.value.count ?? 0) : 0;
-      totalComplexes = complexCount.status === "fulfilled" ? (complexCount.value.count ?? 0) : 0;
+      volume = volumeRes.status === "fulfilled" ? volumeRes.value as unknown as AptTransaction[] : [];
+      recent = recentRes.status === "fulfilled" ? recentRes.value as unknown as AptTransaction[] : [];
+      rates = ratesRes.status === "fulfilled" ? ratesRes.value as unknown as FinanceRate[] : [];
+      totalTxns = txnCount.status === "fulfilled" ? Number(txnCount.value[0]?.count ?? 0) : 0;
+      totalComplexes = complexCount.status === "fulfilled" ? Number(complexCount.value[0]?.count ?? 0) : 0;
     }
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7);
     const startDateStr = startDate.toISOString().split("T")[0];
 
-    const { data: popularData } = await supabase
-      .from("page_views")
-      .select("page_path,page_type,view_count")
-      .gte("view_date", startDateStr)
-      .eq("page_type", "apt_detail")
-      .order("view_count", { ascending: false })
+    const popularData = await db.select({
+      page_path: pageViews.pagePath,
+      page_type: pageViews.pageType,
+      view_count: pageViews.viewCount,
+    }).from(pageViews)
+      .where(and(gte(pageViews.viewDate, startDateStr), eq(pageViews.pageType, "apt_detail")))
+      .orderBy(desc(pageViews.viewCount))
       .limit(10);
-    popularItems = popularData ?? [];
+    popularItems = popularData;
   } catch (e) {
     console.error("[Homepage] DB query failed:", e instanceof Error ? e.message : e);
   }

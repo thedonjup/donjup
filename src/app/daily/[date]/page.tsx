@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { dailyReports } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -52,23 +54,26 @@ export default async function DailyReportPage({
   params: Promise<{ date: string }>;
 }) {
   const { date } = await params;
-  const supabase = await createClient();
-
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), 30000);
 
   let report: DailyReport | null = null;
   try {
-    const { data } = await supabase
-      .from("daily_reports")
-      .select("*")
-      .eq("report_date", date)
-      .abortSignal(ac.signal)
-      .single();
-    report = data;
-    clearTimeout(timer);
+    const rows = await db.select({
+      id: dailyReports.id,
+      report_date: dailyReports.reportDate,
+      title: dailyReports.title,
+      summary: dailyReports.summary,
+      top_drops: dailyReports.topDrops,
+      top_highs: dailyReports.topHighs,
+      rate_summary: dailyReports.rateSummary,
+      volume_summary: dailyReports.volumeSummary,
+      og_image_url: dailyReports.ogImageUrl,
+      created_at: dailyReports.createdAt,
+    }).from(dailyReports)
+      .where(eq(dailyReports.reportDate, date))
+      .limit(1);
+    report = rows[0] as unknown as DailyReport ?? null;
   } catch {
-    clearTimeout(timer);
+    // ignore
   }
 
   if (!report) {
@@ -298,4 +303,3 @@ function getNextDate(dateStr: string): string {
   d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
 }
-

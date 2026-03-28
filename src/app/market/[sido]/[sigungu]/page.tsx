@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptTransactions } from "@/lib/db/schema";
+import { eq, desc, asc, lt, isNotNull, and, sql } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -85,39 +87,60 @@ export default async function MarketSigunguPage({
   const sigunguName = sido.sigungu[sigungu];
   if (!sigunguName) notFound();
 
-  const supabase = await createClient();
-
   let drops: Transaction[] = [];
   let highs: Transaction[] = [];
   let recent: Transaction[] = [];
   let totalCount = 0;
 
   try {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
-
-    const applyTypeFilter = <Q extends { eq: (col: string, val: number) => Q }>(q: Q): Q =>
-      validType !== 0 ? q.eq("property_type", validType) : q;
-    const txFields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,highest_price,change_rate,is_new_high,is_significant_drop,deal_type,drop_level";
+    const typeFilter = validType !== 0 ? eq(aptTransactions.propertyType, validType) : undefined;
+    const txFields = {
+      id: aptTransactions.id,
+      region_code: aptTransactions.regionCode,
+      region_name: aptTransactions.regionName,
+      apt_name: aptTransactions.aptName,
+      size_sqm: aptTransactions.sizeSqm,
+      floor: aptTransactions.floor,
+      trade_price: aptTransactions.tradePrice,
+      trade_date: aptTransactions.tradeDate,
+      highest_price: aptTransactions.highestPrice,
+      change_rate: aptTransactions.changeRate,
+      is_new_high: aptTransactions.isNewHigh,
+      is_significant_drop: aptTransactions.isSignificantDrop,
+      deal_type: aptTransactions.dealType,
+      drop_level: aptTransactions.dropLevel,
+    };
 
     const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([
-      applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("region_code", sigungu)
-        .not("change_rate", "is", null).lt("change_rate", 0))
-        .order("change_rate", { ascending: true }).limit(10).abortSignal(ac.signal),
-      applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("region_code", sigungu)
-        .eq("is_new_high", true)).order("trade_date", { ascending: false }).limit(10).abortSignal(ac.signal),
-      applyTypeFilter(supabase.from("apt_transactions").select(txFields).eq("region_code", sigungu))
-        .order("trade_date", { ascending: false }).limit(20).abortSignal(ac.signal),
-      applyTypeFilter(supabase.from("apt_transactions").select("id", { count: "exact", head: true })
-        .eq("region_code", sigungu)).abortSignal(ac.signal),
+      db.select(txFields).from(aptTransactions)
+        .where(and(
+          eq(aptTransactions.regionCode, sigungu),
+          isNotNull(aptTransactions.changeRate),
+          lt(aptTransactions.changeRate, "0"),
+          typeFilter,
+        ))
+        .orderBy(asc(aptTransactions.changeRate))
+        .limit(10),
+      db.select(txFields).from(aptTransactions)
+        .where(and(
+          eq(aptTransactions.regionCode, sigungu),
+          eq(aptTransactions.isNewHigh, true),
+          typeFilter,
+        ))
+        .orderBy(desc(aptTransactions.tradeDate))
+        .limit(10),
+      db.select(txFields).from(aptTransactions)
+        .where(and(eq(aptTransactions.regionCode, sigungu), typeFilter))
+        .orderBy(desc(aptTransactions.tradeDate))
+        .limit(20),
+      db.select({ count: sql<number>`count(*)` }).from(aptTransactions)
+        .where(and(eq(aptTransactions.regionCode, sigungu), typeFilter)),
     ]);
 
-    clearTimeout(timer);
-
-    drops = (dropsResult.data ?? []) as Transaction[];
-    highs = (highsResult.data ?? []) as Transaction[];
-    recent = (recentResult.data ?? []) as Transaction[];
-    totalCount = countResult.count ?? 0;
+    drops = dropsResult as unknown as Transaction[];
+    highs = highsResult as unknown as Transaction[];
+    recent = recentResult as unknown as Transaction[];
+    totalCount = Number(countResult[0]?.count ?? 0);
   } catch {
     // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
   }
@@ -205,16 +228,16 @@ export default async function MarketSigunguPage({
                       <p className="font-semibold t-text">{t.apt_name}</p>
                       <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</p>
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(t.size_sqm)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(Number(t.size_sqm))}</td>
                     <td className="px-4 py-3 text-right tabular-nums line-through" style={{ color: "var(--color-text-tertiary)" }}>
-                      {t.highest_price ? formatPrice(t.highest_price) : "-"}
+                      {t.highest_price ? formatPrice(Number(t.highest_price)) : "-"}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">
-                      {formatPrice(t.trade_price)}
+                      {formatPrice(Number(t.trade_price))}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" }}>
-                        ▼ {t.change_rate !== null ? Math.abs(t.change_rate) : 0}%
+                        ▼ {t.change_rate !== null ? Math.abs(Number(t.change_rate)) : 0}%
                       </span>
                     </td>
                   </tr>
@@ -252,8 +275,8 @@ export default async function MarketSigunguPage({
                       <span className="rank-badge rank-badge-rise text-[11px]">{i + 1}</span>
                     </td>
                     <td className="px-4 py-3 font-semibold t-text">{t.apt_name}</td>
-                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(t.size_sqm)}</td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">{formatPrice(t.trade_price)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(Number(t.size_sqm))}</td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">{formatPrice(Number(t.trade_price))}</td>
                     <td className="px-4 py-3 text-right" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</td>
                   </tr>
                 ))}
@@ -289,9 +312,9 @@ export default async function MarketSigunguPage({
                 {recent.map((t) => (
                   <tr key={t.id} className="border-b last:border-0 transition hover:opacity-80" style={{ borderColor: "var(--color-border-subtle)" }}>
                     <td className="px-4 py-3 font-semibold t-text">{t.apt_name}</td>
-                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(t.size_sqm)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{formatSizeWithPyeong(Number(t.size_sqm))}</td>
                     <td className="px-4 py-3 text-right tabular-nums" style={{ color: "var(--color-text-secondary)" }}>{t.floor}층</td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">{formatPrice(t.trade_price)}</td>
+                    <td className="px-4 py-3 text-right font-semibold tabular-nums t-text">{formatPrice(Number(t.trade_price))}</td>
                     <td className="px-4 py-3 text-right" style={{ color: "var(--color-text-tertiary)" }}>{t.trade_date}</td>
                   </tr>
                 ))}
