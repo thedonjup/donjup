@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptTransactions } from "@/lib/db/schema";
+import { desc, eq, and } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, sqmToPyeong } from "@/lib/format";
@@ -47,26 +49,28 @@ export default async function NewHighsPage({
   let transactions: NewHighTransaction[] = [];
 
   try {
-    const supabase = await createClient();
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
+    const typeFilter = validType !== 0 ? eq(aptTransactions.propertyType, validType) : undefined;
 
-    const fields = "id,region_code,region_name,apt_name,size_sqm,trade_price,trade_date,deal_type,property_type";
-
-    let query = supabase
-      .from("apt_transactions")
-      .select(fields)
-      .eq("is_new_high", true)
-      .order("trade_date", { ascending: false })
+    const rows = await db.select({
+      id: aptTransactions.id,
+      region_code: aptTransactions.regionCode,
+      region_name: aptTransactions.regionName,
+      apt_name: aptTransactions.aptName,
+      size_sqm: aptTransactions.sizeSqm,
+      trade_price: aptTransactions.tradePrice,
+      trade_date: aptTransactions.tradeDate,
+      deal_type: aptTransactions.dealType,
+      property_type: aptTransactions.propertyType,
+    }).from(aptTransactions)
+      .where(and(eq(aptTransactions.isNewHigh, true), typeFilter))
+      .orderBy(desc(aptTransactions.tradeDate))
       .limit(50);
 
-    if (validType !== 0) {
-      query = query.eq("property_type", validType);
-    }
-
-    const { data } = await query.abortSignal(ac.signal);
-    clearTimeout(timer);
-    transactions = (data as NewHighTransaction[]) ?? [];
+    transactions = rows.map((r) => ({
+      ...r,
+      size_sqm: Number(r.size_sqm),
+      trade_price: Number(r.trade_price),
+    }));
   } catch (e) {
     console.error("[NewHighs] DB query failed:", e instanceof Error ? e.message : e);
   }

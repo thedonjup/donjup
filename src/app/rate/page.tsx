@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { financeRates } from "@/lib/db/schema";
+import { desc, like, ne } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";
@@ -46,30 +48,51 @@ export default async function RateDashboardPage() {
   let bankRatesRaw: FinanceRate[] | null = null;
 
   try {
-    const supabase = await createClient();
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
-
     const [ratesRes, bankRes] = await Promise.all([
-      supabase
-        .from("finance_rates")
-        .select("rate_type,rate_value,prev_value,change_bp,base_date,source")
-        .order("base_date", { ascending: false })
-        .limit(100)
-        .abortSignal(ac.signal),
-      supabase
-        .from("finance_rates")
-        .select("rate_type, rate_value, prev_value, change_bp, base_date")
-        .like("rate_type", "BANK_%")
-        .neq("rate_type", "BANK_PRODUCTS_ALL")
-        .order("base_date", { ascending: false })
-        .limit(100)
-        .abortSignal(ac.signal),
+      db.select({
+        id: financeRates.id,
+        rate_type: financeRates.rateType,
+        rate_value: financeRates.rateValue,
+        prev_value: financeRates.prevValue,
+        change_bp: financeRates.changeBp,
+        base_date: financeRates.baseDate,
+        source: financeRates.source,
+        created_at: financeRates.createdAt,
+      }).from(financeRates)
+        .orderBy(desc(financeRates.baseDate))
+        .limit(100),
+      db.select({
+        id: financeRates.id,
+        rate_type: financeRates.rateType,
+        rate_value: financeRates.rateValue,
+        prev_value: financeRates.prevValue,
+        change_bp: financeRates.changeBp,
+        base_date: financeRates.baseDate,
+        source: financeRates.source,
+        created_at: financeRates.createdAt,
+      }).from(financeRates)
+        .where(ne(financeRates.rateType, "BANK_PRODUCTS_ALL"))
+        .orderBy(desc(financeRates.baseDate))
+        .limit(100),
     ]);
 
-    clearTimeout(timer);
-    allRates = ratesRes.data;
-    bankRatesRaw = bankRes.data;
+    allRates = ratesRes.map((r) => ({
+      ...r,
+      rate_value: Number(r.rate_value),
+      prev_value: r.prev_value !== null ? Number(r.prev_value) : null,
+      base_date: String(r.base_date),
+      created_at: r.created_at ? String(r.created_at) : "",
+    })) as FinanceRate[];
+
+    bankRatesRaw = bankRes
+      .filter((r) => r.rate_type.startsWith("BANK_"))
+      .map((r) => ({
+        ...r,
+        rate_value: Number(r.rate_value),
+        prev_value: r.prev_value !== null ? Number(r.prev_value) : null,
+        base_date: String(r.base_date),
+        created_at: r.created_at ? String(r.created_at) : "",
+      })) as FinanceRate[];
   } catch {
     // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
   }

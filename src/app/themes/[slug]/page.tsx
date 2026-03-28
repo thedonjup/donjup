@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptComplexes, aptTransactions } from "@/lib/db/schema";
+import { desc, asc, lte, gte, isNotNull } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -132,58 +134,73 @@ export default async function ThemeDetailPage({
   const theme = THEMES[slug];
   if (!theme) notFound();
 
-  const supabase = await createClient();
   let results: ThemeResult[] = [];
 
   try {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
     const currentYear = new Date().getFullYear();
 
     if (slug === "reconstruction") {
       const cutoffYear = currentYear - 30;
-      const { data } = await supabase
-        .from("apt_complexes")
-        .select("id,apt_name,region_code,region_name,slug,built_year,total_units")
-        .not("built_year", "is", null)
-        .lte("built_year", cutoffYear)
-        .order("built_year", { ascending: true })
-        .limit(50)
-        .abortSignal(ac.signal);
-      results = (data ?? []) as ThemeResult[];
+      const data = await db.select({
+        id: aptComplexes.id,
+        apt_name: aptComplexes.aptName,
+        region_code: aptComplexes.regionCode,
+        region_name: aptComplexes.regionName,
+        slug: aptComplexes.slug,
+        built_year: aptComplexes.builtYear,
+        total_units: aptComplexes.totalUnits,
+      }).from(aptComplexes)
+        .where(lte(aptComplexes.builtYear, cutoffYear))
+        .orderBy(asc(aptComplexes.builtYear))
+        .limit(50);
+      results = data as unknown as ThemeResult[];
     } else if (slug === "large-complex") {
-      const { data } = await supabase
-        .from("apt_complexes")
-        .select("id,apt_name,region_code,region_name,slug,built_year,total_units")
-        .not("total_units", "is", null)
-        .gte("total_units", 1000)
-        .order("total_units", { ascending: false })
-        .limit(50)
-        .abortSignal(ac.signal);
-      results = (data ?? []) as ThemeResult[];
+      const data = await db.select({
+        id: aptComplexes.id,
+        apt_name: aptComplexes.aptName,
+        region_code: aptComplexes.regionCode,
+        region_name: aptComplexes.regionName,
+        slug: aptComplexes.slug,
+        built_year: aptComplexes.builtYear,
+        total_units: aptComplexes.totalUnits,
+      }).from(aptComplexes)
+        .where(gte(aptComplexes.totalUnits, 1000))
+        .orderBy(desc(aptComplexes.totalUnits))
+        .limit(50);
+      results = data as unknown as ThemeResult[];
     } else if (slug === "new-build") {
-      const { data } = await supabase
-        .from("apt_complexes")
-        .select("id,apt_name,region_code,region_name,slug,built_year,total_units")
-        .not("built_year", "is", null)
-        .gte("built_year", 2020)
-        .order("built_year", { ascending: false })
-        .limit(50)
-        .abortSignal(ac.signal);
-      results = (data ?? []) as ThemeResult[];
+      const data = await db.select({
+        id: aptComplexes.id,
+        apt_name: aptComplexes.aptName,
+        region_code: aptComplexes.regionCode,
+        region_name: aptComplexes.regionName,
+        slug: aptComplexes.slug,
+        built_year: aptComplexes.builtYear,
+        total_units: aptComplexes.totalUnits,
+      }).from(aptComplexes)
+        .where(gte(aptComplexes.builtYear, 2020))
+        .orderBy(desc(aptComplexes.builtYear))
+        .limit(50);
+      results = data as unknown as ThemeResult[];
     } else if (slug === "crash-deals") {
-      const { data } = await supabase
-        .from("apt_transactions")
-        .select("id,apt_name,region_code,region_name,trade_price,change_rate,trade_date")
-        .not("change_rate", "is", null)
-        .lte("change_rate", -20)
-        .order("change_rate", { ascending: true })
-        .limit(50)
-        .abortSignal(ac.signal);
-      results = (data ?? []) as ThemeResult[];
+      const data = await db.select({
+        id: aptTransactions.id,
+        apt_name: aptTransactions.aptName,
+        region_code: aptTransactions.regionCode,
+        region_name: aptTransactions.regionName,
+        trade_price: aptTransactions.tradePrice,
+        change_rate: aptTransactions.changeRate,
+        trade_date: aptTransactions.tradeDate,
+      }).from(aptTransactions)
+        .where(lte(aptTransactions.changeRate, "-20"))
+        .orderBy(asc(aptTransactions.changeRate))
+        .limit(50);
+      results = data.map((r) => ({
+        ...r,
+        trade_price: Number(r.trade_price),
+        change_rate: r.change_rate !== null ? Number(r.change_rate) : null,
+      }));
     }
-
-    clearTimeout(timer);
   } catch (e) {
     console.error("[ThemeDetail] query failed:", e);
   }

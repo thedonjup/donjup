@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptComplexes, aptTransactions } from "@/lib/db/schema";
+import { desc, asc, isNotNull, lte, gte } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice } from "@/lib/format";
@@ -87,7 +89,6 @@ export default async function ThemesPage({
   const { theme: themeParam } = await searchParams;
   const selectedTheme = typeof themeParam === "string" ? themeParam : null;
 
-  const supabase = await createClient();
   let results: ThemeResult[] = [];
   let activeTheme: ThemeDef | null = null;
 
@@ -96,58 +97,70 @@ export default async function ThemesPage({
 
     if (activeTheme) {
       try {
-        const ac = new AbortController();
-        const timer = setTimeout(() => ac.abort(), 30000);
         const currentYear = new Date().getFullYear();
 
         if (selectedTheme === "reconstruction") {
-          // 준공 30년 이상 단지
           const cutoffYear = currentYear - 30;
-          const { data } = await supabase
-            .from("apt_complexes")
-            .select("id,apt_name,region_code,region_name,slug,built_year,total_units")
-            .not("built_year", "is", null)
-            .lte("built_year", cutoffYear)
-            .order("built_year", { ascending: true })
-            .limit(30)
-            .abortSignal(ac.signal);
-          results = (data ?? []) as ThemeResult[];
+          const data = await db.select({
+            id: aptComplexes.id,
+            apt_name: aptComplexes.aptName,
+            region_code: aptComplexes.regionCode,
+            region_name: aptComplexes.regionName,
+            slug: aptComplexes.slug,
+            built_year: aptComplexes.builtYear,
+            total_units: aptComplexes.totalUnits,
+          }).from(aptComplexes)
+            .where(lte(aptComplexes.builtYear, cutoffYear))
+            .orderBy(asc(aptComplexes.builtYear))
+            .limit(30);
+          results = data as unknown as ThemeResult[];
         } else if (selectedTheme === "large-complex") {
-          // 1000세대 이상
-          const { data } = await supabase
-            .from("apt_complexes")
-            .select("id,apt_name,region_code,region_name,slug,built_year,total_units")
-            .not("total_units", "is", null)
-            .gte("total_units", 1000)
-            .order("total_units", { ascending: false })
-            .limit(30)
-            .abortSignal(ac.signal);
-          results = (data ?? []) as ThemeResult[];
+          const data = await db.select({
+            id: aptComplexes.id,
+            apt_name: aptComplexes.aptName,
+            region_code: aptComplexes.regionCode,
+            region_name: aptComplexes.regionName,
+            slug: aptComplexes.slug,
+            built_year: aptComplexes.builtYear,
+            total_units: aptComplexes.totalUnits,
+          }).from(aptComplexes)
+            .where(gte(aptComplexes.totalUnits, 1000))
+            .orderBy(desc(aptComplexes.totalUnits))
+            .limit(30);
+          results = data as unknown as ThemeResult[];
         } else if (selectedTheme === "new-build") {
-          // 2020년 이후 준공
-          const { data } = await supabase
-            .from("apt_complexes")
-            .select("id,apt_name,region_code,region_name,slug,built_year,total_units")
-            .not("built_year", "is", null)
-            .gte("built_year", 2020)
-            .order("built_year", { ascending: false })
-            .limit(30)
-            .abortSignal(ac.signal);
-          results = (data ?? []) as ThemeResult[];
+          const data = await db.select({
+            id: aptComplexes.id,
+            apt_name: aptComplexes.aptName,
+            region_code: aptComplexes.regionCode,
+            region_name: aptComplexes.regionName,
+            slug: aptComplexes.slug,
+            built_year: aptComplexes.builtYear,
+            total_units: aptComplexes.totalUnits,
+          }).from(aptComplexes)
+            .where(gte(aptComplexes.builtYear, 2020))
+            .orderBy(desc(aptComplexes.builtYear))
+            .limit(30);
+          results = data as unknown as ThemeResult[];
         } else if (selectedTheme === "crash-deals") {
-          // 최고가 대비 20% 이상 하락 거래
-          const { data } = await supabase
-            .from("apt_transactions")
-            .select("id,apt_name,region_code,region_name,trade_price,change_rate,trade_date")
-            .not("change_rate", "is", null)
-            .lte("change_rate", -20)
-            .order("change_rate", { ascending: true })
-            .limit(30)
-            .abortSignal(ac.signal);
-          results = (data ?? []) as ThemeResult[];
+          const data = await db.select({
+            id: aptTransactions.id,
+            apt_name: aptTransactions.aptName,
+            region_code: aptTransactions.regionCode,
+            region_name: aptTransactions.regionName,
+            trade_price: aptTransactions.tradePrice,
+            change_rate: aptTransactions.changeRate,
+            trade_date: aptTransactions.tradeDate,
+          }).from(aptTransactions)
+            .where(lte(aptTransactions.changeRate, "-20"))
+            .orderBy(asc(aptTransactions.changeRate))
+            .limit(30);
+          results = data.map((r) => ({
+            ...r,
+            trade_price: Number(r.trade_price),
+            change_rate: r.change_rate !== null ? Number(r.change_rate) : null,
+          }));
         }
-
-        clearTimeout(timer);
       } catch (e) {
         console.error("[Themes] query failed:", e);
       }
@@ -255,7 +268,7 @@ export default async function ThemesPage({
                         {item.trade_price ? formatPrice(item.trade_price) : "-"}
                       </td>
                       <td className="px-4 py-3 text-right font-bold tabular-nums t-drop">
-                        {item.change_rate != null ? `${item.change_rate.toFixed(1)}%` : "-"}
+                        {item.change_rate != null ? `${Number(item.change_rate).toFixed(1)}%` : "-"}
                       </td>
                       <td className="px-4 py-3 text-xs tabular-nums t-text-tertiary">
                         {item.trade_date ?? "-"}

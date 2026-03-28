@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptTransactions } from "@/lib/db/schema";
+import { desc, eq, and } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, sqmToPyeong } from "@/lib/format";
@@ -56,26 +58,32 @@ export default async function TodayPage({
   let transactions: TodayTransaction[] = [];
 
   try {
-    const supabase = await createClient();
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
+    const typeFilter = validType !== 0 ? eq(aptTransactions.propertyType, validType) : undefined;
 
-    const fields = "id,region_code,region_name,apt_name,size_sqm,floor,trade_price,trade_date,change_rate,deal_type,drop_level,property_type";
-
-    let query = supabase
-      .from("apt_transactions")
-      .select(fields)
-      .order("trade_date", { ascending: false })
-      .order("trade_price", { ascending: false })
+    const rows = await db.select({
+      id: aptTransactions.id,
+      region_code: aptTransactions.regionCode,
+      region_name: aptTransactions.regionName,
+      apt_name: aptTransactions.aptName,
+      size_sqm: aptTransactions.sizeSqm,
+      floor: aptTransactions.floor,
+      trade_price: aptTransactions.tradePrice,
+      trade_date: aptTransactions.tradeDate,
+      change_rate: aptTransactions.changeRate,
+      deal_type: aptTransactions.dealType,
+      drop_level: aptTransactions.dropLevel,
+      property_type: aptTransactions.propertyType,
+    }).from(aptTransactions)
+      .where(typeFilter)
+      .orderBy(desc(aptTransactions.tradeDate), desc(aptTransactions.tradePrice))
       .limit(100);
 
-    if (validType !== 0) {
-      query = query.eq("property_type", validType);
-    }
-
-    const { data } = await query.abortSignal(ac.signal);
-    clearTimeout(timer);
-    transactions = (data as TodayTransaction[]) ?? [];
+    transactions = rows.map((r) => ({
+      ...r,
+      size_sqm: Number(r.size_sqm),
+      trade_price: Number(r.trade_price),
+      change_rate: r.change_rate !== null ? Number(r.change_rate) : null,
+    }));
   } catch (e) {
     console.error("[Today] DB query failed:", e instanceof Error ? e.message : e);
   }

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/db/server";
+import { db } from "@/lib/db";
+import { aptTransactions } from "@/lib/db/schema";
+import { desc, and, inArray, sql } from "drizzle-orm";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
@@ -25,61 +27,35 @@ export const metadata: Metadata = {
 
 export default async function TrendPage() {
   // 최근 6개월 월별 거래량 추이
-  // trade_date is stored as string (YYYY-MM-DD) — extract month via substring
-  let volumeRaw: Record<string, unknown>[] | null = null;
-  let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
+  let volumeRaw: { trade_date: string }[] = [];
 
   try {
-    supabase = await createClient();
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 30000);
-
-    // RPC 시도 → 실패 시 직접 쿼리 fallback
-    const rpcResult = await supabase.rpc("get_monthly_volume", {
-      month_count: 6,
-    }).abortSignal(ac.signal);
-
-    if (rpcResult.error || !rpcResult.data) {
-      // RPC가 없으면 직접 쿼리
-      const { data } = await supabase
-        .from("apt_transactions")
-        .select("trade_date")
-        .order("trade_date", { ascending: false })
-        .limit(50000)
-        .abortSignal(ac.signal);
-      volumeRaw = data as Record<string, unknown>[] | null;
-    } else {
-      volumeRaw = rpcResult.data as Record<string, unknown>[];
-    }
-
-    clearTimeout(timer);
+    volumeRaw = await db.select({
+      trade_date: aptTransactions.tradeDate,
+    }).from(aptTransactions)
+      .orderBy(desc(aptTransactions.tradeDate))
+      .limit(50000);
   } catch (error) {
     console.error("월별 거래량 데이터 조회 실패:", error);
   }
 
-  // 월별 거래량 집계 (서버 사이드 fallback)
+  // 월별 거래량 집계 (서버 사이드)
   let monthlyVolume: { month: string; count: number }[] = [];
 
-  if (volumeRaw && Array.isArray(volumeRaw)) {
-    // RPC 결과인 경우 (month, count 형태)
-    if (volumeRaw.length > 0 && "month" in volumeRaw[0]) {
-      monthlyVolume = volumeRaw as { month: string; count: number }[];
-    } else {
-      // raw trade_date 목록에서 집계
-      const countMap = new Map<string, number>();
-      for (const row of volumeRaw) {
-        const td = String((row as Record<string, unknown>).trade_date ?? "");
-        const month = td.substring(0, 7); // "YYYY-MM"
-        if (month) {
-          countMap.set(month, (countMap.get(month) ?? 0) + 1);
-        }
+  if (volumeRaw.length > 0) {
+    const countMap = new Map<string, number>();
+    for (const row of volumeRaw) {
+      const td = String(row.trade_date ?? "");
+      const month = td.substring(0, 7); // "YYYY-MM"
+      if (month) {
+        countMap.set(month, (countMap.get(month) ?? 0) + 1);
       }
-      monthlyVolume = Array.from(countMap.entries())
-        .map(([month, count]) => ({ month, count }))
-        .sort((a, b) => b.month.localeCompare(a.month))
-        .slice(0, 6)
-        .reverse();
     }
+    monthlyVolume = Array.from(countMap.entries())
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => b.month.localeCompare(a.month))
+      .slice(0, 6)
+      .reverse();
   }
 
   // 시도별 평균 거래가 비교
@@ -87,26 +63,19 @@ export default async function TrendPage() {
   let sidoAvgPrices: { name: string; slug: string; avgPrice: number; count: number }[] = [];
 
   try {
-    if (!supabase) supabase = await createClient();
-    const ac2 = new AbortController();
-    const timer2 = setTimeout(() => ac2.abort(), 5000);
-    const db = supabase;
-
     sidoAvgPrices = await Promise.all(
       sidoEntries.map(async ([, sido]) => {
         const sigunguCodes = Object.keys(sido.sigungu);
 
-        const { data, count } = await db
-          .from("apt_transactions")
-          .select("trade_price", { count: "exact" })
-          .in("region_code", sigunguCodes)
-          .order("trade_date", { ascending: false })
-          .limit(1000)
-          .abortSignal(ac2.signal);
+        const rows = await db.select({
+          trade_price: aptTransactions.tradePrice,
+          count: sql<number>`count(*) over ()`,
+        }).from(aptTransactions)
+          .where(inArray(aptTransactions.regionCode, sigunguCodes))
+          .orderBy(desc(aptTransactions.tradeDate))
+          .limit(1000);
 
-        const prices = (data ?? []).map((d: Record<string, unknown>) =>
-          Number(d.trade_price ?? 0)
-        );
+        const prices = rows.map((d) => Number(d.trade_price ?? 0));
         const avgPrice =
           prices.length > 0
             ? Math.round(prices.reduce((a: number, b: number) => a + b, 0) / prices.length)
@@ -116,12 +85,10 @@ export default async function TrendPage() {
           name: sido.shortName,
           slug: sido.slug,
           avgPrice,
-          count: count ?? 0,
+          count: prices.length,
         };
       })
     );
-
-    clearTimeout(timer2);
   } catch (error) {
     console.error("시도별 평균 거래가 조회 실패:", error);
   }
