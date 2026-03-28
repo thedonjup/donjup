@@ -39,6 +39,7 @@
 - ✓ 금리 표현 개선 — v1.1 Phase 12
 - ✓ 차트 개선 — v1.1 Phase 13
 - ✓ 랭킹 정교화 — v1.1 Phase 14
+- ✓ 지역 지수 대시보드 — v1.1 Phase 15
 
 ### Active
 
@@ -95,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 — Phase 14 complete, Phase 15 next (v1.1 마지막)*
+*Last updated: 2026-03-28 — v1.1 데이터 분석 고도화 마일스톤 완료 (Phase 10-15)*
