@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPool } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { logger } from "@/lib/logger";
 
@@ -19,10 +20,11 @@ for (const [code, sido] of Object.entries(REGION_HIERARCHY)) {
   }
 }
 
+type SqlChunk = ReturnType<typeof sql>;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim() || "";
-  const type = parseInt(searchParams.get("type") || "1", 10);
 
   // New filter params
   const builtYearMin = searchParams.get("builtYearMin");
@@ -39,9 +41,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const conditions: string[] = [];
-    const values: (string | number)[] = [];
-    let paramIdx = 1;
+    const conditions: SqlChunk[] = [];
 
     // Text search conditions (only if query provided)
     if (q.length > 0) {
@@ -55,39 +55,27 @@ export async function GET(request: Request) {
         const sidoCode = SIDO_SEARCH_MAP[regionPart];
         if (sidoCode) {
           if (sidoCode.length === 2) {
-            conditions.push(`c.region_code LIKE $${paramIdx}`);
-            values.push(`${sidoCode}%`);
+            conditions.push(sql`c.region_code LIKE ${sidoCode + "%"}`);
           } else {
-            conditions.push(`c.region_code = $${paramIdx}`);
-            values.push(sidoCode);
+            conditions.push(sql`c.region_code = ${sidoCode}`);
           }
         } else {
-          conditions.push(`(c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
-          values.push(`%${regionPart}%`);
+          conditions.push(sql`(c.region_name ILIKE ${`%${regionPart}%`} OR c.dong_name ILIKE ${`%${regionPart}%`})`);
         }
-        paramIdx++;
 
-        conditions.push(`c.apt_name ILIKE $${paramIdx}`);
-        values.push(`%${aptPart}%`);
-        paramIdx++;
+        conditions.push(sql`c.apt_name ILIKE ${`%${aptPart}%`}`);
       } else {
         const keyword = parts[0];
         const sidoCode = SIDO_SEARCH_MAP[keyword];
 
         if (sidoCode) {
           if (sidoCode.length === 2) {
-            conditions.push(`(c.region_code LIKE $${paramIdx} OR c.apt_name ILIKE $${paramIdx + 1} OR c.dong_name ILIKE $${paramIdx + 1})`);
-            values.push(`${sidoCode}%`, `%${keyword}%`);
-            paramIdx += 2;
+            conditions.push(sql`(c.region_code LIKE ${sidoCode + "%"} OR c.apt_name ILIKE ${`%${keyword}%`} OR c.dong_name ILIKE ${`%${keyword}%`})`);
           } else {
-            conditions.push(`(c.region_code = $${paramIdx} OR c.apt_name ILIKE $${paramIdx + 1} OR c.dong_name ILIKE $${paramIdx + 1})`);
-            values.push(sidoCode, `%${keyword}%`);
-            paramIdx += 2;
+            conditions.push(sql`(c.region_code = ${sidoCode} OR c.apt_name ILIKE ${`%${keyword}%`} OR c.dong_name ILIKE ${`%${keyword}%`})`);
           }
         } else {
-          conditions.push(`(c.apt_name ILIKE $${paramIdx} OR c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
-          values.push(`%${keyword}%`);
-          paramIdx++;
+          conditions.push(sql`(c.apt_name ILIKE ${`%${keyword}%`} OR c.region_name ILIKE ${`%${keyword}%`} OR c.dong_name ILIKE ${`%${keyword}%`})`);
         }
       }
     }
@@ -96,69 +84,62 @@ export async function GET(request: Request) {
     if (builtYearMin) {
       const year = parseInt(builtYearMin, 10);
       if (!isNaN(year)) {
-        conditions.push(`c.built_year >= $${paramIdx}`);
-        values.push(year);
-        paramIdx++;
+        conditions.push(sql`c.built_year >= ${year}`);
       }
     }
 
     // For price/size filters, we need to JOIN with apt_transactions
     const needsJoin = priceMin || priceMax || sizeMin || sizeMax;
-    const txConditions: string[] = [];
+    const txConditions: SqlChunk[] = [];
 
     if (priceMin) {
       const p = parseInt(priceMin, 10);
       if (!isNaN(p)) {
-        txConditions.push(`t.trade_price >= $${paramIdx}`);
-        values.push(p);
-        paramIdx++;
+        txConditions.push(sql`t.trade_price >= ${p}`);
       }
     }
     if (priceMax) {
       const p = parseInt(priceMax, 10);
       if (!isNaN(p)) {
-        txConditions.push(`t.trade_price <= $${paramIdx}`);
-        values.push(p);
-        paramIdx++;
+        txConditions.push(sql`t.trade_price <= ${p}`);
       }
     }
     if (sizeMin) {
       const s = parseFloat(sizeMin);
       if (!isNaN(s)) {
-        txConditions.push(`t.size_sqm >= $${paramIdx}`);
-        values.push(s);
-        paramIdx++;
+        txConditions.push(sql`t.size_sqm >= ${s}`);
       }
     }
     if (sizeMax) {
       const s = parseFloat(sizeMax);
       if (!isNaN(s)) {
-        txConditions.push(`t.size_sqm <= $${paramIdx}`);
-        values.push(s);
-        paramIdx++;
+        txConditions.push(sql`t.size_sqm <= ${s}`);
       }
     }
 
-    const complexWhere = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+    const complexWhere = conditions.length > 0
+      ? sql.join(conditions, sql` AND `)
+      : sql`TRUE`;
 
-    let sql: string;
+    let query: SqlChunk;
 
     if (needsJoin) {
-      // JOIN with transactions for price/size filtering
-      const txWhere = txConditions.length > 0 ? `AND ${txConditions.join(" AND ")}` : "";
-      sql = `SELECT DISTINCT c.id, c.apt_name, c.region_code, c.region_name, c.dong_name, c.built_year, c.slug
+      const txWhere = txConditions.length > 0
+        ? sql`AND ${sql.join(txConditions, sql` AND `)}`
+        : sql``;
+      query = sql`SELECT DISTINCT c.id, c.apt_name, c.region_code, c.region_name, c.dong_name, c.built_year, c.slug
              FROM apt_complexes c
              INNER JOIN apt_transactions t ON t.region_code = c.region_code AND t.apt_name = c.apt_name
              WHERE ${complexWhere} ${txWhere}
              ORDER BY c.apt_name LIMIT 50`;
     } else {
-      sql = `SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
+      query = sql`SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
              FROM apt_complexes c
              WHERE ${complexWhere}
              ORDER BY c.apt_name LIMIT 50`;
     }
 
-    const result = await getPool().query(sql, values);
+    const result = await db.execute(query);
 
     return NextResponse.json({ results: result.rows });
   } catch (e) {

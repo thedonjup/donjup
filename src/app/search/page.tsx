@@ -5,7 +5,8 @@ import AdSlot from "@/components/ads/AdSlot";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import SearchTracker from "@/components/analytics/SearchTracker";
 import { PricePresets, SizePresets, YearPresets } from "@/components/search/FilterPresets";
-import { getPool } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 
 type SearchPageProps = {
@@ -82,9 +83,8 @@ export default async function SearchPage({
 
   if (hasSearch) {
     try {
-      const conditions: string[] = [];
-      const values: (string | number)[] = [];
-      let paramIdx = 1;
+      type SqlChunk = ReturnType<typeof sql>;
+      const conditions: SqlChunk[] = [];
 
       if (query.length > 0) {
         const parts = query.split(/\s+/).filter(Boolean);
@@ -93,38 +93,30 @@ export default async function SearchPage({
           // "동대문 두산" → 지역 + 아파트명 분리 검색
           const regionPart = parts[0];
           const aptPart = parts.slice(1).join(" ");
-          conditions.push(`(c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
-          values.push(`%${regionPart}%`);
-          paramIdx++;
-          conditions.push(`c.apt_name ILIKE $${paramIdx}`);
-          values.push(`%${aptPart}%`);
-          paramIdx++;
+          conditions.push(sql`(c.region_name ILIKE ${`%${regionPart}%`} OR c.dong_name ILIKE ${`%${regionPart}%`})`);
+          conditions.push(sql`c.apt_name ILIKE ${`%${aptPart}%`}`);
         } else {
           // 단일 키워드 — 아파트명/지역명/동명 모두 검색
-          conditions.push(`(c.apt_name ILIKE $${paramIdx} OR c.region_name ILIKE $${paramIdx} OR c.dong_name ILIKE $${paramIdx})`);
-          values.push(`%${parts[0]}%`);
-          paramIdx++;
+          conditions.push(sql`(c.apt_name ILIKE ${`%${parts[0]}%`} OR c.region_name ILIKE ${`%${parts[0]}%`} OR c.dong_name ILIKE ${`%${parts[0]}%`})`);
         }
       }
 
       if (filterBuiltYearMin) {
         const year = parseInt(filterBuiltYearMin, 10);
         if (!isNaN(year)) {
-          conditions.push(`c.built_year >= $${paramIdx}`);
-          values.push(year);
-          paramIdx++;
+          conditions.push(sql`c.built_year >= ${year}`);
         }
       }
 
-      const complexWhere = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+      const complexWhere = conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`;
 
-      const sql = `SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
+      const dbQuery = sql`SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
                    FROM apt_complexes c
                    WHERE ${complexWhere}
                    ORDER BY c.apt_name LIMIT 50`;
 
-      const result = await getPool().query(sql, values);
-      results = result.rows.map((d: { id: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; slug: string }) => ({
+      const result = await db.execute(dbQuery);
+      results = (result.rows as { id: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; slug: string }[]).map((d) => ({
         ...d,
         sido_name: null,
         sigungu_name: null,

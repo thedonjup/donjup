@@ -4,7 +4,9 @@ import Link from "next/link";
 import { CLUSTER_DEFINITIONS } from "@/lib/constants/region-codes";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { computeClusterIndex } from "@/lib/cluster-index";
-import { getPool } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { aptTransactions } from "@/lib/db/schema";
+import { and, eq, inArray, gte, ne, desc } from "drizzle-orm";
 import { computeMedianPrice } from "@/lib/price-normalization";
 import ClusterIndexChart from "@/components/charts/ClusterIndexChart";
 import { formatPrice } from "@/lib/format";
@@ -42,26 +44,25 @@ async function getPerRegionMedian(
 ): Promise<{ regionCode: string; name: string; medianPrice: number; count: number }[]> {
   if (regionCodes.length === 0) return [];
 
-  const placeholders = regionCodes.map((_, i) => `$${i + 2}`).join(", ");
-  const sql = `
-    SELECT region_code, trade_price
-    FROM apt_transactions
-    WHERE trade_date >= $1
-      AND region_code IN (${placeholders})
-      AND property_type = 1
-      AND deal_type != '직거래'
-    ORDER BY trade_date DESC
-  `;
-
   const threeMonthsAgo = new Date();
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
   const dateStr = threeMonthsAgo.toISOString().slice(0, 10);
 
-  const pool = getPool();
-  const result = await pool.query(sql, [dateStr, ...regionCodes]);
-
-  type Row = { region_code: string; trade_price: number | string };
-  const rows = result.rows as Row[];
+  const rows = await db
+    .select({
+      region_code: aptTransactions.regionCode,
+      trade_price: aptTransactions.tradePrice,
+    })
+    .from(aptTransactions)
+    .where(
+      and(
+        gte(aptTransactions.tradeDate, dateStr),
+        inArray(aptTransactions.regionCode, regionCodes),
+        eq(aptTransactions.propertyType, 1),
+        ne(aptTransactions.dealType, "직거래")
+      )
+    )
+    .orderBy(desc(aptTransactions.tradeDate));
 
   const byCode = new Map<string, number[]>();
   for (const r of rows) {

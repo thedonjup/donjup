@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { getPool } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { analyticsDaily } from "@/lib/db/schema";
+import { sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
@@ -11,7 +13,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const pool = getPool();
   const errors: string[] = [];
 
   try {
@@ -26,8 +27,8 @@ export async function GET(request: Request) {
       }, { status: 400 });
     }
 
-    // analytics_daily 테이블 확보
-    await pool.query(`
+    // analytics_daily 테이블 확보 (DDL — use db.execute with sql template)
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS analytics_daily (
         id SERIAL PRIMARY KEY,
         date DATE NOT NULL,
@@ -49,66 +50,68 @@ export async function GET(request: Request) {
     yesterday.setDate(yesterday.getDate() - 1);
     const dateStr = yesterday.toISOString().split("T")[0];
 
-    // page_views에서 어제 통계 집계
-    const pvResult = await pool.query(`
+    // page_views에서 어제 통계 집계 (complex aggregate — use db.execute)
+    const pvResult = await db.execute(sql`
       SELECT
         COUNT(*) as page_views,
         COUNT(DISTINCT session_id) as sessions,
         COUNT(DISTINCT visitor_id) as users
       FROM page_views
-      WHERE viewed_at::date = $1
-    `, [dateStr]);
+      WHERE viewed_at::date = ${dateStr}
+    `);
 
-    const stats = pvResult.rows[0] || { page_views: 0, sessions: 0, users: 0 };
+    const stats = (pvResult.rows[0] as { page_views: string; sessions: string; users: string }) || { page_views: "0", sessions: "0", users: "0" };
 
     // 인기 페이지 TOP 10
-    const topPagesResult = await pool.query(`
+    const topPagesResult = await db.execute(sql`
       SELECT page_path, COUNT(*) as views
       FROM page_views
-      WHERE viewed_at::date = $1
+      WHERE viewed_at::date = ${dateStr}
       GROUP BY page_path
       ORDER BY views DESC
       LIMIT 10
-    `, [dateStr]);
+    `);
 
     // 인기 유입처 TOP 10
-    const topReferrersResult = await pool.query(`
+    const topReferrersResult = await db.execute(sql`
       SELECT referrer, COUNT(*) as visits
       FROM page_views
-      WHERE viewed_at::date = $1 AND referrer IS NOT NULL AND referrer != ''
+      WHERE viewed_at::date = ${dateStr} AND referrer IS NOT NULL AND referrer != ''
       GROUP BY referrer
       ORDER BY visits DESC
       LIMIT 10
-    `, [dateStr]);
+    `);
 
-    await pool.query(
-      `INSERT INTO analytics_daily (date, page_views, sessions, users, top_pages, top_referrers)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (date) DO UPDATE SET
-         page_views = EXCLUDED.page_views,
-         sessions = EXCLUDED.sessions,
-         users = EXCLUDED.users,
-         top_pages = EXCLUDED.top_pages,
-         top_referrers = EXCLUDED.top_referrers,
-         collected_at = now()`,
-      [
-        dateStr,
-        parseInt(stats.page_views) || 0,
-        parseInt(stats.sessions) || 0,
-        parseInt(stats.users) || 0,
-        JSON.stringify(topPagesResult.rows),
-        JSON.stringify(topReferrersResult.rows),
-      ]
-    );
+    await db
+      .insert(analyticsDaily)
+      .values({
+        date: dateStr,
+        pageViews: parseInt(String(stats.page_views)) || 0,
+        sessions: parseInt(String(stats.sessions)) || 0,
+        users: parseInt(String(stats.users)) || 0,
+        topPages: topPagesResult.rows,
+        topReferrers: topReferrersResult.rows,
+      })
+      .onConflictDoUpdate({
+        target: analyticsDaily.date,
+        set: {
+          pageViews: parseInt(String(stats.page_views)) || 0,
+          sessions: parseInt(String(stats.sessions)) || 0,
+          users: parseInt(String(stats.users)) || 0,
+          topPages: topPagesResult.rows,
+          topReferrers: topReferrersResult.rows,
+          collectedAt: new Date(),
+        },
+      });
 
     return NextResponse.json({
       success: true,
       message: `${dateStr} 분석 데이터 집계 완료 — PV: ${stats.page_views}, 세션: ${stats.sessions}, 사용자: ${stats.users}`,
       date: dateStr,
       stats: {
-        page_views: parseInt(stats.page_views) || 0,
-        sessions: parseInt(stats.sessions) || 0,
-        users: parseInt(stats.users) || 0,
+        page_views: parseInt(String(stats.page_views)) || 0,
+        sessions: parseInt(String(stats.sessions)) || 0,
+        users: parseInt(String(stats.users)) || 0,
       },
     });
   } catch (e) {

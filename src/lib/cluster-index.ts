@@ -4,7 +4,9 @@
  * 지역 코드 배열을 받아 월별 중위가 지수(기준시점=100)를 반환한다.
  */
 
-import { getPool } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { aptTransactions } from "@/lib/db/schema";
+import { and, eq, inArray, asc } from "drizzle-orm";
 import { computeMedianPrice, groupByMonth, isDirectDeal } from "@/lib/price-normalization";
 
 export interface ClusterIndexPoint {
@@ -20,29 +22,33 @@ export async function computeClusterIndex(
 ): Promise<ClusterIndexPoint[]> {
   if (regionCodes.length === 0) return [];
 
-  const placeholders = regionCodes.map((_, i) => `$${i + 1}`).join(", ");
-  const sql = `
-    SELECT trade_date, trade_price, floor, deal_type
-    FROM apt_transactions
-    WHERE region_code IN (${placeholders})
-      AND property_type = 1
-    ORDER BY trade_date ASC
-  `;
-
-  const pool = getPool();
-  const result = await pool.query(sql, regionCodes);
+  const rows = await db
+    .select({
+      trade_date: aptTransactions.tradeDate,
+      trade_price: aptTransactions.tradePrice,
+      floor: aptTransactions.floor,
+      deal_type: aptTransactions.dealType,
+    })
+    .from(aptTransactions)
+    .where(
+      and(
+        inArray(aptTransactions.regionCode, regionCodes),
+        eq(aptTransactions.propertyType, 1)
+      )
+    )
+    .orderBy(asc(aptTransactions.tradeDate));
 
   type Row = {
     trade_date: string;
     trade_price: number | string;
-    floor: number | string;
+    floor: number | string | null;
     deal_type: string | null;
   };
 
-  const rows = result.rows as Row[];
+  const typedRows = rows as Row[];
 
   // Filter out direct deals for cluster-level index computation
-  const filtered = rows
+  const filtered = typedRows
     .filter((r) => !isDirectDeal(r.deal_type))
     .map((r) => ({
       trade_date: typeof r.trade_date === "string" ? r.trade_date.slice(0, 10) : String(r.trade_date),

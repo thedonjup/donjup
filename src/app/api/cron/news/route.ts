@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPool } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
@@ -11,7 +12,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const pool = getPool();
   let inserted = 0;
   const errors: string[] = [];
 
@@ -42,8 +42,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // DB에 저장 (news 테이블 없으면 생성)
-    await pool.query(`
+    // DB에 저장 (news 테이블 없으면 생성 — DDL via db.execute)
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS news (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
@@ -57,10 +57,9 @@ export async function GET(request: Request) {
     for (const item of items.slice(0, 30)) {
       try {
         const pubDate = item.pubDate ? new Date(item.pubDate).toISOString() : null;
-        await pool.query(
-          `INSERT INTO news (title, link, source, published_at) VALUES ($1, $2, $3, $4) ON CONFLICT (link) DO NOTHING`,
-          [item.title, item.link, item.source, pubDate]
-        );
+        await db.execute(sql`
+          INSERT INTO news (title, link, source, published_at) VALUES (${item.title}, ${item.link}, ${item.source}, ${pubDate}) ON CONFLICT (link) DO NOTHING
+        `);
         inserted++;
       } catch (e) {
         errors.push(e instanceof Error ? e.message : String(e));

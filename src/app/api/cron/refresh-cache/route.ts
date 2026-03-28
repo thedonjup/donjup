@@ -1,9 +1,29 @@
 import { NextResponse } from "next/server";
-import { getPool } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { aptTransactions, aptComplexes, financeRates, homepageCache } from "@/lib/db/schema";
+import { and, isNotNull, lt, desc, eq, sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
 export const maxDuration = 60;
+
+const txFields = {
+  id: aptTransactions.id,
+  region_code: aptTransactions.regionCode,
+  region_name: aptTransactions.regionName,
+  apt_name: aptTransactions.aptName,
+  size_sqm: aptTransactions.sizeSqm,
+  floor: aptTransactions.floor,
+  trade_price: aptTransactions.tradePrice,
+  trade_date: aptTransactions.tradeDate,
+  highest_price: aptTransactions.highestPrice,
+  change_rate: aptTransactions.changeRate,
+  is_new_high: aptTransactions.isNewHigh,
+  is_significant_drop: aptTransactions.isSignificantDrop,
+  deal_type: aptTransactions.dealType,
+  drop_level: aptTransactions.dropLevel,
+  property_type: aptTransactions.propertyType,
+};
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("Authorization");
@@ -11,90 +31,102 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const pool = getPool();
-
   try {
-    const txFields = `id, region_code, region_name, apt_name, size_sqm, floor,
-      trade_price, trade_date, highest_price, change_rate, is_new_high,
-      is_significant_drop, deal_type, drop_level, property_type`;
-
     // Run all heavy queries in parallel
-    const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCountRes, complexCountRes] =
+    const [dropsRows, highsRows, volumeRows, recentRows, ratesRows, txnCountRows, complexCountRows] =
       await Promise.all([
         // Top drops (biggest negative change_rate)
-        pool.query(
-          `SELECT ${txFields} FROM "apt_transactions"
-           WHERE "change_rate" IS NOT NULL AND "change_rate" < 0
-           ORDER BY "change_rate" ASC LIMIT 30`
-        ),
+        db
+          .select(txFields)
+          .from(aptTransactions)
+          .where(and(isNotNull(aptTransactions.changeRate), lt(aptTransactions.changeRate, "0")))
+          .orderBy(aptTransactions.changeRate)
+          .limit(30),
         // New highs
-        pool.query(
-          `SELECT ${txFields} FROM "apt_transactions"
-           WHERE "is_new_high" = TRUE
-           ORDER BY "trade_date" DESC LIMIT 30`
-        ),
+        db
+          .select(txFields)
+          .from(aptTransactions)
+          .where(eq(aptTransactions.isNewHigh, true))
+          .orderBy(desc(aptTransactions.tradeDate))
+          .limit(30),
         // Volume (recent + high price)
-        pool.query(
-          `SELECT ${txFields} FROM "apt_transactions"
-           ORDER BY "trade_date" DESC, "trade_price" DESC LIMIT 30`
-        ),
+        db
+          .select(txFields)
+          .from(aptTransactions)
+          .orderBy(desc(aptTransactions.tradeDate), desc(aptTransactions.tradePrice))
+          .limit(30),
         // Most recent
-        pool.query(
-          `SELECT ${txFields} FROM "apt_transactions"
-           ORDER BY "trade_date" DESC LIMIT 30`
-        ),
+        db
+          .select(txFields)
+          .from(aptTransactions)
+          .orderBy(desc(aptTransactions.tradeDate))
+          .limit(30),
         // Finance rates
-        pool.query(
-          `SELECT "rate_type", "rate_value", "prev_value", "change_bp", "base_date", "source"
-           FROM "finance_rates"
-           ORDER BY "base_date" DESC LIMIT 5`
-        ),
+        db
+          .select({
+            rate_type: financeRates.rateType,
+            rate_value: financeRates.rateValue,
+            prev_value: financeRates.prevValue,
+            change_bp: financeRates.changeBp,
+            base_date: financeRates.baseDate,
+            source: financeRates.source,
+          })
+          .from(financeRates)
+          .orderBy(desc(financeRates.baseDate))
+          .limit(5),
         // Total transaction count
-        pool.query(`SELECT COUNT(*) as count FROM "apt_transactions"`),
+        db.select({ count: sql<number>`count(*)` }).from(aptTransactions),
         // Total complex count
-        pool.query(`SELECT COUNT(*) as count FROM "apt_complexes"`),
+        db.select({ count: sql<number>`count(*)` }).from(aptComplexes),
       ]);
 
+    const totalTransactions = Number(txnCountRows[0]?.count ?? 0);
+    const totalComplexes = Number(complexCountRows[0]?.count ?? 0);
+
     const cacheData = {
-      drops: JSON.stringify(dropsRes.rows),
-      highs: JSON.stringify(highsRes.rows),
-      volume: JSON.stringify(volumeRes.rows),
-      recent: JSON.stringify(recentRes.rows),
-      rates: JSON.stringify(ratesRes.rows),
-      total_transactions: parseInt(txnCountRes.rows[0]?.count ?? "0", 10),
-      total_complexes: parseInt(complexCountRes.rows[0]?.count ?? "0", 10),
+      drops: JSON.stringify(dropsRows),
+      highs: JSON.stringify(highsRows),
+      volume: JSON.stringify(volumeRows),
+      recent: JSON.stringify(recentRows),
+      rates: JSON.stringify(ratesRows),
+      total_transactions: totalTransactions,
+      total_complexes: totalComplexes,
     };
 
     // Upsert into homepage_cache (id=1)
-    await pool.query(
-      `INSERT INTO "homepage_cache" (id, drops, highs, volume, recent, rates, total_transactions, total_complexes, updated_at)
-       VALUES (1, $1, $2, $3, $4, $5, $6, $7, NOW())
-       ON CONFLICT (id) DO UPDATE SET
-         drops = EXCLUDED.drops,
-         highs = EXCLUDED.highs,
-         volume = EXCLUDED.volume,
-         recent = EXCLUDED.recent,
-         rates = EXCLUDED.rates,
-         total_transactions = EXCLUDED.total_transactions,
-         total_complexes = EXCLUDED.total_complexes,
-         updated_at = NOW()`,
-      [
-        cacheData.drops,
-        cacheData.highs,
-        cacheData.volume,
-        cacheData.recent,
-        cacheData.rates,
-        cacheData.total_transactions,
-        cacheData.total_complexes,
-      ]
-    );
+    await db
+      .insert(homepageCache)
+      .values({
+        id: 1,
+        drops: JSON.parse(cacheData.drops),
+        highs: JSON.parse(cacheData.highs),
+        volume: JSON.parse(cacheData.volume),
+        recent: JSON.parse(cacheData.recent),
+        rates: JSON.parse(cacheData.rates),
+        totalTransactions: cacheData.total_transactions,
+        totalComplexes: cacheData.total_complexes,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: homepageCache.id,
+        set: {
+          drops: JSON.parse(cacheData.drops),
+          highs: JSON.parse(cacheData.highs),
+          volume: JSON.parse(cacheData.volume),
+          recent: JSON.parse(cacheData.recent),
+          rates: JSON.parse(cacheData.rates),
+          totalTransactions: cacheData.total_transactions,
+          totalComplexes: cacheData.total_complexes,
+          updatedAt: new Date(),
+        },
+      });
 
     return NextResponse.json({
       ok: true,
-      total_transactions: cacheData.total_transactions,
-      total_complexes: cacheData.total_complexes,
-      drops: dropsRes.rows.length,
-      highs: highsRes.rows.length,
+      total_transactions: totalTransactions,
+      total_complexes: totalComplexes,
+      drops: dropsRows.length,
+      highs: highsRows.length,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPool } from "@/lib/db/client";
+import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 
@@ -11,7 +12,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const pool = getPool();
   let updated = 0;
   const errors: string[] = [];
 
@@ -27,8 +27,8 @@ export async function GET(request: Request) {
       }, { status: 400 });
     }
 
-    // 쿠팡 상품 테이블 확보
-    await pool.query(`
+    // 쿠팡 상품 테이블 확보 (DDL via db.execute)
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS coupang_products (
         id SERIAL PRIMARY KEY,
         product_id TEXT NOT NULL UNIQUE,
@@ -78,27 +78,17 @@ export async function GET(request: Request) {
         const products = data?.data?.productData || [];
 
         for (const p of products) {
-          await pool.query(
-            `INSERT INTO coupang_products (product_id, product_name, product_url, product_image, product_price, category, keyword, is_rocket, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
-             ON CONFLICT (product_id) DO UPDATE SET
-               product_name = EXCLUDED.product_name,
-               product_url = EXCLUDED.product_url,
-               product_image = EXCLUDED.product_image,
-               product_price = EXCLUDED.product_price,
-               is_rocket = EXCLUDED.is_rocket,
-               updated_at = now()`,
-            [
-              String(p.productId),
-              p.productName,
-              p.productUrl,
-              p.productImage,
-              p.productPrice ? Math.round(p.productPrice) : null,
-              p.categoryName || keyword,
-              keyword,
-              p.isRocket || false,
-            ]
-          );
+          await db.execute(sql`
+            INSERT INTO coupang_products (product_id, product_name, product_url, product_image, product_price, category, keyword, is_rocket, updated_at)
+            VALUES (${String(p.productId)}, ${p.productName}, ${p.productUrl}, ${p.productImage}, ${p.productPrice ? Math.round(p.productPrice) : null}, ${p.categoryName || keyword}, ${keyword}, ${p.isRocket || false}, now())
+            ON CONFLICT (product_id) DO UPDATE SET
+              product_name = EXCLUDED.product_name,
+              product_url = EXCLUDED.product_url,
+              product_image = EXCLUDED.product_image,
+              product_price = EXCLUDED.product_price,
+              is_rocket = EXCLUDED.is_rocket,
+              updated_at = now()
+          `);
           updated++;
         }
       } catch (e) {
