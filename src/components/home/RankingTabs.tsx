@@ -12,6 +12,8 @@ export interface Transaction {
   region_name: string;
   apt_name: string;
   size_sqm: number;
+  floor?: number | null;          // RANK-03: for low-floor badge
+  deal_type?: string | null;      // Available from cache, not used in rendering but keeps interface aligned
   trade_price: number;
   highest_price: number | null;
   change_rate: number | null;
@@ -236,6 +238,17 @@ export default function RankingTabs({
                             }}
                           >
                             {DROP_LEVEL_CONFIG[t.drop_level].label}
+                          </span>
+                        )}
+                        {t.floor != null && t.floor > 0 && t.floor <= 3 && (
+                          <span
+                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                            style={{
+                              backgroundColor: "rgba(107,114,128,0.12)",
+                              color: "#6b7280",
+                            }}
+                          >
+                            저층
                           </span>
                         )}
                       </div>
