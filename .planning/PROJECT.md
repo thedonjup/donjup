@@ -8,9 +8,19 @@
 
 사용자가 아파트 시장 흐름을 정확히 읽고, 신뢰할 수 있는 데이터 기반 의사결정을 할 수 있게 하는 것.
 
-## Current State
+## Current Milestone: v1.2 코드 품질 강화
 
-**v1.1 데이터 분석 고도화 — SHIPPED 2026-03-28**
+**Goal:** 테스트 인프라 구축 + ORM 교체 + 코드 품질 기반 정비로 장기 유지보수성을 확보한다.
+
+**Target features:**
+- 테스트 인프라 구축 — Vitest 설정, 핵심 유틸/API 유닛 테스트, E2E 기본 설정
+- ORM 전면 교체 (Drizzle) — raw SQL/supabase 쿼리를 타입 안전 ORM으로 마이그레이션
+- 코드 정리/리팩토링 — v1.1에서 누적된 기술 부채 해소
+
+## Previous State
+
+<details>
+<summary>v1.1 데이터 분석 고도화 — SHIPPED 2026-03-28</summary>
 
 v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33개 plan 완료.
 
@@ -21,6 +31,8 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 - 금리 표현: 히어로 카드 + accordion + 은행별 확장
 - 랭킹 정교화: 고층 환산 변동률, 이상거래 제외, 저층 뱃지
 - 지역 지수: 군집별 중위가 지수 대시보드 (/index)
+
+</details>
 
 ## Requirements
 
@@ -44,13 +56,11 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 
 ### Active
 
-(다음 마일스톤에서 정의 — `/gsd:new-milestone`)
+(v1.2 REQUIREMENTS.md에서 관리)
 
 ### Out of Scope
 
 - 동/호수(unit) 단위 가격 예측 — MOLIT API에 호수 데이터 미제공
-- ORM 전면 교체 (Drizzle/Kysely) — 별도 마일스톤
-- 테스트 인프라 구축 — 별도 마일스톤
 - UI 전면 리디자인 — v3 마일스톤
 
 ## Context
@@ -85,4 +95,4 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-03-28 after v1.1 milestone*
+*Last updated: 2026-03-28 — v1.2 코드 품질 강화 시작*
