@@ -131,11 +131,11 @@ function DirectDealConnectors({ directDealDots, xAxisMap, yAxisMap }: ConnectorP
 // Trend line rendering — split solid/dashed segments
 // ────────────────────────────────────────────────────────────────
 
-// Full trend line (solid for high-confidence months)
-function solidTrendData(trendLine: TrendPoint[]) {
+// Full continuous trend line (all points connected)
+function fullTrendData(trendLine: TrendPoint[]) {
   return trendLine.map((p) => ({
     x: `${p.month}-15`, // mid-month as date string for x positioning
-    y: p.isLowConfidence ? null : p.median,
+    y: p.median,
     month: p.month,
     count: p.count,
     isLowConfidence: p.isLowConfidence,
@@ -145,14 +145,21 @@ function solidTrendData(trendLine: TrendPoint[]) {
 
 // Low-confidence segments only (dashed overlay)
 function dashedTrendData(trendLine: TrendPoint[]) {
-  return trendLine.map((p) => ({
-    x: `${p.month}-15`,
-    y: p.isLowConfidence ? p.median : null,
-    month: p.month,
-    count: p.count,
-    isLowConfidence: p.isLowConfidence,
-    median: p.median,
-  }));
+  // Include neighboring high-confidence points so dashed segments connect properly
+  return trendLine.map((p, i, arr) => {
+    const isNeighborOfLow =
+      (i > 0 && arr[i - 1].isLowConfidence) ||
+      (i < arr.length - 1 && arr[i + 1].isLowConfidence);
+    const show = p.isLowConfidence || isNeighborOfLow;
+    return {
+      x: `${p.month}-15`,
+      y: show ? p.median : null,
+      month: p.month,
+      count: p.count,
+      isLowConfidence: p.isLowConfidence,
+      median: p.median,
+    };
+  });
 }
 
 // Map jeonse ratio points to chart-compatible format
@@ -316,9 +323,9 @@ export default function PriceHistoryChart({
   ];
 
   // Build unified X-axis tick pool (all dates + trend mid-month dates)
-  const solidData = solidTrendData(trendLine);
+  const fullData = fullTrendData(trendLine);
   const dashedData = dashedTrendData(trendLine);
-  const solidRentData = hasRentTrend ? solidTrendData(rentTrendLine!) : [];
+  const fullRentData = hasRentTrend ? fullTrendData(rentTrendLine!) : [];
   const dashedRentData = hasRentTrend ? dashedTrendData(rentTrendLine!) : [];
   const ratioChartData = hasRatioOverlay ? ratioLineData(jeonseRatioLine!) : [];
 
@@ -417,21 +424,21 @@ export default function PriceHistoryChart({
               shape={<circle r={3} />}
             />
 
-            {/* Sale trend line solid segments (high-confidence months) */}
+            {/* Sale trend line — continuous solid line */}
             <Line
               yAxisId={0}
-              data={solidData}
+              data={fullData}
               type="monotone"
               dataKey="y"
               stroke="#059669"
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 5, fill: "#059669", stroke: "#fff", strokeWidth: 2 }}
-              connectNulls={false}
+              connectNulls
               isAnimationActive={false}
             />
 
-            {/* Sale trend line dashed segments (low-confidence months) */}
+            {/* Sale trend line dashed overlay for low-confidence months */}
             <Line
               yAxisId={0}
               data={dashedData}
@@ -446,23 +453,23 @@ export default function PriceHistoryChart({
               isAnimationActive={false}
             />
 
-            {/* Rent trend line solid segments (high-confidence months) */}
+            {/* Rent trend line — continuous solid line */}
             {hasRentTrend && (
               <Line
                 yAxisId={0}
-                data={solidRentData}
+                data={fullRentData}
                 type="monotone"
                 dataKey="y"
                 stroke="#3B82F6"
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 5, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
-                connectNulls={false}
+                connectNulls
                 isAnimationActive={false}
               />
             )}
 
-            {/* Rent trend line dashed segments (low-confidence months) */}
+            {/* Rent trend line dashed overlay for low-confidence months */}
             {hasRentTrend && (
               <Line
                 yAxisId={0}

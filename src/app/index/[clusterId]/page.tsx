@@ -111,6 +111,7 @@ export default async function ClusterDetailPage({
   const chartData = indexPoints.map((p) => ({
     month: p.month,
     index: p.index,
+    medianPrice: p.medianPrice,
     count: p.count,
   }));
 
