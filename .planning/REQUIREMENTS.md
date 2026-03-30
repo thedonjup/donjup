@@ -1,64 +1,75 @@
-# Requirements: v1.2 코드 품질 강화
+# Requirements: 돈줍 v1.3
 
-**Defined:** 2026-03-28
-**Core Value:** 장기 유지보수성 확보 — 테스트 가능하고 타입 안전한 코드베이스
+**Defined:** 2026-03-31
+**Core Value:** 사용자가 아파트 시장 흐름을 정확히 읽고, 신뢰할 수 있는 데이터 기반 의사결정을 할 수 있게 하는 것.
 
-## 테스트 인프라 (TEST)
+## v1.3 Requirements
 
-- [x] **TEST-01**: Vitest가 설치·설정되어 `npm test`로 전체 테스트를 실행할 수 있다
-- [x] **TEST-02**: price-normalization.ts의 모든 exported 함수에 유닛 테스트가 존재한다
-- [x] **TEST-03**: cluster-index.ts의 computeClusterIndex에 유닛 테스트가 존재한다
-- [x] **TEST-04**: 주요 API 라우트(fetch-transactions, fetch-rents, fetch-bank-rates)에 통합 테스트가 존재한다
-- [x] **TEST-05**: Playwright가 설치되어 홈 페이지 로드 + 기본 네비게이션 E2E 테스트가 동작한다
+Requirements for 서비스 품질 개선. Each maps to roadmap phases.
 
-## ORM 교체 (ORM)
+### 디자인 시스템 (DESIGN)
 
-- [x] **ORM-01**: Drizzle ORM이 설치·설정되어 Neon PostgreSQL에 연결된다
-- [x] **ORM-02**: apt_transactions 테이블에 대한 Drizzle 스키마가 정의되고 기존 raw SQL 쿼리가 Drizzle 쿼리로 교체된다
-- [x] **ORM-03**: apt_rent_transactions 테이블에 대한 Drizzle 스키마가 정의되고 기존 supabase 쿼리가 교체된다
-- [x] **ORM-04**: finance_rates 테이블에 대한 Drizzle 스키마가 정의되고 기존 쿼리가 교체된다
-- [x] **ORM-05**: apt_complexes 및 기타 테이블의 Drizzle 스키마가 정의되고 모든 DB 접근이 통일된다
-- [x] **ORM-06**: getPool().query() 직접 호출이 0건이 된다 (cluster-index 포함)
+- [ ] **DESIGN-01**: 하드코딩된 색상(82개)이 CSS 변수 또는 Tailwind 유틸클래스로 전환되어 다크모드에서 정상 표시된다
+- [ ] **DESIGN-02**: `@custom-variant dark` 추가로 Tailwind dark: 유틸리티가 [data-theme="dark"]에서 활성화된다
+- [ ] **DESIGN-03**: 컴포넌트의 인라인 style이 className 또는 CSS 변수 기반으로 전환된다 (동적 색상 포함)
+- [ ] **DESIGN-04**: 동적 색상(드롭레벨, 전세가율 등)이 CSS 변수 맵 또는 유틸클래스로 관리되어 다크모드 대응된다
 
-## 코드 정리 (CLEAN)
+### 데이터 표현 (DATA)
 
-- [x] **CLEAN-01**: `as any` 타입 캐스트가 프로덕션 코드에서 제거되거나 최소화된다 (5개 미만)
-- [x] **CLEAN-02**: 미사용 import/변수가 프로덕션 코드에서 0건이 된다
-- [x] **CLEAN-03**: 중복된 DB 연결 패턴(createClient, createRentServiceClient, getPool)이 Drizzle 단일 패턴으로 통일된다
+- [ ] **DATA-01**: 가격 표시가 formatPrice 단일 함수로 통일되고, 축약형은 formatPriceShort로 명확히 분리된다
+- [ ] **DATA-02**: null/빈값 표시가 전체 페이지에서 일관된 규칙("-")으로 통일된다
+- [ ] **DATA-03**: 면적 표시가 모든 페이지에서 "㎡ (평)" 병기 형식으로 통일된다
+- [ ] **DATA-04**: 포맷 유틸 함수(formatPrice, sqmToPyeong, makeSlug 등)가 중복 없이 단일 모듈에서 관리된다
 
-## Traceability
+### URL 구조 (URL)
 
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| TEST-01 | Phase 16 | Complete |
-| TEST-02 | Phase 16 | Complete |
-| TEST-03 | Phase 16 | Complete |
-| TEST-04 | Phase 17 | Complete |
-| TEST-05 | Phase 17 | Complete |
-| ORM-01 | Phase 18 | Complete |
-| ORM-02 | Phase 18 | Complete |
-| ORM-03 | Phase 18 | Complete |
-| ORM-04 | Phase 18 | Complete |
-| ORM-05 | Phase 18 | Complete |
-| ORM-06 | Phase 18 | Complete |
-| CLEAN-01 | Phase 19 | Complete |
-| CLEAN-02 | Phase 19 | Complete |
-| CLEAN-03 | Phase 19 | Complete |
+- [ ] **URL-01**: 아파트 상세 페이지 URL이 govtComplexId(aptSeq) 기반으로 변환된다
+- [ ] **URL-02**: 기존 `/apt/[region]/[slug]` URL이 새 URL로 301/308 리다이렉트된다
+- [ ] **URL-03**: makeSlug 함수가 단일 유틸 모듈(`lib/apt-url.ts`)로 중앙화된다
+- [ ] **URL-04**: Sitemap에 모든 아파트 상세 페이지가 포함된다
+- [ ] **URL-05**: Profile 페이지의 아파트 링크가 정상 동작한다 (region 파라미터 포함)
+- [ ] **URL-06**: govtComplexId가 null인 단지에 대해 백필이 완료된다
 
-## Future Requirements (v2.0+)
+### 깨진 기능 복구 (FIX)
 
-- UI 전면 리디자인 — v3 마일스톤
-- 동/호수(unit) 단위 가격 예측 — MOLIT API 호수 데이터 미제공
-- 인구 이동 데이터 연동 — 외부 데이터 소스 필요
-- 학군 정보 — 외부 데이터 소스 필요
-- PIR (소득 대비 집값) — 소득 데이터 소스 필요
-- 미분양 현황 — 국토부 별도 API 필요
+- [ ] **FIX-01**: 카드뉴스 이미지가 Vercel Blob에 저장되어 공개 URL이 생성된다
+- [ ] **FIX-02**: Instagram 자동 포스팅이 저장된 이미지 URL로 정상 동작한다
+- [ ] **FIX-03**: CSP에 Vercel Blob 도메인이 추가된다
+
+### UX 개선 (UX)
+
+- [ ] **UX-01**: 검색 결과에 준공년도, 세대수, 최근 거래가가 일관되게 표시된다
+- [ ] **UX-02**: 차트 범례가 명확하게 표시되어 추이선/직거래/저신뢰구간을 사용자가 구분할 수 있다
+
+## v2 Requirements
+
+Deferred to future release.
+
+### 추가 기능
+- **FEAT-01**: 실시간 가격 알림 (특정 단지 가격 변동 Push)
+- **FEAT-02**: 단지 비교 기능 고도화 (3개 이상 동시 비교)
+- **FEAT-03**: 지역별 시세 지도 히트맵
 
 ## Out of Scope
 
-- UI 리디자인 — v3 마일스톤
-- 새 기능 추가 — v1.2는 품질 강화에 집중
-- DB 스키마 변경 — Drizzle은 기존 스키마에 매핑 (마이그레이션 없음)
+| Feature | Reason |
+|---------|--------|
+| UI 전면 리디자인 | v3 마일스톤 — 현재는 일관성 확보에 집중 |
+| 동/호수 단위 가격 예측 | MOLIT API에 호수 데이터 미제공 |
+| OAuth 추가 (카카오/네이버 로그인) | 현재 Google 로그인으로 충분 |
+| Cloudflare R2 | Vercel Blob이 기존 스택에 더 자연스럽고 비용 동등 |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| (To be filled by roadmapper) | | |
+
+**Coverage:**
+- v1.3 requirements: 17 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 17
 
 ---
-*Requirements defined: 2026-03-28*
+*Requirements defined: 2026-03-31*
+*Last updated: 2026-03-31 after initial definition*
