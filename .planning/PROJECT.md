@@ -2,13 +2,24 @@
 
 ## What This Is
 
-돈줍은 매일 자동 업데이트되는 전국 아파트 실거래가 폭락/신고가 랭킹, 금리 정보, 가격 정규화 차트, 전세가율 분석, 군집별 지역 지수를 제공하는 부동산 데이터 플랫폼(donjup.com)이다. Next.js 16 + Neon PostgreSQL + Firebase Auth 기반으로 운영 중.
+돈줍은 매일 자동 업데이트되는 전국 아파트 실거래가 폭락/신고가 랭킹, 금리 정보, 가격 정규화 차트, 전세가율 분석, 군집별 지역 지수를 제공하는 부동산 데이터 플랫폼(donjup.com)이다. Next.js 16 + CockroachDB Serverless + Firebase Auth 기반으로 운영 중.
 
 ## Core Value
 
 사용자가 아파트 시장 흐름을 정확히 읽고, 신뢰할 수 있는 데이터 기반 의사결정을 할 수 있게 하는 것.
 
-## Current State
+## Current Milestone: v1.3 서비스 품질 개선
+
+**Goal:** 디자인 시스템 통합, 데이터 표현 정규화, URL 구조 개편, 깨진 기능 복구로 사용자 경험 품질을 근본적으로 개선한다
+
+**Target features:**
+- 디자인 시스템 통합 — 하드코딩 색상 82개 → CSS 변수/유틸클래스, 인라인 style → className, 다크모드 정상화
+- 데이터 표현 정규화 — 가격 포맷 단일화, null/빈값 표시 규칙 통일, 면적·날짜 단위 일관성
+- URL 구조 개편 — aptSeq 기반 아파트 URL, makeSlug 중앙화, Sitemap 완성, 301 리다이렉트
+- 깨진 기능 복구 — 카드뉴스 Storage 연동 + Instagram 포스팅 파이프라인 완성
+- 추가 UX 개선 — 검색 결과 보강, 차트 범례 개선, Profile 링크 수정
+
+## Previous States
 
 **v1.2 코드 품질 강화 — SHIPPED 2026-03-28**
 
@@ -71,7 +82,11 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 
 ### Active
 
-(다음 마일스톤에서 정의 — `/gsd:new-milestone`)
+- [ ] 디자인 시스템 통합 (CSS변수+Tailwind+하드코딩 3층 → CSS변수 단일 체계)
+- [ ] 데이터 표현 정규화 (가격·면적·날짜·null 표시 일관성)
+- [ ] URL 구조 개편 (aptSeq 기반 URL + makeSlug 중앙화 + Sitemap)
+- [ ] 깨진 기능 복구 (카드뉴스 Storage + Instagram 포스팅)
+- [ ] UX 개선 (검색·차트·Profile 링크 등)
 
 ### Out of Scope
 
@@ -82,7 +97,7 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 
 - **v1.0 완료**: 9 phases, 21 plans — 사이트 안정화
 - **v1.1 완료**: 6 phases, 12 plans — 데이터 분석 고도화
-- **배포**: Vercel (donjup.com), Neon PostgreSQL, Firebase Auth/Firestore
+- **배포**: Vercel (donjup.com), CockroachDB Serverless, Firebase Auth/Firestore
 - **폭락 기준**: docs/10-crash-criteria-v2.md — 3단계 분류 체계
 - **아카이브**: .planning/milestones/ — v1.0, v1.1 로드맵/요구사항
 
@@ -90,7 +105,7 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 
 - **Tech Stack**: Next.js 16 + React 19 + Tailwind CSS 4 + TypeScript
 - **배포**: Vercel serverless
-- **DB**: Neon PostgreSQL — 커넥션 풀 max 10
+- **DB**: CockroachDB Serverless — 커넥션 풀 max 10
 - **비용**: 최소 비용 (외부 서비스 추가 최소화)
 - **데이터**: 국토교통부 실거래가 + 금감원 금리
 
@@ -110,4 +125,4 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-03-28 after v1.2 milestone*
+*Last updated: 2026-03-31 after v1.3 milestone start*
