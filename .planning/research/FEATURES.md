@@ -1,222 +1,235 @@
-# Feature Research
+# Feature Landscape: v1.3 서비스 품질 개선
 
-**Domain:** Production Next.js site stabilization — real estate data platform (donjup.com)
-**Researched:** 2026-03-26
-**Confidence:** HIGH (based on codebase analysis, automated QA report, and documented concerns)
-
-## Feature Landscape
-
-This is a stabilization milestone, not a new-feature milestone. "Features" here means improvements that fix
-degraded site quality. The framing is: what does a production site need that this one currently lacks?
+**Domain:** Korean real estate data platform (부동산 데이터 플랫폼)
+**Researched:** 2026-03-30
+**Scope:** Design system, price display, URL structure, cardnews/Instagram pipeline
 
 ---
 
-### Table Stakes (Users and Search Engines Expect These)
+## Existing Codebase Reality (pre-research audit)
 
-Features that, when absent or broken, directly degrade trust, discoverability, or functional correctness.
-Missing these = the site is broken by industry standards.
+Before mapping the ecosystem, auditing the actual codebase reveals the current state:
+
+### Price Formatting (lib/format.ts)
+- `formatPrice(priceInManWon)` — already exists: outputs `8억 5,000만` or `8억`
+- `formatKrw(won)` — raw won → `8억원` or `5,000만원`
+- Both functions exist but are NOT consistently used across all components (hardcoded strings exist in chart labels, rankings, etc.)
+
+### Design System (globals.css)
+- CSS variable system already defined: `--color-surface-*`, `--color-text-*`, `--color-semantic-*`
+- Dark mode via `[data-theme="dark"]` attribute already defined with full variable overrides
+- Utility classes already exist: `.t-card`, `.t-text`, `.t-drop`, `.t-rise`, etc.
+- Problem: components use hardcoded Tailwind colors (`text-red-500`, `bg-white`) AND inline `style={{color: '#ef4444'}}` instead of these variables
+- Tailwind `@theme inline` block exposes static color aliases but NOT the dynamic CSS variables
+
+### URL Structure (app/apt/)
+- Current: `/apt/[region]/[slug]` where slug is DB-stored string (e.g., `11110-은평자이`)
+- `aptSeq` exists in the DB schema but is NOT used in URLs
+- No centralized `makeSlug()` utility — slug construction is scattered
+- Sitemap at `app/apt/sitemap.ts` is incomplete
+
+### Cardnews Pipeline
+- Image generation: `lib/cardnews/render.ts` uses `next/og` ImageResponse — generates Buffer in memory, 1080x1080 px
+- Storage: TODO comment in `generate-cardnews/route.ts` — `storageUrls = []` always empty
+- Instagram client: `lib/instagram/client.ts` fully implemented (publishPhoto, publishCarousel, getRemainingQuota)
+- Blocker: `content_queue.storage_urls` is always empty → `post-instagram` route skips posting with "No image URLs"
+
+---
+
+## Korean Real Estate Platform Conventions (Ecosystem Research)
+
+### 1. Price Display Format — Industry Standard
+
+**Findings from competitor analysis (호갱노노, 아실, 부동산지인, 네이버부동산):**
+
+| Platform | Format Used | Example |
+|----------|-------------|---------|
+| 호갱노노 | 억 단위 + 소숫점 없음 | `9억 8,000만` |
+| 아실 | 억원/만원 혼용 | `1,500만원` / `5.2억원` |
+| 부동산지인 | 억원 (소숫점 1자리, 테이블용) | `5.2억원` |
+| 네이버부동산 | 만원 단위 내부저장, 표시는 억/만 혼용 | `9억 8,000만` |
+| 돈줍 현재 | `formatPrice()` 존재하지만 미적용 부분 있음 | `8억 5,000만` or `8억` |
+
+**Industry consensus:**
+- 1억 이상: `N억` or `N억 M,000만` (천 단위 콤마 포함)
+- 1억 미만: `N,000만` (콤마 포함)
+- 소숫점 억 표시 (`5.2억`)는 테이블 공간이 좁을 때만 허용 — 주요 표시에는 미사용
+- 주요 플랫폼은 차트 축에서 `억` 단위 축약 사용 (`8억`, `9억`, `10억`)
+- Confidence: MEDIUM (cross-platform observation + official crawling docs)
+
+**Gap in donjup:** `formatPrice()` exists and is correct. The problem is inconsistent usage — some places call it, others use raw number formatting, Recharts `tickFormatter` bypasses it.
+
+### 2. URL Structure — Industry Standard
+
+**Findings:**
+
+| Platform | URL Pattern | Identifier Type |
+|----------|-------------|-----------------|
+| 호갱노노 | `/apt/{alphanumeric_id}` | Opaque internal ID (e.g., `e1u54`, `fulbc`) — NOT human-readable |
+| 아실 | `/app/apt_info.jsp?apt={aptID}` | Query parameter, JSP-based |
+| 부동산지인 | `/home/gin02/gin0201/apt/{pk_bi_ent_view}` | Numeric internal key |
+| 직방 | `/home/apartment/complexes/{id}` | Numeric complex ID |
+| 돈줍 현재 | `/apt/[region]/[slug]` | Text slug from DB |
+
+**Key insight:** No Korean real estate platform uses human-readable slugs. They all use opaque or numeric IDs. SEO value is delivered via rich page metadata (OGP, structured data), not URL text.
+
+**`aptSeq` hybrid approach:** Using `/apt/[region]/[aptSeq]-[name-slug]` gives:
+- Stable canonical ID (no duplicate slug collisions across regions)
+- Human-readable context in URL (name still visible)
+- Simpler `makeSlug()` central function
+- Better for Sitemap generation (enumerate by aptSeq)
+
+**Confidence:** HIGH for competitor patterns (direct URL observation). MEDIUM for SEO impact.
+
+### 3. Design System — Industry Conventions
+
+**Findings from hogangnono.com (CSS inspection):**
+- Primary color: `#584de4` (purple) — strong brand identity
+- Semantic colors: Red `#ef5a5a`, Green `#00BD58`, Blue `#0651F1`
+- NO dark mode — hogangnono has no dark mode in 2026
+- Font: Pretendard (same as donjup)
+- Mobile-first with SafeArea insets
+
+**Industry pattern:**
+- Korean real estate apps are predominantly light-mode only
+- No major competitor has dark mode as of 2026
+- Donjup's dark mode is a **differentiator**, not table stakes
+- A half-broken dark mode is worse UX than no dark mode
+
+**Tailwind CSS v4 dark mode root cause (from official docs — HIGH confidence):**
+- `[data-theme="dark"]` CSS approach already defined in globals.css is correct
+- But to use `dark:` utility classes (e.g., `dark:text-white`), you MUST add to globals.css:
+  ```css
+  @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+  ```
+- This declaration is MISSING from donjup's globals.css
+- Without it, `dark:text-white` never applies — only manual `[data-theme="dark"] .t-*` CSS works
+- This is the root cause of partial dark mode: components using Tailwind `dark:` utilities are broken
+
+### 4. Cardnews / Social Media Auto-Posting
+
+**Industry findings:**
+No Korean real estate competitor (호갱노노, 아실, 직방, 네이버부동산) publicly auto-posts daily data cardnews to Instagram. This is a **differentiator**, not table stakes.
+
+**2025 Instagram platform data (Meta official docs — HIGH confidence):**
+- Carousels: 2-10 images, all cropped to first image aspect ratio (1:1 recommended)
+- Rate limit: 100 API-published posts per 24h rolling window (updated March 2025, previously 25)
+- Image requirements: publicly accessible HTTPS URL at time of API call — Buffer not accepted
+- Publishing flow: create container → wait for FINISHED status → publish
+
+**The specific blocker in donjup:**
+1. `generateCardNews()` returns `Buffer[]` in memory — never stored
+2. `storageUrls` in content_queue is always `[]`
+3. Instagram API requires public HTTPS URLs — cannot use in-memory Buffer
+
+**Storage options for image hosting:**
+
+| Option | Free Tier | Complexity | Fit |
+|--------|-----------|------------|-----|
+| Vercel Blob | Shared with project quota | Low | Best — already on Vercel, `@vercel/blob` SDK |
+| Firebase Storage | 5GB free (Firebase already in stack) | Low | Good — already authenticated |
+| Cloudinary | 25 credits/month, 25GB bandwidth | Medium | External dependency |
+| AWS S3 | Pay-per-use | High | Overkill |
+
+**Recommendation: Vercel Blob**
+- Already in Vercel ecosystem
+- `@vercel/blob` npm package, server-side `put()` function
+- Client upload: no data transfer charges
+- Server upload: incurs Fast Data Transfer charges (minor for 5 images/post)
+- Free tier: sufficient for ~260MB/year at 5 images × 5 days × 52 weeks × ~200KB
+- Single env var: `BLOB_READ_WRITE_TOKEN` (added in Vercel dashboard)
+
+**Confidence:** HIGH for Vercel Blob fit. HIGH for Instagram API requirements.
+
+---
+
+## Table Stakes
+
+Features users expect. Missing = product feels incomplete or broken.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Correct canonical URLs on all pages | Google treats wrong canonical as duplicate content; 17+ pages currently point to root — SEO is catastrophically broken | LOW | Single metadata fix in layout/page files; `themes/reconstruction` already works as the pattern to follow |
-| Page-specific `<title>` tags | `/compare`, `/profile`, `/dam` use the default site title — misleads search results and browser tabs | LOW | Add `export const metadata` to each page; no data fetching needed |
-| Error boundary pages (`error.tsx`, `global-error.tsx`) | Unhandled server component errors currently show Next.js default error screen with no branding or recovery path | LOW | App Router error boundary convention; two files to add |
-| No internal details in API error responses | `search/route.ts` returns raw `e.message` which may leak SQL schema info to clients | LOW | Replace with generic message; log detail server-side only |
-| Security: ADMIN_EMAILS out of NEXT_PUBLIC | Admin email list is currently bundled into client-side JS and visible in page source | LOW | Rename env var, move check to server-only code path |
-| DAM endpoint authentication | `api/dam/content` PATCH has zero auth — any public request can mutate content status | LOW | Add CRON_SECRET or Firebase admin token check |
-| SSL certificate verification enabled | `rejectUnauthorized: false` in DB pool disables TLS validation — MITM-vulnerable | LOW | Set to `true` or provide CA cert; Neon supports standard TLS |
-| Structured error logging (replace console.log) | 39 `console.*` calls across 23 files give no log levels, no correlation IDs, no aggregation — production debugging is guesswork | MEDIUM | Adopt a minimal structured logger (e.g., `pino`) with Vercel log drains; or a thin wrapper over `console` that adds severity and request context |
-| Remove storage upload stub | `supabase.storage.from().upload()` always fails silently — any code path hitting it is broken | LOW | Remove stub; if upload is needed, implement properly; if unused, delete callers |
-| Deduplication: `formatPrice` | Identical function in two files — next change to price formatting will silently diverge | LOW | Remove local copy in `KakaoMap.tsx`, import from `@/lib/format` |
-| Remove unused PostgreSQL packages | `postgres` and `@neondatabase/serverless` are installed but not used — dead weight in bundle | LOW | `npm uninstall postgres @neondatabase/serverless` |
-| Rename `src/lib/supabase/` to `src/lib/db/` | Misleading path makes every developer question which DB layer is real | LOW-MEDIUM | Rename directory and update all imports; no logic change |
-| Fix in-memory rate limiter for serverless | Current `Map`-based rate limiter resets on every cold start — provides near-zero protection on Vercel | MEDIUM | Replace with Vercel KV or Upstash Redis; or use Vercel's native rate limiting |
-| Stagger overlapping cron job schedules | 5 transaction batches + 5 rent batches on identical 20:00–20:40 windows compete for the 5-connection pool | LOW | Spread schedules by 2–5 minutes each in `vercel.json` |
-| CSP header | `next.config.ts` sets 5 security headers but no Content-Security-Policy — XSS surface is open | MEDIUM | Add CSP tuned for Kakao SDK, AdSense, Firebase, and the JSON-LD inline scripts already in use |
+| Consistent price format (억/만 throughout) | Industry standard — every Korean real estate site uses this | Low | `formatPrice()` exists; propagation work needed |
+| Working dark mode end-to-end | Users who toggle dark mode expect it everywhere | Medium | Root cause: missing `@custom-variant dark` — one-line CSS fix + component migration |
+| No "0" or blank where data is null | Basic data display quality | Low | Standardize null → `-` or `데이터 없음` |
+| Consistent area units (평/㎡) | Users expect consistent unit per context | Low | `formatSizeWithPyeong()` exists; usage audit needed |
+| Stable apartment URLs (no 404 after updates) | Bookmarks, sharing, SEO | Medium | aptSeq-based URLs prevent slug collision |
 
----
+## Differentiators
 
-### Differentiators (Competitive Advantage — Nice but Not Blocking)
-
-These improve the site quality beyond baseline but do not fix broken behavior. Worth doing during stabilization
-if time and risk allow.
+Features that set donjup apart. Not expected, but valued.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Per-page OG images for major pages | SNS shares of `/today`, `/new-highs`, `/market`, `/rate` currently show generic logo — kills click-through rates from social | MEDIUM | Next.js `opengraph-image.tsx` convention; main page already has the pattern; extend to 4–5 key pages |
-| Search API: `pg_trgm` GIN index | ILIKE with leading wildcard does sequential table scans — search slows linearly as data grows | MEDIUM | `CREATE INDEX CONCURRENTLY` with `gin_trgm_ops`; no application code change required |
-| Code-split large components | `calculator/page.tsx` (1101 lines), `KakaoMap.tsx` (640 lines) block code review and inflate initial JS | MEDIUM | Extract sub-components; use `next/dynamic` with `ssr: false` for the Kakao map (already client-only) |
-| TypeScript: type core DB rows | 80+ `any` usages concentrated in `db/client.ts` (45), `page.tsx` (9), `KakaoMap.tsx` (6) — runtime errors undetectable at compile time | MEDIUM | Define interfaces for `Transaction`, `Complex`, `Rate`; thread generics into query builder |
-| Consolidate Instagram client duplication | Two Instagram modules with overlapping functionality — unclear which to extend | LOW | Keep the 291-line version with rate limiting; delete the simpler wrapper |
-| Map page: loading skeleton instead of empty-state text | SSR renders "좌표가 있는 거래 데이터가 없습니다" on initial load before client JS hydrates — poor first impression | LOW | Replace empty-state message with loading skeleton; SSR cannot hydrate Kakao map |
-| Push subscription endpoint hardening | Unauthenticated POST can flood `push_subscriptions` table with arbitrary data | LOW | Require Firebase auth token on subscribe; reject unauthenticated requests |
-| Accessibility baseline (ARIA + keyboard nav) | Only 15 ARIA attributes across 9 components — fails basic screen reader and keyboard navigation | HIGH | Audit interactive tabs, chart components, map markers; add role/aria-label/tabIndex; add skip-nav link (QA says it exists, codebase says it's minimal) |
-| DB connection pool: migrate to serverless-aware driver | `pg` pool with `max:5` creates a separate pool per serverless instance — actual ceiling is much lower than 5 | HIGH | Migrate to `@neondatabase/serverless` with HTTP mode, or PgBouncer; eliminates pool exhaustion under cron concurrency |
+| Daily cardnews auto-posting to Instagram | Zero Korean competitors do this | Medium | Pipeline 90% done; only storage integration missing |
+| Functional dark mode (competitors lack it entirely) | Premium UX in a dark-mode-free landscape | Medium | CSS fix + component sweep |
+| aptSeq-canonical URLs + complete Sitemap | Long-tail SEO for 50K+ apartments | Low | One-time migration with 301 redirects |
+| Centralized `makeSlug()` | Developer ergonomics; prevents future slug drift | Low | Single utility function |
 
----
+## Anti-Features
 
-### Anti-Features (Things to Deliberately NOT Do During Stabilization)
+Features to explicitly NOT build in v1.3.
 
-These are changes that might seem like improvements but would violate the scope, introduce new risk, or create
-a bigger problem than they solve.
-
-| Feature | Why Requested | Why to Avoid | Alternative |
-|---------|---------------|--------------|-------------|
-| ORM migration (Drizzle/Kysely) | Custom query builder is ugly and fragile | Full swap risks breaking all 22 cron jobs and every data page simultaneously; zero test coverage makes this a rewrite gamble | Improve typing and clarity of existing builder; defer ORM migration to a dedicated milestone with test scaffolding first |
-| New user-facing features (DSR calculator, multi-property types) | Roadmap has them in v3 | This milestone is stabilization-only; adding features while fixing bugs splits focus and adds regression surface | Track in `docs/11-renewal-v3-master-plan.md`; do not touch |
-| UI redesign | Designer may have ideas | Any CSS/component-level redesign during a stability push invalidates QA baselines | Defer to post-stabilization milestone |
-| Full test infrastructure (Jest/Vitest + Playwright) | Zero test coverage is genuinely critical | Test infrastructure setup is a milestone of its own; doing it mid-stabilization adds tooling overhead without delivering site fixes | Add a dedicated "Testing" milestone after stabilization completes |
-| Firebase → alternative auth migration | Firebase SDK is large and adds bundle weight | Auth replacement is a multi-week effort with risk of user session disruption | Use Firebase tree-shaking (`firebase/auth` modular imports) to reduce bundle size without migration |
-| Supabase query builder full replacement (raw SQL) | Builder hides SQL and is fragile | Rewriting all queries to raw SQL without tests is extremely high risk of regressions | Clean up naming (rename `/supabase/` to `/db/`), improve types — leave query structure intact |
-| Aggressive TypeScript strict mode (`noImplicitAny` globally) | 109 `any` usages need fixing eventually | Enabling strict globally breaks the build immediately; mass-fixing `any` without understanding each callsite introduces bugs | Fix `any` in critical paths only (DB row types, API responses); enable strict incrementally per-file |
-| Real-time features (WebSocket, live updates) | Real-time prices sound compelling | Serverless Vercel cannot maintain persistent connections; Neon free tier is not suited for high-frequency polling | Keep current SSR + cron + cache pattern; it already handles freshness adequately |
-
----
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Human-readable slug-only URLs (no ID) | Korean competitors don't use; duplicate collision risk | aptSeq + compact slug hybrid |
+| Full UI redesign | Out of scope (PROJECT.md: "v3 마일스톤") | Token-level consistency only |
+| Instagram Reels / video generation | High complexity, no data format benefit | Keep carousel (static images) |
+| Third-party storage (AWS S3, Cloudinary) | Adds vendor dependency + cost | Vercel Blob or Firebase Storage |
+| Rebuilding dark mode from scratch | System already defined correctly | Fix @custom-variant + migrate components |
+| Adding brand new chart types | v1.3 is quality, not new features | Improve existing chart legends only |
 
 ## Feature Dependencies
 
 ```
-[Structured logging]
-    └──enables──> [Production debugging of all other fixes]
-    └──enables──> [Rate limiter effectiveness measurement]
+Dark Mode Fix:
+  globals.css: add @custom-variant dark
+    → Tailwind dark: utilities activate
+      → Component migration: replace hardcoded colors with dark: utilities or .t-* classes
 
-[SSL rejectUnauthorized fix]
-    └──prerequisite for──> [Security hardening phase]
+Price Format Normalization:
+  Audit all chart tickFormatter, ranking displays, detail pages
+    → Replace with formatPrice() / formatKrw()
+      → Standardize null/"0" display rules
 
-[ADMIN_EMAILS server-only]
-    └──prerequisite for──> [DAM endpoint authentication]
-    └──part of──> [Security hardening phase]
+Cardnews Instagram Pipeline:
+  npm install @vercel/blob + BLOB_READ_WRITE_TOKEN env var
+    → generate-cardnews: upload Buffer[] to Vercel Blob → store public URLs
+      → content_queue.storage_urls populated
+        → post-instagram route: imageUrls.length > 0 → publishCarousel() executes
 
-[CSP header]
-    └──requires knowledge of──> [All third-party scripts: Kakao, AdSense, Firebase]
-    └──best done after──> [Code split / dynamic imports settled]
-
-[pg_trgm index]
-    └──independent of──> [Application code]
-    └──enhances──> [Search API]
-
-[Duplicate formatPrice removal]
-    └──prerequisite for──> [KakaoMap.tsx TypeScript any cleanup]
-
-[Supabase → db rename]
-    └──enables──> [Clarity for TypeScript type improvements]
-    └──requires──> [All import paths updated simultaneously]
-
-[Remove unused PostgreSQL packages]
-    └──independent of──> [All other changes]
-
-[Error boundaries]
-    └──independent of──> [Other fixes]
-    └──enhances──> [User trust during any remaining bugs]
-
-[Cron schedule stagger]
-    └──partially mitigates──> [DB connection pool exhaustion]
-    └──does NOT fully solve──> [Need serverless-aware driver for full fix]
-
-[DB serverless driver migration]
-    └──conflicts with──> [Current pg pool configuration]
-    └──high risk; defer to──> [Post-stabilization unless exhaustion is observed in production]
+URL Structure:
+  Confirm aptSeq in apt_complexes schema
+    → Centralize makeSlug(aptSeq, name) utility
+      → Update /apt/[region]/[slug] routes to /apt/[region]/[aptSeq]-[slug]
+        → Add 301 redirects for old URL format
+          → Regenerate Sitemap
 ```
 
-### Dependency Notes
+## MVP Recommendation for v1.3
 
-- **Security phase last:** CONCERNS.md and PROJECT.md both specify security work goes last — other changes may introduce new issues that need consolidating. Do not scatter security fixes across phases.
-- **Logging before debugging:** Structured logging should be early so subsequent debugging work benefits from it.
-- **CSP requires third-party inventory:** Adding CSP without knowing all script sources will break Kakao maps, AdSense, and Firebase Auth. Inventory first.
-- **Supabase rename is a broad import change:** Touches many files at once; safest to do as a single atomic commit with a find-and-replace, not incrementally.
+Ordered by dependency + user impact:
 
----
+1. **globals.css: add `@custom-variant dark`** — single line, unblocks all `dark:` utilities (Low complexity, high leverage)
+2. **Hardcoded color migration** — sweep components, replace inline style and hardcoded Tailwind colors with `.t-*` classes (Medium complexity, High visual impact)
+3. **Price format audit** — ensure `formatPrice()` used in all chart formatters, ranking rows, null handling (Low complexity, High data quality)
+4. **Vercel Blob storage** — 30-minute integration that unblocks the entire Instagram pipeline (Low complexity, enables differentiator)
+5. **aptSeq URL + makeSlug + Sitemap** — SEO foundation, no user-facing visual change (Medium complexity, Long-term SEO value)
 
-## MVP Definition (Stabilization Context)
-
-In stabilization, "MVP" means the minimum work that makes the site trustworthy at production standards.
-
-### Phase 1: Critical Fixes (Blocker-level)
-
-- [ ] Canonical URL fix — SEO is broken for 17+ pages RIGHT NOW, every day without a fix loses search ranking
-- [ ] Page titles for `/compare`, `/profile`, `/dam` — trivial, blocks nothing, completes SEO baseline
-- [ ] Error boundaries (`error.tsx`, `global-error.tsx`) — unhandled errors show naked Next.js defaults
-- [ ] Search API error message sanitization — leaks internal details in production right now
-- [ ] Remove storage upload stub — silent failures confuse any future developer
-
-### Phase 2: Code Quality (Reduces Maintenance Debt)
-
-- [ ] Deduplicate `formatPrice` — LOW effort, clear win
-- [ ] Consolidate Instagram clients — LOW effort, clear win
-- [ ] Remove unused PostgreSQL packages — 5-minute change
-- [ ] Rename `src/lib/supabase/` to `src/lib/db/` — naming correctness, moderate scope
-- [ ] TypeScript: type DB row interfaces — reduces runtime error surface in critical data paths
-- [ ] Structured logging foundation — makes all future debugging faster
-
-### Phase 3: Performance (Correctness Under Load)
-
-- [ ] Stagger cron job schedules — prevents DB pool exhaustion during batch runs
-- [ ] `pg_trgm` GIN index on search columns — protects search latency as data grows
-- [ ] Code-split large components (`KakaoMap`, `calculator`) — improves client load time
-- [ ] In-memory rate limiter → persistent (Upstash Redis or Vercel KV)
-
-### Phase 4: Security (Final Consolidation)
-
-- [ ] SSL `rejectUnauthorized: true`
-- [ ] `ADMIN_EMAILS` moved to server-only env var
-- [ ] DAM content endpoints authentication
-- [ ] Push subscription endpoint auth
-- [ ] CSP header (requires full third-party script inventory)
-
-### Deferred (Not This Milestone)
-
-- [ ] Full accessibility audit — important, but HIGH complexity and out of scope per PROJECT.md
-- [ ] DB serverless driver migration — HIGH risk without tests
-- [ ] ORM migration — separate milestone
-- [ ] Test infrastructure — separate milestone
-- [ ] Per-page OG images — nice-to-have; main SEO issue is canonical, not OG
-
----
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Canonical URL fix | HIGH (SEO ranking) | LOW | P1 |
-| Page titles (`compare`, `profile`, `dam`) | MEDIUM (SEO, UX) | LOW | P1 |
-| Error boundaries | MEDIUM (trust, UX) | LOW | P1 |
-| Search API error sanitization | MEDIUM (security) | LOW | P1 |
-| Remove storage stub | LOW (silent failure) | LOW | P1 |
-| SSL rejectUnauthorized fix | HIGH (security) | LOW | P1 (Phase 4) |
-| ADMIN_EMAILS server-only | MEDIUM (info disclosure) | LOW | P1 (Phase 4) |
-| DAM endpoint auth | HIGH (data integrity) | LOW | P1 (Phase 4) |
-| CSP header | MEDIUM (XSS surface) | MEDIUM | P1 (Phase 4) |
-| Structured logging | MEDIUM (ops) | MEDIUM | P2 |
-| Deduplicate formatPrice | LOW (DX) | LOW | P2 |
-| Consolidate Instagram clients | LOW (DX) | LOW | P2 |
-| Remove unused pg packages | LOW (hygiene) | LOW | P2 |
-| Supabase → db rename | LOW (DX) | MEDIUM | P2 |
-| TypeScript DB row types | MEDIUM (safety) | MEDIUM | P2 |
-| Cron schedule stagger | MEDIUM (reliability) | LOW | P2 |
-| pg_trgm GIN index | MEDIUM (search perf) | LOW | P2 |
-| Code-split large components | MEDIUM (load time) | MEDIUM | P2 |
-| In-memory rate limiter fix | MEDIUM (security) | MEDIUM | P2 |
-| Push subscription auth | LOW (abuse surface) | LOW | P2 |
-| Per-page OG images | MEDIUM (social CTR) | MEDIUM | P3 |
-| Map page loading skeleton | LOW (polish) | LOW | P3 |
-| Accessibility audit | HIGH (inclusivity) | HIGH | P3 (own milestone) |
-| DB serverless driver | HIGH (scaling) | HIGH | P3 (post-stabilization) |
-
-**Priority key:**
-- P1: Must fix — broken or security-critical
-- P2: Should fix — quality and reliability, moderate effort
-- P3: Nice to have or own milestone
+Defer to v1.3.x or later:
+- Chart legend improvements — cosmetic
+- Profile link fixes — minor
+- Search result enhancements — requires data changes
 
 ---
 
 ## Sources
 
-- `.planning/PROJECT.md` — Active requirements list (2026-03-26)
-- `.planning/codebase/CONCERNS.md` — Detailed codebase audit (2026-03-26)
-- `docs/qa-report.md` — Automated QA scan of all 21 pages (2026-03-25)
-- Next.js App Router conventions: error boundaries (`error.tsx`, `global-error.tsx`) are standard Next.js 13+ patterns
-- PostgreSQL `pg_trgm` extension: standard approach for ILIKE-equivalent indexed search
-
----
-*Feature research for: donjup.com production stabilization*
-*Researched: 2026-03-26*
+- [Instagram Graph API — Content Publishing](https://developers.facebook.com/docs/instagram-platform/content-publishing/) — HIGH confidence (official Meta docs)
+- [Vercel Blob Pricing & Limits](https://vercel.com/docs/vercel-blob/usage-and-pricing) — HIGH confidence (official Vercel docs)
+- [Tailwind CSS v4 Dark Mode](https://tailwindcss.com/docs/dark-mode) — HIGH confidence (official Tailwind docs)
+- [호갱노노 URL pattern](https://hogangnono.com/apt/e1u54) — MEDIUM confidence (direct URL observation)
+- [아실 URL pattern](https://asil.kr/asil/sub/movein.jsp) — MEDIUM confidence (direct inspection)
+- [부동산지인 URL/price](https://aptgin.com) — MEDIUM confidence (page content extraction)
+- [네이버부동산 API/price format](https://financedata.github.io/posts/naver-land-crawling.html) — MEDIUM confidence (community crawling guide)
+- Donjup codebase audit (`src/lib/format.ts`, `src/app/globals.css`, `src/lib/cardnews/render.ts`, `src/lib/instagram/client.ts`) — HIGH confidence (direct inspection)
