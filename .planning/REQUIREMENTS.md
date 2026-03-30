@@ -63,13 +63,31 @@ Deferred to future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| DATA-01 | Phase 20 | Pending |
+| DATA-02 | Phase 20 | Pending |
+| DATA-03 | Phase 20 | Pending |
+| DATA-04 | Phase 20 | Pending |
+| DESIGN-01 | Phase 21 | Pending |
+| DESIGN-02 | Phase 21 | Pending |
+| DESIGN-03 | Phase 21 | Pending |
+| DESIGN-04 | Phase 21 | Pending |
+| URL-01 | Phase 22 | Pending |
+| URL-02 | Phase 22 | Pending |
+| URL-03 | Phase 22 | Pending |
+| URL-04 | Phase 22 | Pending |
+| URL-05 | Phase 22 | Pending |
+| URL-06 | Phase 22 | Pending |
+| FIX-01 | Phase 23 | Pending |
+| FIX-02 | Phase 23 | Pending |
+| FIX-03 | Phase 23 | Pending |
+| UX-01 | Phase 24 | Pending |
+| UX-02 | Phase 24 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 17 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 17
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after initial definition*
+*Last updated: 2026-03-31 — traceability filled after roadmap creation*
