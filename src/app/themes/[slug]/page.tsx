@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { formatPrice } from "@/lib/format";
+import { makeSlug } from "@/lib/apt-url";
 import AdSlot from "@/components/ads/AdSlot";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
 
@@ -113,14 +114,6 @@ interface ThemeResult {
   trade_price?: number;
   change_rate?: number | null;
   trade_date?: string;
-}
-
-function makeSlug(regionCode: string, aptName: string): string {
-  return `${regionCode}-${aptName
-    .replace(/[^가-힣a-zA-Z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase()}`;
 }
 
 // ---------- Page ----------

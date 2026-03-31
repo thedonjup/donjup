@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { formatDateKo } from "@/lib/format";
 
 interface UserRecord {
   uid: string;
@@ -206,10 +207,10 @@ export default function UsersManagement() {
                     {u.email || "-"}
                   </td>
                   <td className="px-4 py-3" style={{ color: "var(--color-text-tertiary)" }}>
-                    {u.creationTime ? formatDate(u.creationTime) : "-"}
+                    {u.creationTime ? formatDateKo(u.creationTime) : "-"}
                   </td>
                   <td className="px-4 py-3" style={{ color: "var(--color-text-tertiary)" }}>
-                    {u.lastSignInTime ? formatDate(u.lastSignInTime) : "-"}
+                    {u.lastSignInTime ? formatDateKo(u.lastSignInTime) : "-"}
                   </td>
                 </tr>
               ))}
@@ -230,16 +231,4 @@ export default function UsersManagement() {
       </div>
     </div>
   );
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  } catch {
-    return dateStr;
-  }
 }

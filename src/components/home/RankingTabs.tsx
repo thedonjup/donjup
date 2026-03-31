@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
+import { makeSlug } from "@/lib/apt-url";
 import { PROPERTY_TYPE_LABELS } from "@/components/PropertyTypeFilter";
 import { shareViaKakao } from "@/lib/kakao-share";
 
@@ -69,14 +70,6 @@ const TABS: TabDef[] = [
     badgeClass: "rank-badge-drop",
   },
 ];
-
-function makeSlug(regionCode: string, aptName: string): string {
-  return `${regionCode}-${aptName
-    .replace(/[^가-힣a-zA-Z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase()}`;
-}
 
 export default function RankingTabs({
   drops,
