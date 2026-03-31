@@ -52,7 +52,7 @@ function CustomTooltip({
       <p style={{ color: "var(--color-text-tertiary)" }}>
         {d.month} · {d.count}건
       </p>
-      <p className="mt-0.5 font-bold" style={{ color: "#2B579A" }}>
+      <p className="mt-0.5 font-bold" style={{ color: "var(--color-chart-index)" }}>
         {formatEok(d.medianPrice)}
       </p>
       <p className="mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
@@ -113,19 +113,19 @@ export default function ClusterIndexChart({ data }: ClusterIndexChartProps) {
         <Tooltip content={<CustomTooltip />} />
         <ReferenceLine
           y={basePoint.medianPrice}
-          stroke="#9CA3AF"
+          stroke="var(--color-chart-neutral)"
           strokeDasharray="4 4"
           label={{
             value: `기준 ${formatEok(basePoint.medianPrice)}`,
             position: "insideTopRight",
             fontSize: 11,
-            fill: "#9CA3AF",
+            fill: "var(--color-chart-neutral)",
           }}
         />
         <Line
           type="monotone"
           dataKey="medianPrice"
-          stroke="#2B579A"
+          stroke="var(--color-chart-index)"
           strokeWidth={2}
           dot={false}
           isAnimationActive={false}

@@ -89,7 +89,7 @@ function DirectDealConnectors({ directDealDots, xAxisMap, yAxisMap }: ConnectorP
               y1={y1}
               x2={x}
               y2={y2}
-              stroke="#9CA3AF"
+              stroke="var(--color-chart-neutral)"
               strokeWidth={1}
               strokeDasharray="3 3"
             />
@@ -98,7 +98,7 @@ function DirectDealConnectors({ directDealDots, xAxisMap, yAxisMap }: ConnectorP
               cx={x}
               cy={y2}
               r={2}
-              fill="#9CA3AF"
+              fill="var(--color-chart-neutral)"
               opacity={0.6}
             />
           </g>
@@ -221,7 +221,7 @@ function CustomTooltip({
     );
   }
 
-  // Ratio tooltip (orange line — entry stroke is #F97316)
+  // Ratio tooltip (orange line — entry stroke is var(--color-chart-ratio))
   if (data.month && data.ratio !== undefined) {
     const confidenceLabel = data.isLowConfidence ? " (낮은 신뢰도)" : "";
     return (
@@ -235,7 +235,7 @@ function CustomTooltip({
         <p style={{ color: "var(--color-text-tertiary)" }}>
           {data.month}{confidenceLabel}
         </p>
-        <p className="mt-0.5 font-bold" style={{ color: "#F97316" }}>
+        <p className="mt-0.5 font-bold" style={{ color: "var(--color-chart-ratio)" }}>
           전세가율: {data.ratio.toFixed(1)}%
         </p>
       </div>
@@ -245,7 +245,7 @@ function CustomTooltip({
   // Trend line tooltip
   if (data.month) {
     const confidenceLabel = data.isLowConfidence ? " (낮은 신뢰도)" : "";
-    const isRentLine = entry.stroke === "#3B82F6";
+    const isRentLine = entry.stroke === "var(--color-chart-jeonse)";
     return (
       <div
         className="rounded-xl px-3 py-2 text-xs shadow-lg"
@@ -332,16 +332,16 @@ export default function PriceHistoryChart({
         <h2 className="font-bold t-text">가격 추이</h2>
         <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-0.5 bg-[#059669]" />매매 추이
+            <span className="inline-block w-3 h-0.5" style={{ background: "var(--color-chart-sale)" }} />매매 추이
           </span>
           {hasRentTrend && (
             <span className="flex items-center gap-1">
-              <span className="inline-block w-3 h-0.5 bg-[#3B82F6]" />전세 추이
+              <span className="inline-block w-3 h-0.5" style={{ background: "var(--color-chart-jeonse)" }} />전세 추이
             </span>
           )}
           {hasRatioOverlay && (
             <span className="flex items-center gap-1">
-              <span className="inline-block w-3 h-0.5 border-t-2 border-dashed border-[#F97316]" />전세가율
+              <span className="inline-block w-3 h-0.5 border-t-2 border-dashed" style={{ borderColor: "var(--color-chart-ratio)" }} />전세가율
             </span>
           )}
         </div>
@@ -391,7 +391,7 @@ export default function PriceHistoryChart({
             <Scatter
               yAxisId={0}
               data={normalDots}
-              fill="#059669"
+              fill="var(--color-chart-sale)"
               opacity={0.7}
               shape={<circle r={3} />}
             />
@@ -400,7 +400,7 @@ export default function PriceHistoryChart({
             <Scatter
               yAxisId={0}
               data={directDealDots}
-              fill="#9CA3AF"
+              fill="var(--color-chart-neutral)"
               opacity={0.4}
               shape={<circle r={3} />}
             />
@@ -411,10 +411,10 @@ export default function PriceHistoryChart({
               data={fullData}
               type="monotone"
               dataKey="y"
-              stroke="#059669"
+              stroke="var(--color-chart-sale)"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 5, fill: "#059669", stroke: "#fff", strokeWidth: 2 }}
+              activeDot={{ r: 5, fill: "var(--color-chart-sale)", stroke: "#fff", strokeWidth: 2 }}
               connectNulls
               isAnimationActive={false}
             />
@@ -425,7 +425,7 @@ export default function PriceHistoryChart({
               data={dashedData}
               type="monotone"
               dataKey="y"
-              stroke="#059669"
+              stroke="var(--color-chart-sale)"
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={false}
@@ -441,10 +441,10 @@ export default function PriceHistoryChart({
                 data={fullRentData}
                 type="monotone"
                 dataKey="y"
-                stroke="#3B82F6"
+                stroke="var(--color-chart-jeonse)"
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 5, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
+                activeDot={{ r: 5, fill: "var(--color-chart-jeonse)", stroke: "#fff", strokeWidth: 2 }}
                 connectNulls
                 isAnimationActive={false}
               />
@@ -457,7 +457,7 @@ export default function PriceHistoryChart({
                 data={dashedRentData}
                 type="monotone"
                 dataKey="y"
-                stroke="#3B82F6"
+                stroke="var(--color-chart-jeonse)"
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
@@ -474,7 +474,7 @@ export default function PriceHistoryChart({
                 yAxisId="right"
                 type="monotone"
                 dataKey="y"
-                stroke="#F97316"
+                stroke="var(--color-chart-ratio)"
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
