@@ -232,8 +232,8 @@ export default function RankingTabs({
                           <span
                             className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
                             style={{
-                              backgroundColor: "rgba(107,114,128,0.12)",
-                              color: "#6b7280",
+                              backgroundColor: "var(--color-surface-elevated)",
+                              color: "var(--color-text-tertiary)",
                             }}
                           >
                             저층

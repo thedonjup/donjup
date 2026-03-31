@@ -185,7 +185,7 @@ export default function RegionSelector() {
                 backgroundColor: selected.length > 0
                   ? "var(--color-brand-600, #2563eb)"
                   : "var(--color-border, #d1d5db)",
-                color: "#fff",
+                color: "var(--color-text-inverted, #ffffff)",
                 fontSize: 15,
                 fontWeight: 700,
                 cursor: selected.length > 0 ? "pointer" : "default",

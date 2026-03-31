@@ -86,7 +86,7 @@ export default function TransactionTabs({
               className="rounded-full px-3 py-1.5 text-xs font-bold transition"
               style={
                 selectedSize === null
-                  ? { background: "var(--color-brand-600)", color: "#fff" }
+                  ? { background: "var(--color-brand-600)", color: "var(--color-text-inverted)" }
                   : { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
               }
             >
@@ -99,7 +99,7 @@ export default function TransactionTabs({
                 className="rounded-full px-3 py-1.5 text-xs font-bold transition"
                 style={
                   selectedSize === size
-                    ? { background: "var(--color-brand-600)", color: "#fff" }
+                    ? { background: "var(--color-brand-600)", color: "var(--color-text-inverted)" }
                     : { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
                 }
               >
@@ -123,7 +123,7 @@ export default function TransactionTabs({
           className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-colors"
           style={
             tab === "sale"
-              ? { background: "var(--color-brand-600)", color: "#fff" }
+              ? { background: "var(--color-brand-600)", color: "var(--color-text-inverted)" }
               : { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
           }
         >
@@ -132,7 +132,7 @@ export default function TransactionTabs({
             className="inline-flex items-center justify-center rounded-full px-1.5 text-xs font-bold min-w-[20px]"
             style={
               tab === "sale"
-                ? { background: "rgba(255,255,255,0.25)", color: "#fff" }
+                ? { background: "rgba(255,255,255,0.25)", color: "var(--color-text-inverted)" }
                 : { background: "var(--color-border)", color: "var(--color-text-tertiary)" }
             }
           >
@@ -150,7 +150,7 @@ export default function TransactionTabs({
           className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-colors"
           style={
             tab === "rent"
-              ? { background: "var(--color-brand-600)", color: "#fff" }
+              ? { background: "var(--color-brand-600)", color: "var(--color-text-inverted)" }
               : { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
           }
         >
@@ -159,7 +159,7 @@ export default function TransactionTabs({
             className="inline-flex items-center justify-center rounded-full px-1.5 text-xs font-bold min-w-[20px]"
             style={
               tab === "rent"
-                ? { background: "rgba(255,255,255,0.25)", color: "#fff" }
+                ? { background: "rgba(255,255,255,0.25)", color: "var(--color-text-inverted)" }
                 : { background: "var(--color-border)", color: "var(--color-text-tertiary)" }
             }
           >

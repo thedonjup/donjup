@@ -291,7 +291,7 @@ export default function AptDetailClient({
   function getJeonseRatioColor(ratio: number | null): string {
     if (ratio === null) return "var(--color-text-primary)";
     if (ratio >= 70) return "var(--color-semantic-drop)";     // red per D-09
-    if (ratio >= 60) return "#F59E0B";                         // amber per D-09
+    if (ratio >= 60) return "var(--color-semantic-warn)";      // amber per D-09
     return "var(--color-semantic-rise)";                       // green per D-09
   }
 
@@ -314,7 +314,7 @@ export default function AptDetailClient({
             <button
               onClick={() => setSizeUnit((u) => (u === "sqm" ? "pyeong" : "sqm"))}
               className="rounded-full px-3 py-1.5 text-xs font-bold transition"
-              style={{ background: "var(--color-brand-600)", color: "#fff" }}
+              style={{ background: "var(--color-brand-600)", color: "var(--color-text-inverted)" }}
               aria-label={sizeUnit === "sqm" ? "평으로 전환" : "제곱미터로 전환"}
             >
               {sizeUnit === "sqm" ? "㎡ → 평 전환" : "평 → ㎡ 전환"}
@@ -334,7 +334,7 @@ export default function AptDetailClient({
                   className="shrink-0 rounded-xl px-3 py-2 text-left transition"
                   style={
                     selectedSize === size
-                      ? { background: "var(--color-brand-600)", color: "#fff" }
+                      ? { background: "var(--color-brand-600)", color: "var(--color-text-inverted)" }
                       : { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
                   }
                 >
@@ -398,7 +398,7 @@ export default function AptDetailClient({
                 className="rounded-full px-3 py-1 text-xs font-bold transition"
                 style={
                   selectedPeriod === key
-                    ? { background: "var(--color-brand-600)", color: "#fff" }
+                    ? { background: "var(--color-brand-600)", color: "var(--color-text-inverted)" }
                     : { background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }
                 }
               >
