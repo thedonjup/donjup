@@ -50,3 +50,44 @@ export function sqmToPyeong(sqm: number): number {
 export function formatSizeWithPyeong(sqm: number): string {
   return `${sqm}㎡ (${sqmToPyeong(sqm)}평)`;
 }
+
+/** 축약형 가격: "3.2억", "8,500만" (만원 단위 입력) */
+export function formatPriceShort(v: number): string {
+  if (v >= 10000) {
+    const eok = Math.floor(v / 10000);
+    const rest = Math.round((v % 10000) / 1000) * 1000;
+    return rest > 0 ? `${eok}.${rest / 1000}억` : `${eok}억`;
+  }
+  return `${v.toLocaleString()}만`;
+}
+
+/** Y축 레이블용 축약형: "3.2억", "8,500만" (만원 단위 입력) */
+export function formatPriceAxis(v: number): string {
+  if (v >= 10000) {
+    return `${(v / 10000).toFixed(v % 10000 === 0 ? 0 : 1)}억`;
+  }
+  return `${v.toLocaleString()}만`;
+}
+
+/** null/undefined/빈문자열/0 → fallback (기본 "-") */
+export function formatNullable(v: string | number | null | undefined, fallback = '-'): string {
+  if (v === null || v === undefined || v === '' || v === 0) return fallback;
+  return String(v);
+}
+
+/** 면적 병기: "84.93㎡ (25.7평)" — formatSizeWithPyeong의 별칭 */
+export const formatArea = formatSizeWithPyeong;
+
+/** ISO 날짜 → "YYYY-MM-DD" */
+export function formatDateKo(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  } catch {
+    return dateStr;
+  }
+}
