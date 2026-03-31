@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: 서비스 품질 개선
-current_phase: 20
-status: verifying
+current_phase: 21
+status: planning
 stopped_at: Completed 20-03-PLAN.md
-last_updated: "2026-03-31T01:47:14.024Z"
+last_updated: "2026-03-31T01:51:48.684Z"
 progress:
   total_phases: 9
   completed_phases: 5
@@ -15,14 +15,14 @@ progress:
 
 # Project State: 돈줍
 
-**Current Phase:** 20
+**Current Phase:** 21
 **Milestone:** v1.3 — 서비스 품질 개선
-**Status:** Phase complete — ready for verification
+**Status:** Ready to plan
 
 ## Current Position
 
 Phase: 20 (format-utils-normalization) — EXECUTING
-Plan: 3 of 3
+Plan: Not started
 
 ## Key Context
 
