@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { aptRentTransactions } from "@/lib/db/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatArea } from "@/lib/format";
+import { makeSlug } from "@/lib/apt-url";
 import AdSlot from "@/components/ads/AdSlot";
 
 export const revalidate = 3600;
@@ -37,15 +38,6 @@ for (const [code, sido] of Object.entries(REGION_HIERARCHY)) {
   SLUG_TO_CODES[sido.slug] = sigunguCodes;
 }
 
-/** 면적(㎡)을 평으로 변환 */
-function sqmToPyeong(sqm: number): string {
-  return (sqm / 3.3058).toFixed(0);
-}
-
-/** 단지 상세 링크용 slug 생성 */
-function makeAptSlug(regionCode: string, aptName: string): string {
-  return `${regionCode}-${aptName.replace(/[^가-힣a-zA-Z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase()}`;
-}
 
 export default async function RentPage({
   searchParams,
@@ -181,7 +173,7 @@ export default async function RentPage({
                 {jeonseItems.map((item: Record<string, unknown>, i: number) => {
                   const regionCode = String(item.region_code ?? "");
                   const aptName = String(item.apt_name ?? "");
-                  const slug = makeAptSlug(regionCode, aptName);
+                  const slug = makeSlug(regionCode, aptName);
                   const sizeSqm = Number(item.size_sqm ?? 0);
                   const deposit = Number(item.deposit ?? 0);
 
@@ -206,7 +198,7 @@ export default async function RentPage({
                         {String(item.region_name ?? "")}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums t-text-secondary">
-                        {sizeSqm}㎡({sqmToPyeong(sizeSqm)}평)
+                        {formatArea(sizeSqm)}
                       </td>
                       <td className="px-4 py-3 text-right font-bold tabular-nums t-rise">
                         {formatPrice(deposit)}
@@ -261,7 +253,7 @@ export default async function RentPage({
                 {wolseItems.map((item: Record<string, unknown>, i: number) => {
                   const regionCode = String(item.region_code ?? "");
                   const aptName = String(item.apt_name ?? "");
-                  const slug = makeAptSlug(regionCode, aptName);
+                  const slug = makeSlug(regionCode, aptName);
                   const sizeSqm = Number(item.size_sqm ?? 0);
                   const deposit = Number(item.deposit ?? 0);
                   const monthlyRent = Number(item.monthly_rent ?? 0);
@@ -287,7 +279,7 @@ export default async function RentPage({
                         {String(item.region_name ?? "")}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums t-text-secondary">
-                        {sizeSqm}㎡({sqmToPyeong(sizeSqm)}평)
+                        {formatArea(sizeSqm)}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold t-text">
                         {formatPrice(deposit)}

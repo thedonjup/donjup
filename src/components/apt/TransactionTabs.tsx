@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, sqmToPyeong } from "@/lib/format";
 import type { AptTransaction, AptRentTransaction } from "@/components/apt/AptDetailClient";
 
 type Transaction = AptTransaction;
@@ -14,12 +14,8 @@ const DROP_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: stri
 
 type RentTransaction = AptRentTransaction;
 
-function sqmToPyeong(sqm: number): string {
-  return (sqm / 3.3058).toFixed(0);
-}
-
 function formatSize(sqm: number, unit: "sqm" | "pyeong"): string {
-  if (unit === "pyeong") return `${sqmToPyeong(sqm)}평`;
+  if (unit === "pyeong") return `${Math.round(sqmToPyeong(sqm))}평`; // compact display
   return `${sqm}㎡`;
 }
 

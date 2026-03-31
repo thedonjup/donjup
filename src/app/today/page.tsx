@@ -4,6 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, sqmToPyeong } from "@/lib/format";
+import { makeSlug } from "@/lib/apt-url";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
 
@@ -38,13 +39,6 @@ interface TodayTransaction {
   property_type?: number;
 }
 
-function makeSlug(regionCode: string, aptName: string): string {
-  return `${regionCode}-${aptName
-    .replace(/[^가-힣a-zA-Z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase()}`;
-}
 
 export default async function TodayPage({
   searchParams,
@@ -138,7 +132,7 @@ export default async function TodayPage({
                           {tx.apt_name}
                         </p>
                         <p className="mt-0.5 text-xs t-text-tertiary" style={{ lineHeight: "1.4" }}>
-                          {tx.region_name} · {sqmToPyeong(tx.size_sqm)}평{tx.floor != null ? ` · ${tx.floor}층` : ""}
+                          {tx.region_name} · {Math.round(sqmToPyeong(tx.size_sqm))}평{tx.floor != null ? ` · ${tx.floor}층` : ""}
                         </p>
                       </div>
                       <div className="flex-shrink-0 text-right">
@@ -221,7 +215,7 @@ export default async function TodayPage({
                         </td>
                         <td className="px-4 py-3 text-sm t-text-secondary">{tx.region_name}</td>
                         <td className="px-4 py-3 text-right tabular-nums t-text-secondary">
-                          {sqmToPyeong(tx.size_sqm)}평
+                          {Math.round(sqmToPyeong(tx.size_sqm))}평
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums t-text-secondary">
                           {tx.floor != null ? `${tx.floor}층` : "-"}

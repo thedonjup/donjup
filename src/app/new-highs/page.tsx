@@ -4,6 +4,7 @@ import { desc, eq, and } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, sqmToPyeong } from "@/lib/format";
+import { makeSlug } from "@/lib/apt-url";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
 
@@ -29,13 +30,6 @@ interface NewHighTransaction {
   property_type?: number;
 }
 
-function makeSlug(regionCode: string, aptName: string): string {
-  return `${regionCode}-${aptName
-    .replace(/[^가-힣a-zA-Z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase()}`;
-}
 
 export default async function NewHighsPage({
   searchParams,
@@ -131,7 +125,7 @@ export default async function NewHighsPage({
                     </div>
                     <div className="mt-1.5 flex items-center gap-2 pl-7">
                       <span className="text-xs t-text-tertiary">
-                        {tx.region_name} · {sqmToPyeong(tx.size_sqm)}평 · {tx.trade_date}
+                        {tx.region_name} · {Math.round(sqmToPyeong(tx.size_sqm))}평 · {tx.trade_date}
                       </span>
                       {tx.deal_type === "직거래" && (
                         <span className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "var(--color-semantic-warn-bg)", color: "var(--color-semantic-warn)" }}>
@@ -180,7 +174,7 @@ export default async function NewHighsPage({
                       </td>
                       <td className="px-4 py-3 text-sm t-text-secondary">{tx.region_name}</td>
                       <td className="px-4 py-3 text-right tabular-nums t-text-secondary">
-                        {sqmToPyeong(tx.size_sqm)}평
+                        {Math.round(sqmToPyeong(tx.size_sqm))}평
                       </td>
                       <td className="px-4 py-3 text-right font-bold tabular-nums t-rise">
                         {formatPrice(tx.trade_price)}
