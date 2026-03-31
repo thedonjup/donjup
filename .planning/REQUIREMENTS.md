@@ -16,10 +16,10 @@ Requirements for 서비스 품질 개선. Each maps to roadmap phases.
 
 ### 데이터 표현 (DATA)
 
-- [ ] **DATA-01**: 가격 표시가 formatPrice 단일 함수로 통일되고, 축약형은 formatPriceShort로 명확히 분리된다
-- [ ] **DATA-02**: null/빈값 표시가 전체 페이지에서 일관된 규칙("-")으로 통일된다
-- [ ] **DATA-03**: 면적 표시가 모든 페이지에서 "㎡ (평)" 병기 형식으로 통일된다
-- [ ] **DATA-04**: 포맷 유틸 함수(formatPrice, sqmToPyeong, makeSlug 등)가 중복 없이 단일 모듈에서 관리된다
+- [x] **DATA-01**: 가격 표시가 formatPrice 단일 함수로 통일되고, 축약형은 formatPriceShort로 명확히 분리된다
+- [x] **DATA-02**: null/빈값 표시가 전체 페이지에서 일관된 규칙("-")으로 통일된다
+- [x] **DATA-03**: 면적 표시가 모든 페이지에서 "㎡ (평)" 병기 형식으로 통일된다
+- [x] **DATA-04**: 포맷 유틸 함수(formatPrice, sqmToPyeong, makeSlug 등)가 중복 없이 단일 모듈에서 관리된다
 
 ### URL 구조 (URL)
 
@@ -63,10 +63,10 @@ Deferred to future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 20 | Pending |
-| DATA-02 | Phase 20 | Pending |
-| DATA-03 | Phase 20 | Pending |
-| DATA-04 | Phase 20 | Pending |
+| DATA-01 | Phase 20 | Complete |
+| DATA-02 | Phase 20 | Complete |
+| DATA-03 | Phase 20 | Complete |
+| DATA-04 | Phase 20 | Complete |
 | DESIGN-01 | Phase 21 | Pending |
 | DESIGN-02 | Phase 21 | Pending |
 | DESIGN-03 | Phase 21 | Pending |

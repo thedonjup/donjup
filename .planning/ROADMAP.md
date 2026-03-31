@@ -167,7 +167,7 @@ Plans:
 
 **Milestone Goal:** 디자인 시스템 통합, 데이터 표현 정규화, URL 구조 개편, 깨진 기능 복구로 사용자 경험 품질을 근본적으로 개선한다
 
-- [ ] **Phase 20: 포맷 유틸 중앙화 + 데이터 표현 정규화** - 가격/면적/날짜/null 포맷 단일 모듈 확립
+- [x] **Phase 20: 포맷 유틸 중앙화 + 데이터 표현 정규화** - 가격/면적/날짜/null 포맷 단일 모듈 확립 (completed 2026-03-31)
 - [ ] **Phase 21: 디자인 시스템 통합** - 다크모드 정상화 + 하드코딩 색상 제거 + 인라인 style 제거
 - [ ] **Phase 22: URL 구조 개편** - aptSeq 기반 canonical URL + 301 리다이렉트 + Sitemap 완성
 - [ ] **Phase 23: 깨진 기능 복구** - Vercel Blob 연동 + Instagram 포스팅 파이프라인 완성
@@ -250,7 +250,7 @@ Plans:
 Plans:
 - [x] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
 - [x] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
-- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
+- [x] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 
 ### Phase 21: 디자인 시스템 통합
 **Goal**: 다크모드가 전체 서비스에서 정상 동작하고, 하드코딩된 색상이 CSS 변수 체계로 완전히 전환된다
@@ -265,7 +265,7 @@ Plans:
 
 Plans:
 - [x] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
-- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
+- [x] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
 - [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 **UI hint**: yes
 
@@ -282,7 +282,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
+- [x] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
 - [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
 - [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 
@@ -341,7 +341,7 @@ Plans:
 | 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete | 2026-03-28 |
 | 18. Drizzle ORM 교체 | v1.2 | 4/4 | Complete | 2026-03-28 |
 | 19. 코드 정리 | v1.2 | 1/1 | Complete | 2026-03-28 |
-| 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 2/3 | In Progress|  |
+| 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 3/3 | Complete   | 2026-03-31 |
 | 21. 디자인 시스템 통합 | v1.3 | 0/? | Not started | - |
 | 22. URL 구조 개편 | v1.3 | 0/? | Not started | - |
 | 23. 깨진 기능 복구 | v1.3 | 0/? | Not started | - |

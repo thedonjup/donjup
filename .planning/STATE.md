@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: 서비스 품질 개선
 current_phase: 20
-status: executing
-stopped_at: Completed 20-02-PLAN.md
-last_updated: "2026-03-31T01:43:43.103Z"
+status: verifying
+stopped_at: Completed 20-03-PLAN.md
+last_updated: "2026-03-31T01:47:14.024Z"
 progress:
   total_phases: 9
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 20
 **Milestone:** v1.3 — 서비스 품질 개선
-**Status:** Ready to execute
+**Status:** Phase complete — ready for verification
 
 ## Current Position
 
@@ -85,10 +85,11 @@ None — roadmap complete, ready to plan Phase 20.
 - [Phase 20]: makeSlug centralized in src/lib/apt-url.ts — prerequisite for Phase 22 URL structure
 - [Phase 20]: generate-seeding uses formatKrw (원 units) not formatPrice — unit semantics preserved
 - [Phase 20]: Price format functions: always import from @/lib/format, never define locally
+- [Phase 20]: Compact area display uses Math.round(sqmToPyeong(sqm))평, full-width uses formatArea(sqm) for DATA-03
 
 ## Last Session
 
-Stopped at: Completed 20-02-PLAN.md
+Stopped at: Completed 20-03-PLAN.md
 Last updated: 2026-03-31
 
 ---
