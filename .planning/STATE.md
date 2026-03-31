@@ -4,13 +4,13 @@ milestone: v1.3
 milestone_name: 서비스 품질 개선
 current_phase: 20
 status: executing
-stopped_at: Completed 20-01-PLAN.md
-last_updated: "2026-03-31T01:36:54.099Z"
+stopped_at: Completed 20-02-PLAN.md
+last_updated: "2026-03-31T01:43:43.103Z"
 progress:
   total_phases: 9
   completed_phases: 4
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State: 돈줍
@@ -22,7 +22,7 @@ progress:
 ## Current Position
 
 Phase: 20 (format-utils-normalization) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Key Context
 
@@ -83,10 +83,12 @@ None — roadmap complete, ready to plan Phase 20.
 
 - [Phase 20]: formatArea = formatSizeWithPyeong alias — avoids duplicate functions, existing callers unaffected
 - [Phase 20]: makeSlug centralized in src/lib/apt-url.ts — prerequisite for Phase 22 URL structure
+- [Phase 20]: generate-seeding uses formatKrw (원 units) not formatPrice — unit semantics preserved
+- [Phase 20]: Price format functions: always import from @/lib/format, never define locally
 
 ## Last Session
 
-Stopped at: Completed 20-01-PLAN.md
+Stopped at: Completed 20-02-PLAN.md
 Last updated: 2026-03-31
 
 ---
