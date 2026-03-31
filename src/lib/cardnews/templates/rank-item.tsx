@@ -1,18 +1,10 @@
 import { colors } from "../colors";
 import type { CardType, RankItem as RankItemData } from "../types";
+import { formatPrice } from "@/lib/format";
 
 interface RankItemProps {
   item: RankItemData;
   cardType: CardType;
-}
-
-function formatPrice(price: number): string {
-  if (price >= 10000) {
-    const eok = Math.floor(price / 10000);
-    const rest = price % 10000;
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`;
-  }
-  return `${price.toLocaleString()}만`;
 }
 
 export function RankItemCard({ item, cardType }: RankItemProps) {

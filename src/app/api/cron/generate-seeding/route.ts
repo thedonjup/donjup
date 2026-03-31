@@ -4,6 +4,7 @@ import { dailyReports, seedingQueue } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
+import { formatKrw } from "@/lib/format";
 
 export const maxDuration = 60;
 
@@ -36,13 +37,6 @@ interface DailyReport {
   volume_summary: VolumeSummary[];
 }
 
-function formatPrice(won: number): string {
-  const eok = Math.floor(won / 100000000);
-  const man = Math.floor((won % 100000000) / 10000);
-  if (eok > 0 && man > 0) return `${eok}억${man.toLocaleString()}만`;
-  if (eok > 0) return `${eok}억`;
-  return `${man.toLocaleString()}만`;
-}
 
 function generateDcFm(report: DailyReport): { title: string; body: string } {
   const top = report.top_drops?.[0];
@@ -55,7 +49,7 @@ function generateDcFm(report: DailyReport): { title: string; body: string } {
 
   const dropPct = Math.abs(top.change_rate);
   const lines: string[] = [
-    `와 ${top.apt_name} ${formatPrice(top.highest_price)}→${formatPrice(top.trade_price)} ㄷㄷ`,
+    `와 ${top.apt_name} ${formatKrw(top.highest_price)}→${formatKrw(top.trade_price)} ㄷㄷ`,
     `최고가 대비 ${dropPct}% 폭락`,
     ``,
   ];
@@ -100,7 +94,7 @@ function generateNaverCafe(report: DailyReport): { title: string; body: string }
     lines.push(`■ 최고가 대비 하락 거래 TOP`);
     for (const d of report.top_drops.slice(0, 5)) {
       lines.push(
-        `  - ${d.apt_name}(${d.region_name}, ${d.size_sqm}㎡): ${formatPrice(d.highest_price)} → ${formatPrice(d.trade_price)} (${Math.abs(d.change_rate)}% 하락)`
+        `  - ${d.apt_name}(${d.region_name}, ${d.size_sqm}㎡): ${formatKrw(d.highest_price)} → ${formatKrw(d.trade_price)} (${Math.abs(d.change_rate)}% 하락)`
       );
     }
     lines.push(``);
@@ -110,7 +104,7 @@ function generateNaverCafe(report: DailyReport): { title: string; body: string }
     lines.push(`■ 신고가 갱신`);
     for (const h of report.top_highs.slice(0, 3)) {
       lines.push(
-        `  - ${h.apt_name}(${h.region_name}): ${formatPrice(h.trade_price)}`
+        `  - ${h.apt_name}(${h.region_name}): ${formatKrw(h.trade_price)}`
       );
     }
     lines.push(``);
@@ -152,7 +146,7 @@ function generateClien(report: DailyReport): { title: string; body: string } {
     lines.push(`[하락 거래]`);
     for (const d of report.top_drops.slice(0, 5)) {
       lines.push(
-        `${d.apt_name} | ${d.region_name} | ${d.size_sqm}㎡ | ${formatPrice(d.trade_price)} | 최고가 대비 ${Math.abs(d.change_rate)}%↓`
+        `${d.apt_name} | ${d.region_name} | ${d.size_sqm}㎡ | ${formatKrw(d.trade_price)} | 최고가 대비 ${Math.abs(d.change_rate)}%↓`
       );
     }
     lines.push(``);
@@ -161,7 +155,7 @@ function generateClien(report: DailyReport): { title: string; body: string } {
   if (report.top_highs?.length > 0) {
     lines.push(`[신고가]`);
     for (const h of report.top_highs.slice(0, 3)) {
-      lines.push(`${h.apt_name} | ${h.region_name} | ${formatPrice(h.trade_price)}`);
+      lines.push(`${h.apt_name} | ${h.region_name} | ${formatKrw(h.trade_price)}`);
     }
     lines.push(``);
   }
@@ -197,7 +191,7 @@ function generateKakaoChat(report: DailyReport): { title: string; body: string }
   ];
 
   for (const d of report.top_drops.slice(0, 3)) {
-    lines.push(`- ${d.apt_name} ${formatPrice(d.trade_price)} (${Math.abs(d.change_rate)}%↓)`);
+    lines.push(`- ${d.apt_name} ${formatKrw(d.trade_price)} (${Math.abs(d.change_rate)}%↓)`);
   }
 
   if (report.rate_summary?.length > 0) {
@@ -234,7 +228,7 @@ function generateBlogDraft(report: DailyReport): { title: string; body: string }
     for (let i = 0; i < Math.min(report.top_drops.length, 10); i++) {
       const d = report.top_drops[i];
       lines.push(
-        `| ${i + 1} | ${d.apt_name} | ${d.region_name} | ${d.size_sqm}㎡ | ${formatPrice(d.highest_price)} | ${formatPrice(d.trade_price)} | ${Math.abs(d.change_rate)}% |`
+        `| ${i + 1} | ${d.apt_name} | ${d.region_name} | ${d.size_sqm}㎡ | ${formatKrw(d.highest_price)} | ${formatKrw(d.trade_price)} | ${Math.abs(d.change_rate)}% |`
       );
     }
     lines.push(``);
@@ -246,7 +240,7 @@ function generateBlogDraft(report: DailyReport): { title: string; body: string }
     lines.push(`역대 최고 거래가를 경신한 아파트 목록입니다.`);
     lines.push(``);
     for (const h of report.top_highs.slice(0, 5)) {
-      lines.push(`- **${h.apt_name}** (${h.region_name}): ${formatPrice(h.trade_price)}`);
+      lines.push(`- **${h.apt_name}** (${h.region_name}): ${formatKrw(h.trade_price)}`);
     }
     lines.push(``);
   }

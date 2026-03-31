@@ -2,20 +2,12 @@ import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { aptComplexes, aptTransactions } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { formatPrice } from "@/lib/format";
 
 export const runtime = "nodejs";
 export const alt = "돈줍 아파트 실거래가";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-
-function formatPrice(v: number): string {
-  if (v >= 10000) {
-    const eok = Math.floor(v / 10000);
-    const rest = v % 10000;
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`;
-  }
-  return `${v.toLocaleString()}만`;
-}
 
 export default async function OgImage({
   params,

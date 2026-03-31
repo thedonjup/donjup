@@ -11,6 +11,7 @@ import {
   Customized,
 } from "recharts";
 import type { RatioPoint } from "@/components/apt/AptDetailClient";
+import { formatPrice, formatPriceAxis, sqmToPyeong } from "@/lib/format";
 
 // ────────────────────────────────────────────────────────────────
 // Types
@@ -46,26 +47,6 @@ interface PriceHistoryChartProps {
 // ────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────
-
-function formatPrice(v: number): string {
-  if (v >= 10000) {
-    const eok = Math.floor(v / 10000);
-    const rest = v % 10000;
-    return rest > 0 ? `${eok}억 ${rest.toLocaleString()}만` : `${eok}억`;
-  }
-  return `${v.toLocaleString()}만`;
-}
-
-function sqmToPyeong(sqm: number): number {
-  return Math.round(sqm / 3.3058);
-}
-
-function formatPriceAxis(v: number): string {
-  if (v >= 10000) {
-    return `${(v / 10000).toFixed(v % 10000 === 0 ? 0 : 1)}억`;
-  }
-  return `${v.toLocaleString()}만`;
-}
 
 // Convert YYYY-MM-DD → MM-DD display
 function formatDateLabel(dateStr: string): string {
