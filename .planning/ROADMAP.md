@@ -248,7 +248,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
+- [x] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
 - [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
 - [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 
@@ -341,7 +341,7 @@ Plans:
 | 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete | 2026-03-28 |
 | 18. Drizzle ORM 교체 | v1.2 | 4/4 | Complete | 2026-03-28 |
 | 19. 코드 정리 | v1.2 | 1/1 | Complete | 2026-03-28 |
-| 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 0/3 | Planning complete | - |
+| 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 1/3 | In Progress|  |
 | 21. 디자인 시스템 통합 | v1.3 | 0/? | Not started | - |
 | 22. URL 구조 개편 | v1.3 | 0/? | Not started | - |
 | 23. 깨진 기능 복구 | v1.3 | 0/? | Not started | - |
