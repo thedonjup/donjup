@@ -9,9 +9,9 @@ Requirements for 서비스 품질 개선. Each maps to roadmap phases.
 
 ### 디자인 시스템 (DESIGN)
 
-- [ ] **DESIGN-01**: 하드코딩된 색상(82개)이 CSS 변수 또는 Tailwind 유틸클래스로 전환되어 다크모드에서 정상 표시된다
+- [x] **DESIGN-01**: 하드코딩된 색상(82개)이 CSS 변수 또는 Tailwind 유틸클래스로 전환되어 다크모드에서 정상 표시된다
 - [x] **DESIGN-02**: `@custom-variant dark` 추가로 Tailwind dark: 유틸리티가 [data-theme="dark"]에서 활성화된다
-- [ ] **DESIGN-03**: 컴포넌트의 인라인 style이 className 또는 CSS 변수 기반으로 전환된다 (동적 색상 포함)
+- [x] **DESIGN-03**: 컴포넌트의 인라인 style이 className 또는 CSS 변수 기반으로 전환된다 (동적 색상 포함)
 - [x] **DESIGN-04**: 동적 색상(드롭레벨, 전세가율 등)이 CSS 변수 맵 또는 유틸클래스로 관리되어 다크모드 대응된다
 
 ### 데이터 표현 (DATA)
@@ -67,9 +67,9 @@ Deferred to future release.
 | DATA-02 | Phase 20 | Complete |
 | DATA-03 | Phase 20 | Complete |
 | DATA-04 | Phase 20 | Complete |
-| DESIGN-01 | Phase 21 | Pending |
+| DESIGN-01 | Phase 21 | Complete |
 | DESIGN-02 | Phase 21 | Complete |
-| DESIGN-03 | Phase 21 | Pending |
+| DESIGN-03 | Phase 21 | Complete |
 | DESIGN-04 | Phase 21 | Complete |
 | URL-01 | Phase 22 | Pending |
 | URL-02 | Phase 22 | Pending |
