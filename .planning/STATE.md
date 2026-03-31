@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: 서비스 품질 개선
 current_phase: 21
-status: planning
-stopped_at: Completed 20-03-PLAN.md
-last_updated: "2026-03-31T01:51:48.684Z"
+status: executing
+stopped_at: Completed 21-01-PLAN.md
+last_updated: "2026-03-31T02:55:41.233Z"
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 15
+  completed_plans: 13
 ---
 
 # Project State: 돈줍
 
 **Current Phase:** 21
 **Milestone:** v1.3 — 서비스 품질 개선
-**Status:** Ready to plan
+**Status:** Ready to execute
 
 ## Current Position
 
-Phase: 20 (format-utils-normalization) — EXECUTING
-Plan: Not started
+Phase: 21 (design-system-integration) — EXECUTING
+Plan: 2 of 3
 
 ## Key Context
 
@@ -86,10 +86,12 @@ None — roadmap complete, ready to plan Phase 20.
 - [Phase 20]: generate-seeding uses formatKrw (원 units) not formatPrice — unit semantics preserved
 - [Phase 20]: Price format functions: always import from @/lib/format, never define locally
 - [Phase 20]: Compact area display uses Math.round(sqmToPyeong(sqm))평, full-width uses formatArea(sqm) for DATA-03
+- [Phase 21]: @custom-variant dark uses [data-theme='dark'] selector to activate all Tailwind dark: utilities
+- [Phase 21]: DROP_LEVEL_CONFIG centralized in src/lib/constants/drop-level.ts with CSS variable references for automatic dark mode response
 
 ## Last Session
 
-Stopped at: Completed 20-03-PLAN.md
+Stopped at: Completed 21-01-PLAN.md
 Last updated: 2026-03-31
 
 ---
