@@ -83,7 +83,7 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 ### Active
 
 - [ ] 디자인 시스템 통합 (CSS변수+Tailwind+하드코딩 3층 → CSS변수 단일 체계)
-- [ ] 데이터 표현 정규화 (가격·면적·날짜·null 표시 일관성)
+- [x] 데이터 표현 정규화 (가격·면적·날짜·null 표시 일관성) — Phase 20 완료
 - [ ] URL 구조 개편 (aptSeq 기반 URL + makeSlug 중앙화 + Sitemap)
 - [ ] 깨진 기능 복구 (카드뉴스 Storage + Instagram 포스팅)
 - [ ] UX 개선 (검색·차트·Profile 링크 등)
@@ -125,4 +125,4 @@ v1.0(사이트 안정화) + v1.1(데이터 분석 고도화) 총 15개 phase, 33
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-03-31 after v1.3 milestone start*
+*Last updated: 2026-03-31 after Phase 20 (format-utils-normalization) complete*
