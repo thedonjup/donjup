@@ -64,7 +64,7 @@ export default function ContentManagement() {
   const statusBadge = (status: string) => {
     const styles: Record<string, { bg: string; color: string }> = {
       ready: { bg: "var(--color-semantic-rise-bg)", color: "var(--color-semantic-rise)" },
-      posted: { bg: "#dbeafe", color: "#2563eb" },
+      posted: { bg: "var(--color-status-posted-bg)", color: "var(--color-status-posted)" },
       failed: { bg: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" },
       hold: { bg: "var(--color-semantic-warn-bg)", color: "var(--color-semantic-warn)" },
     };
@@ -153,7 +153,7 @@ export default function ContentManagement() {
                                 onClick={() => handleAction(item.id, "posted")}
                                 disabled={actionLoading === item.id}
                                 className="rounded px-2 py-1 text-xs font-medium text-white transition hover:opacity-80 disabled:opacity-50"
-                                style={{ background: "#2563eb" }}
+                                style={{ background: "var(--color-brand-600)" }}
                               >
                                 발행
                               </button>

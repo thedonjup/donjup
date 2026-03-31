@@ -4,6 +4,10 @@ import { useState, useCallback } from "react";
 import { shareViaKakao } from "@/lib/kakao-share";
 import { trackShare } from "@/lib/analytics/events";
 
+// brand: KakaoTalk official brand colors — must not be changed
+const KAKAO_YELLOW = "#FEE500";
+const KAKAO_BROWN = "#3C1E1E";
+
 interface ShareButtonsProps {
   url: string;
   title: string;
@@ -89,12 +93,12 @@ export default function ShareButtons({ url, title, description, imageUrl }: Shar
         onClick={handleKakao}
         className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-80"
         style={{
-          borderColor: "#FEE500",
-          color: "#3C1E1E",
-          background: "#FEE500",
+          borderColor: KAKAO_YELLOW,
+          color: KAKAO_BROWN,
+          background: KAKAO_YELLOW,
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="#3C1E1E">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill={KAKAO_BROWN}>
           <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.113 4.508 6.463-.2.728-.723 2.636-.828 3.047-.13.51.187.503.393.365.162-.108 2.575-1.746 3.62-2.457.746.108 1.517.165 2.307.165 5.523 0 10-3.463 10-7.583C22 6.463 17.523 3 12 3" />
         </svg>
         카카오톡

@@ -94,7 +94,7 @@ export default function UsersManagement() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
-            style={{ background: "#f59e0b" }}
+            style={{ background: "var(--color-semantic-warn)" }}
           >
             Firebase Console 열기
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">

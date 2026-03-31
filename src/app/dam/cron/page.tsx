@@ -149,7 +149,7 @@ export default function CronManagement() {
                         onClick={() => triggerCron(job)}
                         disabled={result?.status === "running"}
                         className="rounded-lg px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-80 disabled:opacity-50"
-                        style={{ background: "#2563eb" }}
+                        style={{ background: "var(--color-brand-600)" }}
                       >
                         {result?.status === "running" ? "실행 중..." : "수동 실행"}
                       </button>

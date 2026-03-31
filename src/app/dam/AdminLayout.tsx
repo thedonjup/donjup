@@ -71,12 +71,12 @@ export default function AdminLayoutClient({ children }: { children: ReactNode })
       <aside
         className="hidden w-60 flex-shrink-0 flex-col border-r md:flex"
         style={{
-          background: "#1e293b",
-          borderColor: "#334155",
+          background: "var(--color-hero-via)",
+          borderColor: "var(--color-admin-border)",
         }}
       >
         {/* Top bar */}
-        <div className="flex h-14 items-center justify-between border-b px-4" style={{ borderColor: "#334155" }}>
+        <div className="flex h-14 items-center justify-between border-b px-4" style={{ borderColor: "var(--color-admin-border)" }}>
           <span className="text-sm font-bold text-white">돈줍 관리자</span>
           <Link
             href="/"
@@ -111,7 +111,7 @@ export default function AdminLayoutClient({ children }: { children: ReactNode })
         </nav>
 
         {/* User info */}
-        <div className="border-t p-3" style={{ borderColor: "#334155" }}>
+        <div className="border-t p-3" style={{ borderColor: "var(--color-admin-border)" }}>
           <div className="flex items-center gap-2 rounded-lg px-3 py-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
               {user?.email?.charAt(0).toUpperCase() || "A"}
@@ -130,7 +130,7 @@ export default function AdminLayoutClient({ children }: { children: ReactNode })
 
       {/* Mobile top nav */}
       <div className="fixed bottom-0 left-0 right-0 z-40 flex border-t md:hidden"
-        style={{ background: "#1e293b", borderColor: "#334155" }}
+        style={{ background: "var(--color-hero-via)", borderColor: "var(--color-admin-border)" }}
       >
         {NAV_ITEMS.slice(0, 5).map((item) => {
           const isActive = pathname === item.href || (item.href !== "/dam" && pathname.startsWith(item.href));
