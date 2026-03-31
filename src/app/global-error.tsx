@@ -1,5 +1,8 @@
 "use client";
 
+// design-system-exception: global-error renders outside ThemeProvider and layout.tsx
+// Hardcoded colors are intentional — CSS variables may not be available in error state
+
 export default function GlobalError({
   reset,
 }: {
