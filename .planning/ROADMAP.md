@@ -245,7 +245,12 @@ Plans:
   2. 데이터가 없는 모든 필드에서 0이나 빈 문자열 대신 "-"가 표시된다
   3. 면적이 있는 모든 페이지에서 "84.93㎡ (25.7평)" 병기 형식으로 통일된다
   4. `formatPrice`, `formatPriceShort`, `formatArea`, `formatNullable` 등 포맷 함수가 `src/lib/format.ts` 단일 파일에서만 정의되고, 다른 파일의 로컬 중복 정의가 존재하지 않는다
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
+- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
+- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 
 ### Phase 21: 디자인 시스템 통합
 **Goal**: 다크모드가 전체 서비스에서 정상 동작하고, 하드코딩된 색상이 CSS 변수 체계로 완전히 전환된다
@@ -256,7 +261,12 @@ Plans:
   2. `globals.css`에 `@custom-variant dark` 선언이 추가되어 `dark:` Tailwind 유틸리티가 `[data-theme="dark"]`에서 정상 활성화된다
   3. 컴포넌트 코드에서 인라인 `style={{ color: '#...' }}` 패턴이 `className` 또는 CSS 변수 기반으로 전환된다
   4. 드롭레벨·전세가율 등 동적으로 계산되는 색상이 CSS 변수 맵 또는 유틸클래스로 관리되어 다크모드에서도 올바르게 표시된다
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
+- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
+- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 **UI hint**: yes
 
 ### Phase 22: URL 구조 개편
@@ -269,7 +279,12 @@ Plans:
   3. `makeSlug` 함수가 `src/lib/apt-url.ts` 단일 모듈에만 존재하고, 기존 4개 산재 정의가 제거된다
   4. `sitemap.xml`에 모든 아파트 단지의 `/apt/[govtComplexId]` URL이 포함된다
   5. Profile 페이지의 아파트 링크 클릭 시 404 없이 해당 단지 상세 페이지로 이동한다
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
+- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
+- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 
 ### Phase 23: 깨진 기능 복구
 **Goal**: 카드뉴스 이미지가 Vercel Blob에 저장되고, Instagram 자동 포스팅 파이프라인이 정상 동작한다
@@ -279,7 +294,12 @@ Plans:
   1. 카드뉴스 생성 크론잡 실행 후 생성된 이미지가 Vercel Blob에 업로드되어 `https://*.public.blob.vercel-storage.com/...` 형식의 공개 URL이 반환된다
   2. Instagram 자동 포스팅 크론잡이 해당 Blob URL을 사용하여 인스타그램에 카드뉴스를 정상 게시한다 (Instagram Graph API 성공 응답 확인)
   3. `next.config.ts`의 CSP `img-src`에 `https://*.public.blob.vercel-storage.com`이 포함되어 브라우저에서 Blob 이미지가 차단 없이 렌더링된다
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
+- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
+- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 
 ### Phase 24: UX 개선
 **Goal**: 검색 결과에 단지 핵심 정보가 표시되고, 차트 범례가 명확하여 사용자가 데이터를 즉시 해석할 수 있다
@@ -288,7 +308,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. 검색 결과 드롭다운 또는 목록에서 각 단지의 준공년도, 세대수, 최근 거래가가 표시된다
   2. 가격 추이 차트의 범례에서 추이선, 직거래, 저신뢰구간 각 계열이 명확하게 구분되어 사용자가 어느 선이 무엇인지 즉시 알 수 있다
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
+- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
+- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 **UI hint**: yes
 
 ---
@@ -316,7 +341,7 @@ Plans:
 | 17. 통합 테스트 & E2E | v1.2 | 2/2 | Complete | 2026-03-28 |
 | 18. Drizzle ORM 교체 | v1.2 | 4/4 | Complete | 2026-03-28 |
 | 19. 코드 정리 | v1.2 | 1/1 | Complete | 2026-03-28 |
-| 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 0/? | Not started | - |
+| 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 0/3 | Planning complete | - |
 | 21. 디자인 시스템 통합 | v1.3 | 0/? | Not started | - |
 | 22. URL 구조 개편 | v1.3 | 0/? | Not started | - |
 | 23. 깨진 기능 복구 | v1.3 | 0/? | Not started | - |
