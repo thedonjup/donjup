@@ -1,5 +1,6 @@
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
 @import "tailwindcss";
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ===========================
    돈줍 Design System
@@ -32,6 +33,17 @@
   --color-map-normal: #94a3b8;
   --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
   --shadow-card-hover: 0 8px 25px -5px rgba(0,0,0,0.1), 0 4px 10px -6px rgba(0,0,0,0.05);
+  --color-drop-level-decline: #f59e0b;
+  --color-drop-level-decline-bg: rgba(245,158,11,0.12);
+  --color-drop-level-crash: #ef4444;
+  --color-drop-level-crash-bg: rgba(239,68,68,0.12);
+  --color-drop-level-severe: #dc2626;
+  --color-drop-level-severe-bg: rgba(220,38,38,0.12);
+  --color-chart-sale: #059669;
+  --color-chart-jeonse: #3B82F6;
+  --color-chart-ratio: #F97316;
+  --color-chart-neutral: #9CA3AF;
+  --color-chart-index: #2B579A;
 }
 
 [data-theme="dark"] {
@@ -60,6 +72,17 @@
   --color-map-normal: #64748b;
   --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
   --shadow-card-hover: 0 8px 25px -5px rgba(0,0,0,0.3);
+  --color-drop-level-decline: #fbbf24;
+  --color-drop-level-decline-bg: rgba(251,191,36,0.15);
+  --color-drop-level-crash: #f87171;
+  --color-drop-level-crash-bg: rgba(248,113,113,0.15);
+  --color-drop-level-severe: #fca5a5;
+  --color-drop-level-severe-bg: rgba(252,165,165,0.12);
+  --color-chart-sale: #34d399;
+  --color-chart-jeonse: #60a5fa;
+  --color-chart-ratio: #fb923c;
+  --color-chart-neutral: #6b7280;
+  --color-chart-index: #5b8dd9;
 }
 
 @theme inline {
