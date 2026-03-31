@@ -168,7 +168,7 @@ Plans:
 **Milestone Goal:** 디자인 시스템 통합, 데이터 표현 정규화, URL 구조 개편, 깨진 기능 복구로 사용자 경험 품질을 근본적으로 개선한다
 
 - [x] **Phase 20: 포맷 유틸 중앙화 + 데이터 표현 정규화** - 가격/면적/날짜/null 포맷 단일 모듈 확립 (completed 2026-03-31)
-- [ ] **Phase 21: 디자인 시스템 통합** - 다크모드 정상화 + 하드코딩 색상 제거 + 인라인 style 제거
+- [x] **Phase 21: 디자인 시스템 통합** - 다크모드 정상화 + 하드코딩 색상 제거 + 인라인 style 제거 (completed 2026-03-31)
 - [ ] **Phase 22: URL 구조 개편** - aptSeq 기반 canonical URL + 301 리다이렉트 + Sitemap 완성
 - [ ] **Phase 23: 깨진 기능 복구** - Vercel Blob 연동 + Instagram 포스팅 파이프라인 완성
 - [ ] **Phase 24: UX 개선** - 검색 결과 보강 + 차트 범례 개선
@@ -266,7 +266,7 @@ Plans:
 Plans:
 - [x] 21-01-PLAN.md — CSS foundation: @custom-variant dark + CSS variables + DROP_LEVEL_CONFIG centralization (DESIGN-02, DESIGN-04)
 - [x] 21-02-PLAN.md — Component sweep: hardcoded hex colors to CSS variables in 11 component files (DESIGN-01, DESIGN-03)
-- [ ] 21-03-PLAN.md — Chart SVG colors + global-error annotation + dark mode visual verification (DESIGN-01, DESIGN-03, DESIGN-04)
+- [x] 21-03-PLAN.md — Chart SVG colors + global-error annotation + dark mode visual verification (DESIGN-01, DESIGN-03, DESIGN-04)
 **UI hint**: yes
 
 ### Phase 22: URL 구조 개편
@@ -324,7 +324,7 @@ Plans:
 | 18. Drizzle ORM 교체 | v1.2 | 4/4 | Complete | 2026-03-28 |
 | 19. 코드 정리 | v1.2 | 1/1 | Complete | 2026-03-28 |
 | 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 3/3 | Complete    | 2026-03-31 |
-| 21. 디자인 시스템 통합 | v1.3 | 2/3 | In Progress|  |
+| 21. 디자인 시스템 통합 | v1.3 | 3/3 | Complete   | 2026-03-31 |
 | 22. URL 구조 개편 | v1.3 | 0/? | Not started | - |
 | 23. 깨진 기능 복구 | v1.3 | 0/? | Not started | - |
 | 24. UX 개선 | v1.3 | 0/? | Not started | - |
