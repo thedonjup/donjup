@@ -7,6 +7,7 @@ import { formatPrice, sqmToPyeong } from "@/lib/format";
 import { makeSlug } from "@/lib/apt-url";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
+import { DROP_LEVEL_CONFIG } from "@/lib/constants/drop-level";
 
 export const revalidate = 300;
 
@@ -16,12 +17,6 @@ export const metadata: Metadata = {
     "오늘 체결된 전국 아파트 실거래 내역. 최신 거래가와 변동률을 확인하세요.",
   keywords: ["오늘 아파트 거래", "실거래가", "아파트 매매", "부동산 거래"],
   alternates: { canonical: "/today" },
-};
-
-const DROP_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  decline: { label: "하락", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
-  crash: { label: "폭락", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
-  severe: { label: "대폭락", color: "#dc2626", bg: "rgba(220,38,38,0.12)" },
 };
 
 interface TodayTransaction {

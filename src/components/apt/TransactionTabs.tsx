@@ -3,14 +3,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { formatPrice, sqmToPyeong } from "@/lib/format";
 import type { AptTransaction, AptRentTransaction } from "@/components/apt/AptDetailClient";
+import { DROP_LEVEL_CONFIG } from "@/lib/constants/drop-level";
 
 type Transaction = AptTransaction;
-
-const DROP_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  decline: { label: "하락", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
-  crash: { label: "폭락", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
-  severe: { label: "대폭락", color: "#dc2626", bg: "rgba(220,38,38,0.12)" },
-};
 
 type RentTransaction = AptRentTransaction;
 
