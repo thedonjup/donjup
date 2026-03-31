@@ -264,9 +264,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [x] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
-- [x] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
-- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
+- [ ] 21-01-PLAN.md — CSS foundation: @custom-variant dark + CSS variables + DROP_LEVEL_CONFIG centralization (DESIGN-02, DESIGN-04)
+- [ ] 21-02-PLAN.md — Component sweep: hardcoded hex colors to CSS variables in 11 component files (DESIGN-01, DESIGN-03)
+- [ ] 21-03-PLAN.md — Chart SVG colors + global-error annotation + dark mode visual verification (DESIGN-01, DESIGN-03, DESIGN-04)
 **UI hint**: yes
 
 ### Phase 22: URL 구조 개편
@@ -279,12 +279,6 @@ Plans:
   3. `makeSlug` 함수가 `src/lib/apt-url.ts` 단일 모듈에만 존재하고, 기존 4개 산재 정의가 제거된다
   4. `sitemap.xml`에 모든 아파트 단지의 `/apt/[govtComplexId]` URL이 포함된다
   5. Profile 페이지의 아파트 링크 클릭 시 404 없이 해당 단지 상세 페이지로 이동한다
-**Plans**: 3 plans
-
-Plans:
-- [x] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
-- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
-- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 
 ### Phase 23: 깨진 기능 복구
 **Goal**: 카드뉴스 이미지가 Vercel Blob에 저장되고, Instagram 자동 포스팅 파이프라인이 정상 동작한다
@@ -294,12 +288,6 @@ Plans:
   1. 카드뉴스 생성 크론잡 실행 후 생성된 이미지가 Vercel Blob에 업로드되어 `https://*.public.blob.vercel-storage.com/...` 형식의 공개 URL이 반환된다
   2. Instagram 자동 포스팅 크론잡이 해당 Blob URL을 사용하여 인스타그램에 카드뉴스를 정상 게시한다 (Instagram Graph API 성공 응답 확인)
   3. `next.config.ts`의 CSP `img-src`에 `https://*.public.blob.vercel-storage.com`이 포함되어 브라우저에서 Blob 이미지가 차단 없이 렌더링된다
-**Plans**: 3 plans
-
-Plans:
-- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
-- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
-- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 
 ### Phase 24: UX 개선
 **Goal**: 검색 결과에 단지 핵심 정보가 표시되고, 차트 범례가 명확하여 사용자가 데이터를 즉시 해석할 수 있다
@@ -308,12 +296,6 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. 검색 결과 드롭다운 또는 목록에서 각 단지의 준공년도, 세대수, 최근 거래가가 표시된다
   2. 가격 추이 차트의 범례에서 추이선, 직거래, 저신뢰구간 각 계열이 명확하게 구분되어 사용자가 어느 선이 무엇인지 즉시 알 수 있다
-**Plans**: 3 plans
-
-Plans:
-- [ ] 20-01-PLAN.md — TDD: format utility functions + makeSlug + unit tests (DATA-01, DATA-02, DATA-03, DATA-04)
-- [ ] 20-02-PLAN.md — Price format duplicate sweep: PriceHistoryChart, OG image, cardnews, generate-seeding, AptDetailClient (DATA-01, DATA-04)
-- [ ] 20-03-PLAN.md — Area/slug/date/null duplicate sweep: TransactionTabs, rent, today, new-highs, themes, RankingTabs, dam/users (DATA-02, DATA-03, DATA-04)
 **UI hint**: yes
 
 ---
@@ -342,7 +324,7 @@ Plans:
 | 18. Drizzle ORM 교체 | v1.2 | 4/4 | Complete | 2026-03-28 |
 | 19. 코드 정리 | v1.2 | 1/1 | Complete | 2026-03-28 |
 | 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 3/3 | Complete    | 2026-03-31 |
-| 21. 디자인 시스템 통합 | v1.3 | 0/? | Not started | - |
+| 21. 디자인 시스템 통합 | v1.3 | 0/3 | Planning | - |
 | 22. URL 구조 개편 | v1.3 | 0/? | Not started | - |
 | 23. 깨진 기능 복구 | v1.3 | 0/? | Not started | - |
 | 24. UX 개선 | v1.3 | 0/? | Not started | - |
