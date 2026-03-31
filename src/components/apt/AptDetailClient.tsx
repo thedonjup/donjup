@@ -10,6 +10,7 @@ import {
   computeMedianPrice,
   LOW_FLOOR_MAX,
 } from "@/lib/price-normalization";
+import { sqmToPyeong, formatPriceShort } from "@/lib/format";
 
 // DB의 size_sqm = 전용면적. 공급면적 = 전용 / 비율
 function supplyArea(exclusiveSqm: number): number {
@@ -18,9 +19,6 @@ function supplyArea(exclusiveSqm: number): number {
   return Math.round((exclusiveSqm / ratio) * 10) / 10;
 }
 
-function sqmToPyeong(sqm: number): number {
-  return Math.round(sqm / 3.3058);
-}
 
 interface SizeUnitContextType {
   sizeUnit: "sqm" | "pyeong";
@@ -184,15 +182,6 @@ export default function AptDetailClient({
       return `전용 ${exclPy}평 / 공급 ${supplyPy}평`;
     }
     return `전용 ${exclusiveSqm}㎡ / 공급 ${supply}㎡`;
-  }
-
-  function formatPriceShort(v: number): string {
-    if (v >= 10000) {
-      const eok = Math.floor(v / 10000);
-      const rest = Math.round((v % 10000) / 1000) * 1000;
-      return rest > 0 ? `${eok}.${(rest / 1000).toFixed(0)}억` : `${eok}억`;
-    }
-    return `${v.toLocaleString()}만`;
   }
 
   // ── Normalization pipeline ──────────────────────────────────────
