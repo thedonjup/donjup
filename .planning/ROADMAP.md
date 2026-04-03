@@ -282,7 +282,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — aptUrl() + new /apt/[govtComplexId] route + proxy.ts 308 redirect + backfill (URL-01, URL-02, URL-06)
+- [x] 22-01-PLAN.md — aptUrl() + new /apt/[govtComplexId] route + proxy.ts 308 redirect + backfill (URL-01, URL-02, URL-06)
 - [ ] 22-02-PLAN.md — Internal link sweep + sitemap + FavoriteButton + toSlug dedup (URL-03, URL-04, URL-05)
 
 ### Phase 23: 깨진 기능 복구
@@ -330,7 +330,7 @@ Plans:
 | 19. 코드 정리 | v1.2 | 1/1 | Complete | 2026-03-28 |
 | 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 3/3 | Complete    | 2026-03-31 |
 | 21. 디자인 시스템 통합 | v1.3 | 3/3 | Complete   | 2026-03-31 |
-| 22. URL 구조 개편 | v1.3 | 0/2 | Not started | - |
+| 22. URL 구조 개편 | v1.3 | 1/2 | In Progress|  |
 | 23. 깨진 기능 복구 | v1.3 | 0/? | Not started | - |
 | 24. UX 개선 | v1.3 | 0/? | Not started | - |
 

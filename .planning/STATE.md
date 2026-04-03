@@ -2,27 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: 서비스 품질 개선
-current_phase: 21
-status: verifying
-stopped_at: Phase 22 context gathered
-last_updated: "2026-04-03T12:30:40.999Z"
+current_phase: 22
+status: executing
+stopped_at: Completed 22-url-01-PLAN.md
+last_updated: "2026-04-03T13:12:41.910Z"
 progress:
   total_phases: 9
   completed_phases: 6
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 17
+  completed_plans: 16
 ---
 
 # Project State: 돈줍
 
-**Current Phase:** 21
+**Current Phase:** 22
 **Milestone:** v1.3 — 서비스 품질 개선
-**Status:** Phase complete — ready for verification
+**Status:** Ready to execute
 
 ## Current Position
 
-Phase: 21 (design-system-integration) — EXECUTING
-Plan: 3 of 3
+Phase: 22 (url) — EXECUTING
+Plan: 2 of 2
 
 ## Key Context
 
@@ -93,10 +93,12 @@ None — roadmap complete, ready to plan Phase 20.
 - [Phase 21-02]: Admin sidebar: --color-admin-border (#334155) + --color-hero-via distinct from page theme vars
 - [Phase 21]: CSS variables work directly as SVG stroke/fill attribute values in Recharts — no getComputedStyle needed
 - [Phase 21]: Brand colors (Google/Kakao/Naver) extracted to named constants with brand: comments for audit exclusion
+- [Phase 22-url]: aptUrl() falls back to /apt/{regionCode}/{urlSlug} for complexes without govtComplexId — ensures zero broken links during transition
+- [Phase 22-url]: proxy.ts uses pattern-matching (no DB query) for 308 redirect — edge-compatible and fast
 
 ## Last Session
 
-Stopped at: Phase 22 context gathered
+Stopped at: Completed 22-url-01-PLAN.md
 Last updated: 2026-03-31
 
 ---
