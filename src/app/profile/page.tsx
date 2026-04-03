@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/providers/AuthProvider";
+import LoginModal from "@/components/auth/LoginModal";
 
 interface FavoriteItem {
-  slug: string;
+  govtComplexId?: string;
+  slug?: string; // legacy
   aptName: string;
   regionName: string;
 }
@@ -15,12 +17,13 @@ export default function ProfilePage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/");
+      setShowLogin(true);
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   useEffect(() => {
     try {
@@ -44,7 +47,16 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-secondary)" }}>
+          로그인이 필요합니다
+        </p>
+        <LoginModal open={showLogin} onClose={() => { setShowLogin(false); router.replace("/"); }} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -122,10 +134,10 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {favorites.map((f) => (
+            {favorites.map((f, i) => (
               <Link
-                key={f.slug}
-                href={`/apt/${f.slug}`}
+                key={f.govtComplexId ?? f.slug ?? i}
+                href={f.govtComplexId ? `/apt/${f.govtComplexId}` : `/apt/${f.slug}`}
                 className="card-hover rounded-2xl border p-4 transition-colors"
                 style={{
                   borderColor: "var(--color-border)",

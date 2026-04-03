@@ -9,6 +9,7 @@ import CoupangBanner from "@/components/CoupangBanner";
 import ShareButtons from "@/components/ShareButtons";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import AptDetailClient, { type AptTransaction, type AptRentTransaction } from "@/components/apt/AptDetailClient";
+import { toDbSlug } from "@/lib/apt-url";
 import NotifyButton from "@/components/apt/NotifyButton";
 import FavoriteButton from "@/components/apt/FavoriteButton";
 import MiniLoanCalculator from "@/components/apt/MiniLoanCalculator";
@@ -32,41 +33,39 @@ export async function generateMetadata({
   type MetaComplex = { apt_name: string; region_name: string; dong_name: string | null; region_code: string; slug: string };
   let complex: MetaComplex | null = null;
 
+  const metaDbSlug = toDbSlug(region, decodedSlug);
+
   const exactMatch = await db.select({
     apt_name: aptComplexes.aptName,
     region_name: aptComplexes.regionName,
     dong_name: aptComplexes.dongName,
     region_code: aptComplexes.regionCode,
     slug: aptComplexes.slug,
-  }).from(aptComplexes).where(eq(aptComplexes.slug, decodedSlug)).limit(1);
+  }).from(aptComplexes).where(eq(aptComplexes.slug, metaDbSlug)).limit(1);
 
   if (exactMatch[0]) {
     complex = exactMatch[0];
   }
 
-  // Fallback: parse region_code from slug and search by region
+  // Fallback: try with decoded slug directly or region search
   if (!complex) {
-    const dashIdx = decodedSlug.indexOf("-");
-    if (dashIdx > 0) {
-      const regionCode = decodedSlug.substring(0, dashIdx);
-      const aptSlugPart = decodedSlug.substring(dashIdx + 1);
-      const fallbackList = await db.select({
-        apt_name: aptComplexes.aptName,
-        region_name: aptComplexes.regionName,
-        dong_name: aptComplexes.dongName,
-        slug: aptComplexes.slug,
-        region_code: aptComplexes.regionCode,
-      }).from(aptComplexes).where(eq(aptComplexes.regionCode, regionCode)).limit(50);
+    const fallbackList = await db.select({
+      apt_name: aptComplexes.aptName,
+      region_name: aptComplexes.regionName,
+      dong_name: aptComplexes.dongName,
+      slug: aptComplexes.slug,
+      region_code: aptComplexes.regionCode,
+    }).from(aptComplexes).where(eq(aptComplexes.regionCode, region)).limit(200);
 
-      if (fallbackList.length > 0) {
-        const found = fallbackList.find((c) => {
-          const s = c.slug ?? "";
-          const dbDash = s.indexOf("-");
-          const dbSuffix = dbDash > 0 ? s.substring(dbDash + 1) : s;
-          return dbSuffix === aptSlugPart || s === decodedSlug;
-        });
-        if (found) complex = found;
-      }
+    if (fallbackList.length > 0) {
+      const dashIdx = decodedSlug.indexOf("-");
+      const nameCandidate = dashIdx > 0 ? decodedSlug.substring(dashIdx + 1) : decodedSlug;
+      const found = fallbackList.find((c) => {
+        return c.slug === decodedSlug ||
+          c.slug === metaDbSlug ||
+          c.apt_name.replace(/[\s\-]/g, "").toLowerCase() === nameCandidate.replace(/-/g, "").toLowerCase();
+      });
+      if (found) complex = found;
     }
   }
 
@@ -165,33 +164,38 @@ export default async function AptDetailPage({
   const { slug, region } = await params;
   const decodedSlug = decodeURIComponent(slug);
 
-  // Try exact slug match first
+  // DB slug 복원: URL의 "164" → DB의 "11230-164"
+  const dbSlug = toDbSlug(region, decodedSlug);
+
+  // Try exact slug match
   const complexRows = await db.select().from(aptComplexes)
-    .where(eq(aptComplexes.slug, decodedSlug))
+    .where(eq(aptComplexes.slug, dbSlug))
     .limit(1);
 
   let complex = complexRows[0] ?? null;
 
-  // Fallback: parse region_code and apt_name from slug and query by those
-  if (!complex) {
-    const dashIdx = decodedSlug.indexOf("-");
-    if (dashIdx > 0) {
-      const regionCode = decodedSlug.substring(0, dashIdx);
-      const aptSlugPart = decodedSlug.substring(dashIdx + 1);
-      const fallbackList = await db.select().from(aptComplexes)
-        .where(eq(aptComplexes.regionCode, regionCode))
-        .limit(50);
+  // Fallback 1: URL slug 그대로 매칭 (한글 slug 등)
+  if (!complex && dbSlug !== decodedSlug) {
+    const fallback1 = await db.select().from(aptComplexes)
+      .where(eq(aptComplexes.slug, decodedSlug))
+      .limit(1);
+    if (fallback1[0]) complex = fallback1[0];
+  }
 
-      if (fallbackList.length > 0) {
-        const found = fallbackList.find((c) => {
-          const s = c.slug ?? "";
-          const dbDash = s.indexOf("-");
-          const dbSuffix = dbDash > 0 ? s.substring(dbDash + 1) : s;
-          return dbSuffix === aptSlugPart || s === decodedSlug;
-        });
-        if (found) complex = found;
-      }
-    }
+  // Fallback 2: 옛날 형식 "{regionCode}-{aptName}" 링크 → aptName으로 매칭
+  if (!complex) {
+    // decodedSlug가 "11230-서해그랑블5단지" 형태일 수 있음
+    const dashIdx = decodedSlug.indexOf("-");
+    const nameCandidate = dashIdx > 0 ? decodedSlug.substring(dashIdx + 1) : decodedSlug;
+    const cleanName = decodeURIComponent(nameCandidate).replace(/-/g, "");
+    const candidates = await db.select().from(aptComplexes)
+      .where(eq(aptComplexes.regionCode, region))
+      .limit(200);
+    const found = candidates.find((c) =>
+      c.aptName?.replace(/[\s\-]/g, "").toLowerCase() === cleanName.toLowerCase() ||
+      c.aptName === nameCandidate
+    );
+    if (found) complex = found;
   }
 
   if (!complex) {
@@ -346,7 +350,7 @@ export default async function AptDetailPage({
             <h1 className="text-2xl font-extrabold t-text">{complex.aptName}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <FavoriteButton slug={slug} aptName={complex.aptName} regionName={complex.regionName} />
+            <FavoriteButton govtComplexId={complex.govtComplexId ?? slug} aptName={complex.aptName} regionName={complex.regionName} />
             <NotifyButton aptName={complex.aptName} />
             <ShareButtons
               url={`https://donjup.com/apt/${region}/${slug}`}

@@ -1,12 +1,14 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { aptComplexes } from "@/lib/db/schema";
-import { asc, sql } from "drizzle-orm";
+import { isNotNull, asc, sql } from "drizzle-orm";
 
 const ITEMS_PER_SITEMAP = 5000;
 
 export async function generateSitemaps() {
-  const result = await db.select({ count: sql<number>`count(*)` }).from(aptComplexes);
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(aptComplexes)
+    .where(isNotNull(aptComplexes.govtComplexId));
   const total = Number(result[0]?.count ?? 0);
   const numSitemaps = Math.max(1, Math.ceil(total / ITEMS_PER_SITEMAP));
 
@@ -22,9 +24,9 @@ export default async function sitemap(props: {
   const offset = id * ITEMS_PER_SITEMAP;
 
   const complexes = await db.select({
-    region_code: aptComplexes.regionCode,
-    slug: aptComplexes.slug,
+    govtComplexId: aptComplexes.govtComplexId,
   }).from(aptComplexes)
+    .where(isNotNull(aptComplexes.govtComplexId))
     .orderBy(asc(aptComplexes.id))
     .offset(offset)
     .limit(ITEMS_PER_SITEMAP);
@@ -33,12 +35,10 @@ export default async function sitemap(props: {
     return [];
   }
 
-  return complexes.map(
-    (c) => ({
-      url: `${baseUrl}/apt/${c.region_code}/${c.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.6,
-    }),
-  );
+  return complexes.map((c) => ({
+    url: `${baseUrl}/apt/${c.govtComplexId}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  }));
 }

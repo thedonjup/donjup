@@ -3,15 +3,16 @@
 import { useState, useEffect } from "react";
 
 interface FavoriteButtonProps {
-  slug: string;
+  govtComplexId: string;
   aptName: string;
   regionName: string;
 }
 
 interface FavoriteItem {
-  slug: string;
+  govtComplexId: string;
   aptName: string;
   regionName: string;
+  slug?: string; // legacy compat
 }
 
 const STORAGE_KEY = "donjup-favorites";
@@ -34,23 +35,23 @@ function setFavorites(items: FavoriteItem[]) {
   }
 }
 
-export default function FavoriteButton({ slug, aptName, regionName }: FavoriteButtonProps) {
+export default function FavoriteButton({ govtComplexId, aptName, regionName }: FavoriteButtonProps) {
   const [isFavorited, setIsFavorited] = useState(false);
 
   useEffect(() => {
     const favorites = getFavorites();
-    setIsFavorited(favorites.some((f) => f.slug === slug));
-  }, [slug]);
+    setIsFavorited(favorites.some((f) => f.govtComplexId === govtComplexId || f.slug === govtComplexId));
+  }, [govtComplexId]);
 
   function handleToggle() {
     const favorites = getFavorites();
-    const index = favorites.findIndex((f) => f.slug === slug);
+    const index = favorites.findIndex((f) => f.govtComplexId === govtComplexId || f.slug === govtComplexId);
 
     if (index >= 0) {
       favorites.splice(index, 1);
       setIsFavorited(false);
     } else {
-      favorites.push({ slug, aptName, regionName });
+      favorites.push({ govtComplexId, aptName, regionName });
       setIsFavorited(true);
     }
 

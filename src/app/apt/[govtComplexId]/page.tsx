@@ -301,7 +301,7 @@ export default async function AptDetailPage({
             <h1 className="text-2xl font-extrabold t-text">{complex.aptName}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <FavoriteButton slug={govtComplexId} aptName={complex.aptName} regionName={complex.regionName} />
+            <FavoriteButton govtComplexId={govtComplexId} aptName={complex.aptName} regionName={complex.regionName} />
             <NotifyButton aptName={complex.aptName} />
             <ShareButtons
               url={`https://donjup.com/apt/${govtComplexId}`}

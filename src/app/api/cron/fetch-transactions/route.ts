@@ -9,6 +9,7 @@ import {
   delay as multiDelay,
 } from "@/lib/api/molit-multi";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
+import { makeSlug } from "@/lib/apt-url";
 import {
   PROPERTY_TYPES,
   PROPERTY_TYPE_LABELS,
@@ -107,6 +108,20 @@ export async function GET(request: Request) {
         // 각 거래에 대해 최고가 조회 및 변동률 계산
         const enriched = await enrichTransactions(transactions, name);
 
+        // 단지 마스터 먼저 UPSERT (complex_id 연결 위해)
+        await upsertComplexes(transactions, name);
+
+        // 단지 ID 맵 구성 (region_code + apt_name → complex_id)
+        const complexNames = [...new Set(enriched.map((t) => t.aptName))];
+        const complexRows = await db
+          .select({ id: aptComplexes.id, aptName: aptComplexes.aptName, regionCode: aptComplexes.regionCode })
+          .from(aptComplexes)
+          .where(and(
+            eq(aptComplexes.regionCode, code),
+            inArray(aptComplexes.aptName, complexNames),
+          ));
+        const complexMap = new Map(complexRows.map((r) => [`${r.regionCode}|${r.aptName}`, r.id]));
+
         // DB 삽입 (중복 무시)
         const inserted = await db
           .insert(aptTransactions)
@@ -125,7 +140,8 @@ export async function GET(request: Request) {
               isSignificantDrop: t.isSignificantDrop,
               dropLevel: t.dropLevel,
               dealType: t.dealType,
-              rawData: t.rawData,
+
+              complexId: complexMap.get(`${t.regionCode}|${t.aptName}`) ?? null,
             }))
           )
           .onConflictDoNothing()
@@ -135,9 +151,6 @@ export async function GET(request: Request) {
         totalInserted += insertCount;
         totalNewHigh += enriched.filter((t) => t.isNewHigh).length;
         totalSignificantDrop += enriched.filter((t) => t.isSignificantDrop).length;
-
-        // 단지 마스터 UPSERT
-        await upsertComplexes(transactions, name);
 
         await delay(300); // API 부하 방지
       } catch (e) {
@@ -167,15 +180,7 @@ export async function GET(request: Request) {
   });
 }
 
-type DropLevel = "normal" | "decline" | "crash" | "severe";
-
-function calcDropLevel(changeRate: number | null): DropLevel {
-  if (changeRate === null) return "normal";
-  if (changeRate <= -25) return "severe";
-  if (changeRate <= -15) return "crash";
-  if (changeRate <= -10) return "decline";
-  return "normal";
-}
+import { calcDropLevel, type DropLevel } from "@/lib/constants/drop-level";
 
 interface EnrichedTransaction extends ParsedTransaction {
   highestPrice: number | null;
@@ -286,8 +291,13 @@ async function upsertComplexes(
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const slug = `${t.regionCode}-${toSlug(t.aptName)}`;
-    const govtComplexId = t.aptSeq ? `${t.regionCode}-${t.aptSeq}` : null;
+    // aptSeq에서 regionCode 접두사 제거 (API가 "28200-164" 형태로 줄 수 있음)
+    const cleanSeq = t.aptSeq?.startsWith(`${t.regionCode}-`)
+      ? t.aptSeq.slice(t.regionCode.length + 1)
+      : t.aptSeq;
+    const govtComplexId = cleanSeq ? `${t.regionCode}-${cleanSeq}` : null;
+    // slug는 aptSeq만 (URL에 이미 regionCode 있으므로)
+    const slug = cleanSeq || makeSlug(t.regionCode, t.aptName);
 
     complexes.push({
       regionCode: t.regionCode,
@@ -319,14 +329,6 @@ async function upsertComplexes(
       .values(complexes)
       .onConflictDoNothing();
   }
-}
-
-function toSlug(name: string): string {
-  return name
-    .replace(/[^가-힣a-zA-Z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase();
 }
 
 // ---------------------------------------------------------------------------
@@ -393,6 +395,20 @@ async function handleMultiPropertyType(
 
         const enriched = await enrichTransactions(asParsed, name);
 
+        // 단지 마스터 먼저 UPSERT
+        await upsertComplexes(asParsed, name);
+
+        // 단지 ID 맵 구성
+        const multiComplexNames = [...new Set(enriched.map((t) => t.aptName))];
+        const multiComplexRows = await db
+          .select({ id: aptComplexes.id, aptName: aptComplexes.aptName, regionCode: aptComplexes.regionCode })
+          .from(aptComplexes)
+          .where(and(
+            eq(aptComplexes.regionCode, enriched[0]?.regionCode ?? ""),
+            inArray(aptComplexes.aptName, multiComplexNames),
+          ));
+        const multiComplexMap = new Map(multiComplexRows.map((r) => [`${r.regionCode}|${r.aptName}`, r.id]));
+
         const inserted = await db
           .insert(aptTransactions)
           .values(
@@ -410,8 +426,9 @@ async function handleMultiPropertyType(
               isSignificantDrop: t.isSignificantDrop,
               dropLevel: t.dropLevel,
               dealType: t.dealType,
-              rawData: t.rawData,
+
               propertyType,
+              complexId: multiComplexMap.get(`${t.regionCode}|${t.aptName}`) ?? null,
             }))
           )
           .onConflictDoNothing()
@@ -423,9 +440,6 @@ async function handleMultiPropertyType(
         totalSignificantDrop += enriched.filter(
           (t) => t.isSignificantDrop
         ).length;
-
-        // 단지 마스터 UPSERT
-        await upsertComplexes(asParsed, name);
 
         await multiDelay(300);
       } catch (e) {
