@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
-import { makeSlug } from "@/lib/apt-url";
+import { aptUrl } from "@/lib/apt-url";
 import { PROPERTY_TYPE_LABELS } from "@/components/PropertyTypeFilter";
 import { shareViaKakao } from "@/lib/kakao-share";
 import { DROP_LEVEL_CONFIG } from "@/lib/constants/drop-level";
@@ -23,6 +23,8 @@ export interface Transaction {
   is_new_high?: boolean;
   drop_level?: "normal" | "decline" | "crash" | "severe";
   property_type?: number;
+  complex_slug?: string | null;
+  govt_complex_id?: string | null;
 }
 
 type TabKey = "drops" | "highs" | "volume" | "recent";
@@ -162,12 +164,11 @@ export default function RankingTabs({
           items.map((t, i) => {
             const isDrop = activeTab === "drops";
             const isHigh = activeTab === "highs";
-            const slug = makeSlug(t.region_code, t.apt_name);
 
             return (
               <Link
                 key={t.id}
-                href={`/apt/${t.region_code}/${slug}`}
+                href={aptUrl({ govtComplexId: t.govt_complex_id ?? null, regionCode: t.region_code, slug: t.complex_slug ?? '' })}
                 className="block"
               >
                 <div className="card-hover flex items-center gap-3 rounded-xl border t-border px-4 py-3.5 t-card">
@@ -259,7 +260,7 @@ export default function RankingTabs({
                       shareViaKakao({
                         title: dropLabel,
                         description: desc,
-                        url: `https://donjup.com/apt/${t.region_code}/${slug}`,
+                        url: `https://donjup.com${aptUrl({ govtComplexId: t.govt_complex_id ?? null, regionCode: t.region_code, slug: t.complex_slug ?? '' })}`,
                       });
                     }}
                     className="flex-shrink-0 rounded-lg p-1.5 transition hover:bg-[var(--color-surface-elevated)]"

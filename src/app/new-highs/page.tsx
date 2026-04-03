@@ -1,10 +1,10 @@
 import { db } from "@/lib/db";
-import { aptTransactions } from "@/lib/db/schema";
+import { aptTransactions, aptComplexes } from "@/lib/db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { formatPrice, sqmToPyeong } from "@/lib/format";
-import { makeSlug } from "@/lib/apt-url";
+import { aptUrl } from "@/lib/apt-url";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
 
@@ -28,6 +28,8 @@ interface NewHighTransaction {
   trade_date: string;
   deal_type: string | null;
   property_type?: number;
+  complex_slug: string | null;
+  govt_complex_id: string | null;
 }
 
 
@@ -55,7 +57,10 @@ export default async function NewHighsPage({
       trade_date: aptTransactions.tradeDate,
       deal_type: aptTransactions.dealType,
       property_type: aptTransactions.propertyType,
+      complex_slug: aptComplexes.slug,
+      govt_complex_id: aptComplexes.govtComplexId,
     }).from(aptTransactions)
+      .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
       .where(and(eq(aptTransactions.isNewHigh, true), typeFilter))
       .orderBy(desc(aptTransactions.tradeDate))
       .limit(50);
@@ -64,6 +69,8 @@ export default async function NewHighsPage({
       ...r,
       size_sqm: Number(r.size_sqm),
       trade_price: Number(r.trade_price),
+      complex_slug: r.complex_slug ?? null,
+      govt_complex_id: r.govt_complex_id ?? null,
     }));
   } catch (e) {
     console.error("[NewHighs] DB query failed:", e instanceof Error ? e.message : e);
@@ -77,7 +84,7 @@ export default async function NewHighsPage({
           name="오늘의 아파트 신고가 랭킹"
           items={transactions.slice(0, 10).map((tx, i) => ({
             name: `${tx.apt_name} (${tx.region_name})`,
-            url: `https://donjup.com/apt/${tx.region_code}/${makeSlug(tx.region_code, tx.apt_name)}`,
+            url: `https://donjup.com${aptUrl({ govtComplexId: tx.govt_complex_id, regionCode: tx.region_code, slug: tx.complex_slug ?? '' })}`,
             position: i + 1,
           }))}
         />
@@ -104,11 +111,10 @@ export default async function NewHighsPage({
             {/* Mobile: Card layout */}
             <div className="space-y-2 sm:hidden">
               {transactions.map((tx, i) => {
-                const slug = makeSlug(tx.region_code, tx.apt_name);
                 return (
                   <Link
                     key={tx.id}
-                    href={`/apt/${tx.region_code}/${slug}`}
+                    href={aptUrl({ govtComplexId: tx.govt_complex_id, regionCode: tx.region_code, slug: tx.complex_slug ?? '' })}
                     className="card-hover block rounded-xl border t-border t-card px-4 py-3.5"
                     style={{ WebkitTapHighlightColor: "transparent", minHeight: 64 }}
                   >
@@ -154,7 +160,6 @@ export default async function NewHighsPage({
               </thead>
               <tbody>
                 {transactions.map((tx, i) => {
-                  const slug = makeSlug(tx.region_code, tx.apt_name);
                   return (
                     <tr
                       key={tx.id}
@@ -166,7 +171,7 @@ export default async function NewHighsPage({
                       </td>
                       <td className="px-4 py-3">
                         <Link
-                          href={`/apt/${tx.region_code}/${slug}`}
+                          href={aptUrl({ govtComplexId: tx.govt_complex_id, regionCode: tx.region_code, slug: tx.complex_slug ?? '' })}
                           className="font-semibold t-text hover:text-brand-600 transition"
                         >
                           {tx.apt_name}

@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
+import { aptUrl } from "@/lib/apt-url";
 
 interface Complex {
   id: string;
@@ -12,6 +13,7 @@ interface Complex {
   dong_name: string | null;
   built_year: number | null;
   slug: string;
+  govt_complex_id?: string | null;
   total_units?: number | null;
 }
 
@@ -262,7 +264,7 @@ export default function ComparePage() {
                   {selected.map((s) => (
                     <th key={s.complex.id} className="pb-3 px-2 text-center text-xs font-bold t-text">
                       <Link
-                        href={`/apt/${s.complex.region_code}/${s.complex.slug}`}
+                        href={aptUrl({ govtComplexId: s.complex.govt_complex_id ?? null, regionCode: s.complex.region_code, slug: s.complex.slug })}
                         className="hover:text-brand-600"
                       >
                         {s.complex.apt_name}

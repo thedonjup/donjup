@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { homepageCache, aptTransactions, financeRates, pageViews } from "@/lib/db/schema";
+import { homepageCache, aptTransactions, aptComplexes, financeRates, pageViews } from "@/lib/db/schema";
 import { eq, desc, asc, lt, isNotNull, gte, and, sql } from "drizzle-orm";
 import AdSlot from "@/components/ads/AdSlot";
 import CoupangBanner from "@/components/CoupangBanner";
@@ -49,14 +49,7 @@ function filterByType<T extends { property_type: number }>(rows: T[], validType:
   return rows.filter((r) => r.property_type === validType);
 }
 
-type DropLevel = "normal" | "decline" | "crash" | "severe";
-function calcDropLevel(changeRate: number | null): DropLevel {
-  if (changeRate === null) return "normal";
-  if (changeRate <= -25) return "severe";
-  if (changeRate <= -15) return "crash";
-  if (changeRate <= -10) return "decline";
-  return "normal";
-}
+import { calcDropLevel } from "@/lib/constants/drop-level";
 
 function applyRankingNormalization(txns: AptTransaction[]): AptTransaction[] {
   return txns
@@ -160,24 +153,30 @@ export default async function HomePage({
         deal_type: aptTransactions.dealType,
         drop_level: aptTransactions.dropLevel,
         property_type: aptTransactions.propertyType,
+        complex_slug: aptComplexes.slug,
+        govt_complex_id: aptComplexes.govtComplexId,
       };
 
       const typeFilter = validType !== 0 ? eq(aptTransactions.propertyType, validType) : undefined;
 
       const [dropsRes, highsRes, volumeRes, recentRes, ratesRes, txnCount, complexCount] = await Promise.allSettled([
         db.select(txFields).from(aptTransactions)
+          .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
           .where(and(isNotNull(aptTransactions.changeRate), lt(aptTransactions.changeRate, "0"), typeFilter))
           .orderBy(asc(aptTransactions.changeRate))
           .limit(10),
         db.select(txFields).from(aptTransactions)
+          .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
           .where(and(eq(aptTransactions.isNewHigh, true), typeFilter))
           .orderBy(desc(aptTransactions.tradeDate))
           .limit(10),
         db.select(txFields).from(aptTransactions)
+          .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
           .where(typeFilter)
           .orderBy(desc(aptTransactions.tradeDate), desc(aptTransactions.tradePrice))
           .limit(10),
         db.select(txFields).from(aptTransactions)
+          .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
           .where(typeFilter)
           .orderBy(desc(aptTransactions.tradeDate))
           .limit(10),

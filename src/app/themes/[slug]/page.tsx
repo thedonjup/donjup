@@ -1,11 +1,11 @@
 import { db } from "@/lib/db";
 import { aptComplexes, aptTransactions } from "@/lib/db/schema";
-import { desc, asc, lte, gte } from "drizzle-orm";
+import { desc, asc, lte, gte, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { formatPrice } from "@/lib/format";
-import { makeSlug } from "@/lib/apt-url";
+import { aptUrl } from "@/lib/apt-url";
 import AdSlot from "@/components/ads/AdSlot";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
 
@@ -109,6 +109,7 @@ interface ThemeResult {
   region_code: string;
   region_name: string;
   slug?: string;
+  govt_complex_id?: string | null;
   built_year?: number | null;
   total_units?: number | null;
   trade_price?: number;
@@ -140,6 +141,7 @@ export default async function ThemeDetailPage({
         region_code: aptComplexes.regionCode,
         region_name: aptComplexes.regionName,
         slug: aptComplexes.slug,
+        govt_complex_id: aptComplexes.govtComplexId,
         built_year: aptComplexes.builtYear,
         total_units: aptComplexes.totalUnits,
       }).from(aptComplexes)
@@ -154,6 +156,7 @@ export default async function ThemeDetailPage({
         region_code: aptComplexes.regionCode,
         region_name: aptComplexes.regionName,
         slug: aptComplexes.slug,
+        govt_complex_id: aptComplexes.govtComplexId,
         built_year: aptComplexes.builtYear,
         total_units: aptComplexes.totalUnits,
       }).from(aptComplexes)
@@ -168,6 +171,7 @@ export default async function ThemeDetailPage({
         region_code: aptComplexes.regionCode,
         region_name: aptComplexes.regionName,
         slug: aptComplexes.slug,
+        govt_complex_id: aptComplexes.govtComplexId,
         built_year: aptComplexes.builtYear,
         total_units: aptComplexes.totalUnits,
       }).from(aptComplexes)
@@ -184,7 +188,10 @@ export default async function ThemeDetailPage({
         trade_price: aptTransactions.tradePrice,
         change_rate: aptTransactions.changeRate,
         trade_date: aptTransactions.tradeDate,
+        complex_slug: aptComplexes.slug,
+        govt_complex_id: aptComplexes.govtComplexId,
       }).from(aptTransactions)
+        .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
         .where(lte(aptTransactions.changeRate, "-20"))
         .orderBy(asc(aptTransactions.changeRate))
         .limit(50);
@@ -192,6 +199,8 @@ export default async function ThemeDetailPage({
         ...r,
         trade_price: Number(r.trade_price),
         change_rate: r.change_rate !== null ? Number(r.change_rate) : null,
+        slug: r.complex_slug ?? undefined,
+        govt_complex_id: r.govt_complex_id ?? null,
       }));
     }
   } catch (e) {
@@ -212,7 +221,7 @@ export default async function ThemeDetailPage({
           name={`${theme.title} 아파트 목록`}
           items={results.slice(0, 10).map((item, i) => ({
             name: `${item.apt_name} (${item.region_name})`,
-            url: `https://donjup.com/apt/${item.region_code}/${item.slug ?? makeSlug(item.region_code, item.apt_name)}`,
+            url: `https://donjup.com${aptUrl({ govtComplexId: item.govt_complex_id ?? null, regionCode: item.region_code, slug: item.slug ?? '' })}`,
             position: i + 1,
           }))}
         />
@@ -282,7 +291,7 @@ export default async function ThemeDetailPage({
                   <td className="px-4 py-3 tabular-nums t-text-tertiary">{i + 1}</td>
                   <td className="px-4 py-3">
                     <Link
-                      href={`/apt/${item.region_code}/${makeSlug(item.region_code, item.apt_name)}`}
+                      href={aptUrl({ govtComplexId: item.govt_complex_id ?? null, regionCode: item.region_code, slug: item.slug ?? '' })}
                       className="font-semibold t-text hover:text-brand-600 transition"
                     >
                       {item.apt_name}
@@ -309,7 +318,7 @@ export default async function ThemeDetailPage({
           {results.map((item, i) => (
             <Link
               key={`${item.id}-${i}`}
-              href={`/apt/${item.region_code}/${item.slug ?? makeSlug(item.region_code, item.apt_name)}`}
+              href={aptUrl({ govtComplexId: item.govt_complex_id ?? null, regionCode: item.region_code, slug: item.slug ?? '' })}
               className="card-hover block rounded-2xl border t-border p-5 transition"
               style={{ background: "var(--color-surface-card)" }}
             >

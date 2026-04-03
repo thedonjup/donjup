@@ -35,8 +35,9 @@ export interface AptTransaction {
   deal_type: string | null;
   drop_level: string;
   property_type: number;
-  raw_data: Record<string, unknown> | null;
   created_at: string;
+  complex_slug?: string | null;
+  govt_complex_id?: string | null;
 }
 
 export interface FinanceRate {

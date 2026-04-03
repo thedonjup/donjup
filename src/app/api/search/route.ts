@@ -127,13 +127,13 @@ export async function GET(request: Request) {
       const txWhere = txConditions.length > 0
         ? sql`AND ${sql.join(txConditions, sql` AND `)}`
         : sql``;
-      query = sql`SELECT DISTINCT c.id, c.apt_name, c.region_code, c.region_name, c.dong_name, c.built_year, c.slug
+      query = sql`SELECT DISTINCT c.id, c.apt_name, c.region_code, c.region_name, c.dong_name, c.built_year, c.slug, c.govt_complex_id
              FROM apt_complexes c
              INNER JOIN apt_transactions t ON t.region_code = c.region_code AND t.apt_name = c.apt_name
              WHERE ${complexWhere} ${txWhere}
              ORDER BY c.apt_name LIMIT 50`;
     } else {
-      query = sql`SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
+      query = sql`SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug, govt_complex_id
              FROM apt_complexes c
              WHERE ${complexWhere}
              ORDER BY c.apt_name LIMIT 50`;

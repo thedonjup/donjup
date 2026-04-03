@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { aptUrl } from "@/lib/apt-url";
 import { formatPrice } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
@@ -77,6 +78,7 @@ export default async function SearchPage({
     sigungu_name: string | null;
     built_year: number | null;
     slug: string;
+    govt_complex_id: string | null;
     latest_trade_price: number | null;
   }> = [];
 
@@ -109,13 +111,13 @@ export default async function SearchPage({
 
       const complexWhere = conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`;
 
-      const dbQuery = sql`SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug
+      const dbQuery = sql`SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug, govt_complex_id
                    FROM apt_complexes c
                    WHERE ${complexWhere}
                    ORDER BY c.apt_name LIMIT 50`;
 
       const result = await db.execute(dbQuery);
-      results = (result.rows as { id: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; slug: string }[]).map((d) => ({
+      results = (result.rows as { id: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; slug: string; govt_complex_id: string | null }[]).map((d) => ({
         ...d,
         sido_name: null,
         sigungu_name: null,
@@ -367,7 +369,7 @@ export default async function SearchPage({
             {results.map((apt) => (
               <Link
                 key={apt.id}
-                href={`/apt/${apt.region_code}/${apt.slug}`}
+                href={aptUrl({ govtComplexId: apt.govt_complex_id, regionCode: apt.region_code, slug: apt.slug })}
                 className="card-hover block rounded-2xl border p-5 transition"
                 style={{
                   borderColor: "var(--color-border)",

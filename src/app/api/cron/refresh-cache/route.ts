@@ -23,6 +23,8 @@ const txFields = {
   deal_type: aptTransactions.dealType,
   drop_level: aptTransactions.dropLevel,
   property_type: aptTransactions.propertyType,
+  complex_slug: aptComplexes.slug,
+  govt_complex_id: aptComplexes.govtComplexId,
 };
 
 export async function GET(request: Request) {
@@ -39,6 +41,7 @@ export async function GET(request: Request) {
         db
           .select(txFields)
           .from(aptTransactions)
+          .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
           .where(and(isNotNull(aptTransactions.changeRate), lt(aptTransactions.changeRate, "0")))
           .orderBy(aptTransactions.changeRate)
           .limit(30),
@@ -46,6 +49,7 @@ export async function GET(request: Request) {
         db
           .select(txFields)
           .from(aptTransactions)
+          .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
           .where(eq(aptTransactions.isNewHigh, true))
           .orderBy(desc(aptTransactions.tradeDate))
           .limit(30),
@@ -53,12 +57,14 @@ export async function GET(request: Request) {
         db
           .select(txFields)
           .from(aptTransactions)
+          .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
           .orderBy(desc(aptTransactions.tradeDate), desc(aptTransactions.tradePrice))
           .limit(30),
         // Most recent
         db
           .select(txFields)
           .from(aptTransactions)
+          .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
           .orderBy(desc(aptTransactions.tradeDate))
           .limit(30),
         // Finance rates

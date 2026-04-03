@@ -5,7 +5,7 @@ import { aptRentTransactions } from "@/lib/db/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice, formatArea } from "@/lib/format";
-import { makeSlug } from "@/lib/apt-url";
+import { aptUrl, makeSlug } from "@/lib/apt-url";
 import AdSlot from "@/components/ads/AdSlot";
 
 export const revalidate = 3600;
@@ -188,7 +188,7 @@ export default async function RentPage({
                       </td>
                       <td className="px-4 py-3">
                         <Link
-                          href={`/apt/${regionCode}/${slug}`}
+                          href={aptUrl({ govtComplexId: null, regionCode, slug })}
                           className="font-semibold t-text hover:text-brand-600 transition"
                         >
                           {aptName}
@@ -269,7 +269,7 @@ export default async function RentPage({
                       </td>
                       <td className="px-4 py-3">
                         <Link
-                          href={`/apt/${regionCode}/${slug}`}
+                          href={aptUrl({ govtComplexId: null, regionCode, slug })}
                           className="font-semibold t-text hover:text-brand-600 transition"
                         >
                           {aptName}
