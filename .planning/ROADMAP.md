@@ -169,7 +169,7 @@ Plans:
 
 - [x] **Phase 20: 포맷 유틸 중앙화 + 데이터 표현 정규화** - 가격/면적/날짜/null 포맷 단일 모듈 확립 (completed 2026-03-31)
 - [x] **Phase 21: 디자인 시스템 통합** - 다크모드 정상화 + 하드코딩 색상 제거 + 인라인 style 제거 (completed 2026-03-31)
-- [ ] **Phase 22: URL 구조 개편** - aptSeq 기반 canonical URL + 301 리다이렉트 + Sitemap 완성
+- [ ] **Phase 22: URL 구조 개편** - govtComplexId 기반 canonical URL + 308 리다이렉트 + Sitemap 완성
 - [ ] **Phase 23: 깨진 기능 복구** - Vercel Blob 연동 + Instagram 포스팅 파이프라인 완성
 - [ ] **Phase 24: UX 개선** - 검색 결과 보강 + 차트 범례 개선
 
@@ -270,7 +270,7 @@ Plans:
 **UI hint**: yes
 
 ### Phase 22: URL 구조 개편
-**Goal**: 아파트 상세 페이지가 govtComplexId 기반의 안정적인 canonical URL을 가지고, 기존 URL은 301 리다이렉트된다
+**Goal**: 아파트 상세 페이지가 govtComplexId 기반의 안정적인 canonical URL을 가지고, 기존 URL은 308 리다이렉트된다
 **Depends on**: Phase 20 (makeSlug 중앙화가 Phase 20 DATA-04에서 완료됨)
 **Requirements**: URL-01, URL-02, URL-03, URL-04, URL-05, URL-06
 **Success Criteria** (what must be TRUE):
@@ -279,6 +279,11 @@ Plans:
   3. `makeSlug` 함수가 `src/lib/apt-url.ts` 단일 모듈에만 존재하고, 기존 4개 산재 정의가 제거된다
   4. `sitemap.xml`에 모든 아파트 단지의 `/apt/[govtComplexId]` URL이 포함된다
   5. Profile 페이지의 아파트 링크 클릭 시 404 없이 해당 단지 상세 페이지로 이동한다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 22-01-PLAN.md — aptUrl() + new /apt/[govtComplexId] route + proxy.ts 308 redirect + backfill (URL-01, URL-02, URL-06)
+- [ ] 22-02-PLAN.md — Internal link sweep + sitemap + FavoriteButton + toSlug dedup (URL-03, URL-04, URL-05)
 
 ### Phase 23: 깨진 기능 복구
 **Goal**: 카드뉴스 이미지가 Vercel Blob에 저장되고, Instagram 자동 포스팅 파이프라인이 정상 동작한다
@@ -325,7 +330,7 @@ Plans:
 | 19. 코드 정리 | v1.2 | 1/1 | Complete | 2026-03-28 |
 | 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 3/3 | Complete    | 2026-03-31 |
 | 21. 디자인 시스템 통합 | v1.3 | 3/3 | Complete   | 2026-03-31 |
-| 22. URL 구조 개편 | v1.3 | 0/? | Not started | - |
+| 22. URL 구조 개편 | v1.3 | 0/2 | Not started | - |
 | 23. 깨진 기능 복구 | v1.3 | 0/? | Not started | - |
 | 24. UX 개선 | v1.3 | 0/? | Not started | - |
 
