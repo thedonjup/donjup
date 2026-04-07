@@ -5,7 +5,8 @@
 - ✅ **v1.0 사이트 안정화** - Phases 1-9 (shipped 2026-03-28)
 - ✅ **v1.1 데이터 분석 고도화** - Phases 10-15 (shipped 2026-03-28)
 - ✅ **v1.2 코드 품질 강화** - Phases 16-19 (shipped 2026-03-28)
-- 🔄 **v1.3 서비스 품질 개선** - Phases 20-24 (in progress)
+- ✅ **v1.3 서비스 품질 개선** - Phases 20-24 (shipped 2026-04-05)
+- 🔄 **v1.4 전환 최적화 + 리텐션 기초** - Phases 25-29 (planning started 2026-04-07)
 
 ## Phases
 
@@ -163,19 +164,37 @@ Plans:
 
 ---
 
-### v1.3 서비스 품질 개선 (In Progress)
+### v1.3 서비스 품질 개선 (Shipped)
 
 **Milestone Goal:** 디자인 시스템 통합, 데이터 표현 정규화, URL 구조 개편, 깨진 기능 복구로 사용자 경험 품질을 근본적으로 개선한다
 
 - [x] **Phase 20: 포맷 유틸 중앙화 + 데이터 표현 정규화** - 가격/면적/날짜/null 포맷 단일 모듈 확립 (completed 2026-03-31)
 - [x] **Phase 21: 디자인 시스템 통합** - 다크모드 정상화 + 하드코딩 색상 제거 + 인라인 style 제거 (completed 2026-03-31)
-- [ ] **Phase 22: URL 구조 개편** - govtComplexId 기반 canonical URL + 308 리다이렉트 + Sitemap 완성
-- [ ] **Phase 23: 깨진 기능 복구** - Vercel Blob 연동 + Instagram 포스팅 파이프라인 완성
-- [ ] **Phase 24: UX 개선** - 검색 결과 보강 + 차트 범례 개선
+- [x] **Phase 21.5: govt_complex_id 백필** - 서울 지역 단지 ID 연동 완료 (completed 2026-04-03)
+- [x] **Phase 22: URL 구조 개편** - govtComplexId 기반 canonical URL + 308 리다이렉트 + Sitemap 완성 (completed 2026-04-03)
+- [x] **Phase 23: 깨진 기능 복구** - Vercel Blob 연동 + Instagram 포스팅 파이프라인 완성 (completed 2026-04-05)
+- [x] **Phase 24: UX 개선** - 검색 결과 보강 + 차트 범례 개선 (completed 2026-04-05)
+
+### v1.4 전환 최적화 + 리텐션 기초 (Planning Started)
+
+**Milestone Goal:** 데이터 중심 서비스 위에 광고/제휴/탐색/개인화 레이어를 추가해 재방문과 수익을 동시에 만든다
+
+- [ ] **Phase 25: 광고/추적 기반 구축** - 광고 슬롯/전역 스크립트/측정 기반 정리
+- [ ] **Phase 26: 계산기/제휴 전환 강화** - 계산기 결과 기반 CPA CTA 및 제휴 경로 실전화
+- [ ] **Phase 27: 탐색 퍼널 최적화** - 메인/리포트/상세 내부 순환 강화
+- [ ] **Phase 28: 리텐션 MVP** - 관심단지 저장 + 최근 본 단지 재진입
+- [ ] **Phase 29: 알림/실험/분석 고도화** - 이벤트 추적 + 기본 알림 + CTA 실험
 
 ## Phase Details
 
-### Phase 16: 테스트 인프라 기반
+### Phase 21.5: govt_complex_id 백필 마이그레이션
+**Goal**: apt_complexes 테이블의 govt_complex_id 누락 비율을 5% 미만으로 낮추어 URL 개편의 데이터 기반을 마련한다.
+**Success Criteria**:
+  1. scripts/backfill-govt-ids.ts 스크립트가 국토교통부 API를 사용하여 ID를 수집한다.
+  2. 실행 후 `SELECT COUNT(*) FROM apt_complexes WHERE govt_complex_id IS NULL` 비율이 5% 미만이다.
+
+### Phase 22: URL 구조 개편
+
 **Goal**: 개발자가 `npm test`로 핵심 비즈니스 로직의 정확성을 즉시 검증할 수 있다
 **Depends on**: Phase 15 (v1.1 완료)
 **Requirements**: TEST-01, TEST-02, TEST-03
@@ -283,7 +302,7 @@ Plans:
 
 Plans:
 - [x] 22-01-PLAN.md — aptUrl() + new /apt/[govtComplexId] route + proxy.ts 308 redirect + backfill (URL-01, URL-02, URL-06)
-- [ ] 22-02-PLAN.md — Internal link sweep + sitemap + FavoriteButton + toSlug dedup (URL-03, URL-04, URL-05)
+- [x] 22-02-PLAN.md — Internal link sweep + sitemap + FavoriteButton + toSlug dedup (URL-03, URL-04, URL-05)
 
 ### Phase 23: 깨진 기능 복구
 **Goal**: 카드뉴스 이미지가 Vercel Blob에 저장되고, Instagram 자동 포스팅 파이프라인이 정상 동작한다
@@ -330,8 +349,8 @@ Plans:
 | 19. 코드 정리 | v1.2 | 1/1 | Complete | 2026-03-28 |
 | 20. 포맷 유틸 중앙화 + 데이터 표현 정규화 | v1.3 | 3/3 | Complete    | 2026-03-31 |
 | 21. 디자인 시스템 통합 | v1.3 | 3/3 | Complete   | 2026-03-31 |
-| 22. URL 구조 개편 | v1.3 | 1/2 | In Progress|  |
-| 23. 깨진 기능 복구 | v1.3 | 0/? | Not started | - |
+| 22. URL 구조 개편 | v1.3 | 2/2 | Complete   | 2026-04-03 |
+| 23. 깨진 기능 복구 | v1.3 | 1/1 | Complete | 2026-04-05 |
 | 24. UX 개선 | v1.3 | 0/? | Not started | - |
 
 ---
