@@ -62,3 +62,11 @@ export function trackCtaClick(ctaName: string, params?: Record<string, string | 
     ...params,
   });
 }
+
+/** 저장/관심/리텐션 이벤트 */
+export function trackRetention(action: string, params?: Record<string, string | number | boolean | undefined>) {
+  trackEvent("retention_action", {
+    action,
+    ...params,
+  });
+}

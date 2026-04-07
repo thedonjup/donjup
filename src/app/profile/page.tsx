@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/providers/AuthProvider";
 import LoginModal from "@/components/auth/LoginModal";
+import { getRecentComplexes, type RecentComplexItem } from "@/lib/recent-complexes";
 
 interface FavoriteItem {
   govtComplexId?: string;
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [recentComplexes, setRecentComplexes] = useState<RecentComplexItem[]>([]);
   const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
@@ -31,6 +33,7 @@ export default function ProfilePage() {
       if (raw) {
         setFavorites(JSON.parse(raw));
       }
+      setRecentComplexes(getRecentComplexes());
     } catch {
       // ignore
     }
@@ -152,6 +155,42 @@ export default function ProfilePage() {
                   style={{ color: "var(--color-text-tertiary)" }}
                 >
                   {f.regionName}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-10">
+        <h2 className="mb-4 text-lg font-bold t-text">최근 본 단지</h2>
+        {recentComplexes.length === 0 ? (
+          <div
+            className="rounded-2xl border py-10 text-center"
+            style={{
+              borderColor: "var(--color-border)",
+              background: "var(--color-surface-card)",
+            }}
+          >
+            <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+              최근 본 단지가 아직 없습니다.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {recentComplexes.map((item) => (
+              <Link
+                key={item.govtComplexId}
+                href={`/apt/${item.govtComplexId}`}
+                className="card-hover rounded-2xl border p-4 transition-colors"
+                style={{
+                  borderColor: "var(--color-border)",
+                  background: "var(--color-surface-card)",
+                }}
+              >
+                <p className="font-bold t-text text-sm truncate">{item.aptName}</p>
+                <p className="mt-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                  {item.regionName}
                 </p>
               </Link>
             ))}

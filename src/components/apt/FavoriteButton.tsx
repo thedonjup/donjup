@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { trackRetention } from "@/lib/analytics/events";
 
 interface FavoriteButtonProps {
   govtComplexId: string;
@@ -50,9 +51,11 @@ export default function FavoriteButton({ govtComplexId, aptName, regionName }: F
     if (index >= 0) {
       favorites.splice(index, 1);
       setIsFavorited(false);
+      trackRetention("favorite_remove", { content_id: govtComplexId });
     } else {
       favorites.push({ govtComplexId, aptName, regionName });
       setIsFavorited(true);
+      trackRetention("favorite_add", { content_id: govtComplexId });
     }
 
     setFavorites(favorites);

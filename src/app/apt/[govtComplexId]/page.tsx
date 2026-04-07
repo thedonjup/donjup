@@ -29,23 +29,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { govtComplexId } = await params;
 
-  type MetaComplex = { apt_name: string; region_name: string; dong_name: string | null; region_code: string; slug: string };
-  let complex: MetaComplex | null = null;
-
   const exactMatch = await db.select({
     apt_name: aptComplexes.aptName,
     region_name: aptComplexes.regionName,
     dong_name: aptComplexes.dongName,
     region_code: aptComplexes.regionCode,
     slug: aptComplexes.slug,
+    govt_complex_id: aptComplexes.govtComplexId,
   }).from(aptComplexes).where(eq(aptComplexes.govtComplexId, govtComplexId)).limit(1);
 
-  if (exactMatch[0]) {
-    complex = exactMatch[0];
-  }
+  const complex = exactMatch[0];
 
   if (!complex) {
-    return { title: "단지 정보" };
+    return { title: "단지 정보 | 돈줍" };
   }
 
   const latestTxnRows = await db.select({
@@ -136,19 +132,20 @@ export default async function AptDetailPage({
 }) {
   const { govtComplexId } = await params;
 
-  // Primary lookup by govtComplexId
   const complexRows = await db.select().from(aptComplexes)
     .where(eq(aptComplexes.govtComplexId, govtComplexId))
     .limit(1);
 
   let complex = complexRows[0] ?? null;
 
-  // Fallback: try slug match (handles edge case where govtComplexId equals the slug)
   if (!complex) {
-    const fallback = await db.select().from(aptComplexes)
-      .where(eq(aptComplexes.slug, govtComplexId))
-      .limit(1);
-    if (fallback[0]) complex = fallback[0];
+    // govtComplexId가 하이픈을 포함하면 슬러그일 수 있음 (폴백)
+    if (govtComplexId.includes("-")) {
+      const fallbackRows = await db.select().from(aptComplexes)
+        .where(eq(aptComplexes.slug, govtComplexId))
+        .limit(1);
+      complex = fallbackRows[0] ?? null;
+    }
   }
 
   if (!complex) {
@@ -157,7 +154,7 @@ export default async function AptDetailPage({
 
   let txns: Transaction[] = [];
   let rentTxns: RentTransaction[] = [];
-  let nearbyComplexes: { slug: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; total_units: number | null; govt_complex_id: string | null }[] = [];
+  let nearbyComplexes: { govt_complex_id: string | null; slug: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; total_units: number | null }[] = [];
 
   try {
     const transactions = await db.select({
@@ -200,12 +197,11 @@ export default async function AptDetailPage({
         .orderBy(desc(aptRentTransactions.tradeDate))
         .limit(200);
       rentTxns = rentData as unknown as RentTransaction[];
-    } catch {
-      // rent data unavailable — ignore
-    }
+    } catch {}
 
     if (complex.dongName) {
       const nearby = await db.select({
+        govt_complex_id: aptComplexes.govtComplexId,
         slug: aptComplexes.slug,
         apt_name: aptComplexes.aptName,
         region_code: aptComplexes.regionCode,
@@ -213,17 +209,16 @@ export default async function AptDetailPage({
         dong_name: aptComplexes.dongName,
         built_year: aptComplexes.builtYear,
         total_units: aptComplexes.totalUnits,
-        govt_complex_id: aptComplexes.govtComplexId,
       }).from(aptComplexes)
         .where(and(
           eq(aptComplexes.dongName, complex.dongName),
-          ne(aptComplexes.slug, complex.slug),
+          ne(aptComplexes.id, complex.id),
         ))
         .limit(5);
       nearbyComplexes = nearby as unknown as typeof nearbyComplexes;
     }
   } catch (err) {
-    console.error("[apt-detail] DB query failed:", err, "govtComplexId:", govtComplexId);
+    console.error("[apt-detail] DB query failed:", err, "id:", govtComplexId);
   }
 
   const prices = txns.map((t) => t.trade_price);
@@ -273,12 +268,12 @@ export default async function AptDetailPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <ViewDetailTracker contentType="apt" contentId={govtComplexId} />
+      <ViewDetailTracker contentType="apt" contentId={govtComplexId} aptName={complex.aptName} regionName={complex.regionName} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(aptJsonLd) }}
       />
-      {/* 브레드크럼 */}
+      
       <div className="mb-2 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
         <Link href="/" className="hover:opacity-80">홈</Link>
         {" > "}
@@ -293,7 +288,6 @@ export default async function AptDetailPage({
         )}
       </div>
 
-      {/* 단지 헤더 */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
@@ -301,7 +295,7 @@ export default async function AptDetailPage({
             <h1 className="text-2xl font-extrabold t-text">{complex.aptName}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <FavoriteButton govtComplexId={govtComplexId} aptName={complex.aptName} regionName={complex.regionName} />
+            <FavoriteButton govtComplexId={complex.govtComplexId ?? complex.slug} aptName={complex.aptName} regionName={complex.regionName} />
             <NotifyButton aptName={complex.aptName} />
             <ShareButtons
               url={`https://donjup.com/apt/${govtComplexId}`}
@@ -314,40 +308,9 @@ export default async function AptDetailPage({
           {complex.regionName} {complex.dongName ?? ""}
           {complex.builtYear ? ` · ${complex.builtYear}년 준공` : ""}
           {complex.totalUnits ? ` · ${complex.totalUnits}세대` : ""}
-          {complex.floorCount ? ` · ${complex.floorCount}층` : ""}
-          {complex.parkingCount ? ` · 주차 ${complex.parkingCount}대` : ""}
-          {complex.heatingMethod ? ` · ${complex.heatingMethod}` : ""}
         </p>
-
-        {/* 건축물 상세 정보 */}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-          {complex.builtYear && (() => {
-            const currentYear = new Date().getFullYear();
-            const age = currentYear - complex.builtYear!;
-            const reconstructionYear = complex.builtYear! + 30;
-            const yearsUntilReconstruction = reconstructionYear - currentYear;
-            return (
-              <>
-                <span>{age}년차</span>
-                <span>
-                  재건축연한 {reconstructionYear}년
-                  {yearsUntilReconstruction > 0
-                    ? ` (${yearsUntilReconstruction}년 후)`
-                    : " (도래)"}
-                </span>
-              </>
-            );
-          })()}
-          {complex.floorAreaRatio && <span>용적률 {complex.floorAreaRatio}%</span>}
-          {complex.buildingCoverage && <span>건폐율 {complex.buildingCoverage}%</span>}
-          {complex.energyGrade && <span>에너지등급 {complex.energyGrade}</span>}
-          {complex.elevatorCount && <span>승강기 {complex.elevatorCount}대</span>}
-          {complex.landArea && <span>대지면적 {Number(complex.landArea).toLocaleString()}㎡</span>}
-          {complex.totalFloorArea && <span>연면적 {Number(complex.totalFloorArea).toLocaleString()}㎡</span>}
-        </div>
       </div>
 
-      {/* 핵심 지표 카드 - Row 1 */}
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 mb-3">
         <StatCard label="최근 거래가" value={formatPrice(latestPrice)} />
         <StatCard label="역대 최고가" value={formatPrice(maxPrice)} />
@@ -365,15 +328,12 @@ export default async function AptDetailPage({
         />
       </div>
 
-      {/* 면적 선택 + 가격 추이 차트 + 거래 이력 (통합 상태 관리) */}
       <AptDetailClient saleTxns={txns} rentTxns={rentTxns} />
 
       <AdSlot slotId="apt-detail-infeed" format="infeed" className="mt-6" />
 
       <div className="mt-6 grid gap-8 lg:grid-cols-3">
-        {/* 우측 사이드바 */}
         <aside className="space-y-6 lg:col-start-3">
-          {/* 면적별 시세 */}
           <div className="rounded-2xl border p-5" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
             <h2 className="mb-4 font-bold t-text">면적별 시세</h2>
             <div className="space-y-4">
@@ -404,26 +364,19 @@ export default async function AptDetailPage({
             </div>
           </div>
 
-          {/* 미니 대출 계산기 */}
           <MiniLoanCalculator defaultPrice={latestPrice > 0 ? latestPrice : 30000} />
-
           <CoupangBanner category="interior" title="새 집 인테리어 추천" className="hidden lg:block" />
-
-          <AdSlot slotId="apt-sidebar-rect" format="rectangle" className="hidden lg:block" />
         </aside>
       </div>
 
-      {/* 관련 뉴스 */}
       <div className="mt-8">
         <AptNews aptName={complex.aptName} regionName={complex.regionName} />
       </div>
 
-      {/* 댓글 */}
       <div className="mt-8">
         <Comments aptSlug={govtComplexId} />
       </div>
 
-      {/* 같은 동네 다른 단지 */}
       {nearbyComplexes.length > 0 && (
         <div className="mt-12">
           <h2 className="mb-4 text-lg font-bold t-text">같은 동네 다른 단지</h2>
@@ -438,13 +391,7 @@ export default async function AptDetailPage({
                 <p className="font-bold t-text text-sm truncate">{nc.apt_name}</p>
                 <p className="mt-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
                   {nc.dong_name ?? nc.region_name}
-                  {nc.built_year ? ` · ${nc.built_year}년` : ""}
                 </p>
-                {nc.total_units && (
-                  <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                    {nc.total_units}세대
-                  </p>
-                )}
               </Link>
             ))}
           </div>

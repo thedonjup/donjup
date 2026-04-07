@@ -19,3 +19,12 @@
   - added mid-page bridge CTA (search + calculator)
   - report cards now link to apartment detail when IDs/slugs are available
   - added explicit detail CTA in report cards
+- 2026-04-08 00:18 KST — moving to retention MVP inspection
+  - inspecting FavoriteButton, profile page, and saved-state data flow
+- 2026-04-08 00:46 KST — resumed with implementation intent
+  - next concrete task: add recent-viewed complexes and expose them in profile
+- 2026-04-08 00:49 KST — retention MVP implemented (first pass)
+  - recent viewed complexes localStorage helper added
+  - apartment detail view now stores recent viewed item
+  - favorite add/remove now tracked
+  - profile page now shows recent viewed complexes section
