@@ -2,71 +2,41 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
+import { formatPrice, formatSizeWithPyeong, formatRegion } from "@/lib/format";
 import { aptUrl } from "@/lib/apt-url";
-import { PROPERTY_TYPE_LABELS } from "@/components/PropertyTypeFilter";
+import { PROPERTY_TYPES } from "@/lib/constants/property-types";
 import { shareViaKakao } from "@/lib/kakao-share";
-import { DROP_LEVEL_CONFIG } from "@/lib/constants/drop-level";
+import { trackCtaClick } from "@/lib/analytics/events";
 
 export interface Transaction {
   id: string;
   region_code: string;
-  region_name: string;
+  region_name?: string;
   apt_name: string;
   size_sqm: number;
-  floor?: number | null;          // RANK-03: for low-floor badge
-  deal_type?: string | null;      // Available from cache, not used in rendering but keeps interface aligned
+  floor: number;
   trade_price: number;
+  trade_date: string;
   highest_price: number | null;
   change_rate: number | null;
-  trade_date: string;
-  is_new_high?: boolean;
-  drop_level?: "normal" | "decline" | "crash" | "severe";
-  property_type?: number;
-  complex_slug?: string | null;
-  govt_complex_id?: string | null;
+  is_new_high: boolean;
+  is_significant_drop: boolean;
+  deal_type: string | null;
+  drop_level?: string | null;
+  property_type: number;
+  complex_slug: string | null;
+  govt_complex_id: string | null;
 }
 
-type TabKey = "drops" | "highs" | "volume" | "recent";
-
-interface TabDef {
-  key: TabKey;
-  label: string;
-  color: string;
-  activeColor: string;
-  badgeClass: string;
+interface RankingTabsProps {
+  drops: Transaction[];
+  highs: Transaction[];
+  volume: Transaction[];
+  recent: Transaction[];
+  showTypeBadge?: boolean;
 }
 
-const TABS: TabDef[] = [
-  {
-    key: "drops",
-    label: "폭락 TOP",
-    color: "text-drop",
-    activeColor: "bg-drop text-white",
-    badgeClass: "rank-badge-drop",
-  },
-  {
-    key: "highs",
-    label: "신고가 TOP",
-    color: "text-rise",
-    activeColor: "bg-rise text-white",
-    badgeClass: "rank-badge-rise",
-  },
-  {
-    key: "volume",
-    label: "거래량 TOP",
-    color: "text-gold-500",
-    activeColor: "bg-gold-500 text-white",
-    badgeClass: "rank-badge-gold",
-  },
-  {
-    key: "recent",
-    label: "최근 거래",
-    color: "text-blue-500",
-    activeColor: "bg-blue-500 text-white",
-    badgeClass: "rank-badge-drop",
-  },
-];
+type TabType = "drops" | "highs" | "volume" | "recent";
 
 export default function RankingTabs({
   drops,
@@ -74,227 +44,141 @@ export default function RankingTabs({
   volume,
   recent,
   showTypeBadge = false,
-}: {
-  drops: Transaction[];
-  highs: Transaction[];
-  volume: Transaction[];
-  recent: Transaction[];
-  showTypeBadge?: boolean;
-}) {
-  const [activeTab, setActiveTab] = useState<TabKey>("drops");
-  const tabRefs = useRef<Record<TabKey, HTMLButtonElement | null>>({
-    drops: null,
-    highs: null,
-    volume: null,
-    recent: null,
-  });
+}: RankingTabsProps) {
+  const [activeTab, setActiveTab] = useState<TabType>("drops");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleTabKeyDown = useCallback(
-    (e: React.KeyboardEvent, currentKey: TabKey) => {
-      const keys = TABS.map((t) => t.key);
-      const idx = keys.indexOf(currentKey);
-      let nextIdx = idx;
-      if (e.key === "ArrowRight") {
-        nextIdx = (idx + 1) % keys.length;
-      } else if (e.key === "ArrowLeft") {
-        nextIdx = (idx - 1 + keys.length) % keys.length;
-      } else if (e.key === "Home") {
-        nextIdx = 0;
-      } else if (e.key === "End") {
-        nextIdx = keys.length - 1;
-      } else {
-        return;
-      }
-      e.preventDefault();
-      const nextKey = keys[nextIdx];
-      setActiveTab(nextKey);
-      tabRefs.current[nextKey]?.focus();
-    },
-    []
-  );
+  const tabs: { id: TabType; label: string; icon: string }[] = [
+    { id: "drops", label: "오늘의 폭락", icon: "📉" },
+    { id: "highs", label: "오늘의 신고가", icon: "✨" },
+    { id: "recent", label: "최신 거래", icon: "🕒" },
+    { id: "volume", label: "많이 본 단지", icon: "🔥" },
+  ];
 
-  const dataMap: Record<TabKey, Transaction[]> = {
-    drops,
-    highs,
-    volume,
-    recent,
-  };
-
-  const currentTab = TABS.find((t) => t.key === activeTab)!;
-  const items = dataMap[activeTab];
+  const currentData = activeTab === "drops" ? drops : activeTab === "highs" ? highs : activeTab === "volume" ? volume : recent;
 
   return (
-    <div>
-      {/* Tab Navigation */}
-      <div
-        className="flex gap-1 rounded-xl tab-container-bg p-1"
-        role="tablist"
-        aria-label="거래 랭킹"
-      >
-        {TABS.map((tab) => (
+    <div className="flex flex-col">
+      {/* Tab Header */}
+      <div className="flex space-x-1 rounded-xl bg-slate-100 p-1 mb-6 dark:bg-slate-800/50">
+        {tabs.map((tab) => (
           <button
-            key={tab.key}
-            ref={(el) => { tabRefs.current[tab.key] = el; }}
-            role="tab"
-            id={`tab-${tab.key}`}
-            aria-selected={activeTab === tab.key}
-            aria-controls={`tabpanel-${tab.key}`}
-            tabIndex={activeTab === tab.key ? 0 : -1}
-            onClick={() => setActiveTab(tab.key)}
-            onKeyDown={(e) => handleTabKeyDown(e, tab.key)}
-            className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-bold transition-all ${
-              activeTab === tab.key
-                ? tab.activeColor + " shadow-sm"
-                : "t-text-secondary hover:t-text"
+            key={tab.id}
+            onClick={() => {
+              setActiveTab(tab.id);
+              trackCtaClick("home_ranking_tab_change", { tab: tab.id });
+            }}
+            className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold transition ${
+              activeTab === tab.id
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
             }`}
           >
-            {tab.label}
+            <span>{tab.icon}</span>
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">{tab.label.replace("오늘의 ", "")}</span>
           </button>
         ))}
       </div>
 
-      {/* Items List */}
-      <div
-        role="tabpanel"
-        id={`tabpanel-${activeTab}`}
-        aria-labelledby={`tab-${activeTab}`}
-        className="mt-4 space-y-2"
-      >
-        {items.length > 0 ? (
-          items.map((t, i) => {
-            const isDrop = activeTab === "drops";
-            const isHigh = activeTab === "highs";
+      {/* Tab Content */}
+      <div className="space-y-3" ref={scrollRef}>
+        {currentData.length > 0 ? (
+          currentData.map((t, i) => {
+            const isDrop = activeTab === "drops" || (t.change_rate !== null && t.change_rate < 0);
+            const isHigh = activeTab === "highs" || t.is_new_high;
 
             return (
-              <Link
-                key={t.id}
-                href={aptUrl({ govtComplexId: t.govt_complex_id ?? null, regionCode: t.region_code, slug: t.complex_slug ?? '' })}
-                className="block"
+              <div
+                key={`${t.id}-${activeTab}-${i}`}
+                className="group relative flex items-center gap-4 rounded-2xl border t-border bg-white p-4 transition hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/50"
               >
-                <div className="card-hover flex items-center gap-3 rounded-xl border t-border px-4 py-3.5 t-card">
-                  {/* Rank */}
-                  <div className={`rank-badge ${currentTab.badgeClass}`}>
-                    {i + 1}
-                  </div>
-
-                  {/* Info */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-semibold t-text">
-                        {t.apt_name}
-                      </p>
-                      {showTypeBadge && t.property_type != null && PROPERTY_TYPE_LABELS[t.property_type] && (
-                        <span className="flex-shrink-0 rounded-full brand-tint-bg px-1.5 py-0.5 text-[10px] font-semibold text-brand-600">
-                          {PROPERTY_TYPE_LABELS[t.property_type]}
-                        </span>
-                      )}
-                      <span className="flex-shrink-0 rounded t-elevated px-1.5 py-0.5 text-[11px] font-medium t-text-tertiary">
-                        {formatSizeWithPyeong(t.size_sqm)}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`rank-badge ${isDrop ? "rank-badge-drop" : isHigh ? "rank-badge-rise" : "rank-badge-normal"}`}>
+                      {i + 1}
+                    </span>
+                    <Link
+                      href={aptUrl({ govtComplexId: t.govt_complex_id, regionCode: t.region_code, slug: t.complex_slug ?? '' })}
+                      onClick={() =>
+                        trackCtaClick("home_ranking_to_detail", {
+                          tab: activeTab,
+                          rank: i + 1,
+                          region_code: t.region_code,
+                        })
+                      }
+                      className="text-sm font-bold t-text truncate group-hover:text-brand-600 transition"
+                    >
+                      {t.apt_name}
+                    </Link>
+                    {showTypeBadge && t.property_type !== PROPERTY_TYPES.APT && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 dark:bg-slate-800">
+                        {t.property_type === PROPERTY_TYPES.VILLA ? "빌라" : "오피"}
                       </span>
-                    </div>
-                    <p className="mt-0.5 text-xs t-text-tertiary">
-                      {t.region_name} · {t.trade_date}
-                    </p>
-                  </div>
-
-                  {/* Price & Change */}
-                  <div className="flex-shrink-0 text-right">
-                    <div className="flex items-center gap-2">
-                      {t.highest_price != null && isDrop && (
-                        <span className="text-xs t-text-tertiary line-through">
-                          {formatPrice(t.highest_price)}
-                        </span>
-                      )}
-                      <span className="font-bold tabular-nums t-text">
-                        {formatPrice(t.trade_price)}
-                      </span>
-                    </div>
-                    {t.change_rate !== null && (isDrop || isHigh) && (
-                      <div className="mt-0.5 flex items-center gap-1.5 justify-end">
-                        <span
-                          className={`inline-block text-xs font-bold tabular-nums ${
-                            isDrop ? "t-drop" : "t-rise"
-                          }`}
-                        >
-                          {isDrop ? "▼" : "▲"} {Math.abs(t.change_rate)}%
-                        </span>
-                        {isDrop && t.drop_level && DROP_LEVEL_CONFIG[t.drop_level] && (
-                          <span
-                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-                            style={{
-                              backgroundColor: DROP_LEVEL_CONFIG[t.drop_level].bg,
-                              color: DROP_LEVEL_CONFIG[t.drop_level].color,
-                            }}
-                          >
-                            {DROP_LEVEL_CONFIG[t.drop_level].label}
-                          </span>
-                        )}
-                        {t.floor != null && t.floor > 0 && t.floor <= 3 && (
-                          <span
-                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-                            style={{
-                              backgroundColor: "var(--color-surface-elevated)",
-                              color: "var(--color-text-tertiary)",
-                            }}
-                          >
-                            저층
-                          </span>
-                        )}
-                      </div>
                     )}
                   </div>
-
-                  {/* Share button */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const dropLabel = isDrop && t.change_rate !== null
-                        ? `${t.apt_name} ${Math.abs(t.change_rate)}% 폭락!`
-                        : isHigh
-                          ? `${t.apt_name} 신고가 ${formatPrice(t.trade_price)} 경신!`
-                          : `${t.apt_name} ${formatPrice(t.trade_price)}`;
-                      const desc = isDrop && t.highest_price != null && t.change_rate !== null
-                        ? `최고가 ${formatPrice(t.highest_price)} → 현재 ${formatPrice(t.trade_price)} | 돈줍에서 확인`
-                        : `${t.region_name} · ${formatPrice(t.trade_price)} | 돈줍에서 확인`;
-                      shareViaKakao({
-                        title: dropLabel,
-                        description: desc,
-                        url: `https://donjup.com${aptUrl({ govtComplexId: t.govt_complex_id ?? null, regionCode: t.region_code, slug: t.complex_slug ?? '' })}`,
-                      });
-                    }}
-                    className="flex-shrink-0 rounded-lg p-1.5 transition hover:bg-[var(--color-surface-elevated)]"
-                    style={{ color: "var(--color-text-tertiary)" }}
-                    aria-label="카카오톡 공유"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-                      <polyline points="16 6 12 2 8 6" />
-                      <line x1="12" y1="2" x2="12" y2="15" />
-                    </svg>
-                  </button>
+                  <p className="mt-0.5 text-xs t-text-tertiary">
+                    {formatRegion(t.region_code)} · {t.trade_date}
+                  </p>
                 </div>
-              </Link>
+
+                <div className="text-right flex flex-col items-end">
+                  <p className="text-sm font-black tabular-nums t-text">
+                    {formatPrice(t.trade_price)}
+                  </p>
+                  {t.change_rate !== null && (
+                    <p className={`mt-0.5 text-[11px] font-bold tabular-nums ${t.change_rate < 0 ? "text-red-500" : "text-emerald-500"}`}>
+                      {t.change_rate > 0 ? "▲" : "▼"} {Math.abs(t.change_rate)}%
+                    </p>
+                  )}
+                  {t.is_new_high && activeTab !== "highs" && (
+                    <span className="mt-0.5 text-[10px] font-bold text-emerald-500">신고가</span>
+                  )}
+                </div>
+
+                {/* Quick Share Button */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const desc = isDrop && t.highest_price != null && t.change_rate !== null
+                      ? `최고가 ${formatPrice(t.highest_price)} → 현재 ${formatPrice(t.trade_price)} | 돈줍 확인`
+                      : `${formatRegion(t.region_code)} · ${formatPrice(t.trade_price)} | 돈줍 확인`;
+                    shareViaKakao({
+                      title: t.apt_name,
+                      description: desc,
+                      url: aptUrl({ govtComplexId: t.govt_complex_id, regionCode: t.region_code, slug: t.complex_slug ?? '' }),
+                    });
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition p-2 hover:bg-brand-50 rounded-lg text-brand-600"
+                  aria-label="공유하기"
+                >
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </button>
+              </div>
             );
           })
         ) : (
-          <div className="rounded-2xl border-2 border-dashed t-border p-10 text-center">
-            <p className="text-sm t-text-secondary">데이터 수집 중입니다</p>
-            <p className="mt-1 text-xs t-text-tertiary">
-              매일 밤 자동으로 업데이트됩니다
-            </p>
+          <div className="py-20 text-center rounded-2xl border-2 border-dashed t-border">
+            <p className="text-sm t-text-tertiary">데이터가 없습니다</p>
           </div>
         )}
       </div>
 
-      {/* More Link */}
-      <Link
-        href="/market"
-        className="mt-4 flex items-center justify-center gap-2 rounded-xl border t-border py-3 text-sm font-semibold t-text-secondary transition hover:bg-[var(--color-surface-elevated)] t-card"
-      >
-        전국 시/도별 시세 보기
-        <span className="t-text-tertiary">&rarr;</span>
-      </Link>
+      {/* Link to all */}
+      <div className="mt-6">
+        <Link
+          href={activeTab === "drops" ? "/today" : activeTab === "highs" ? "/new-highs" : "/map"}
+          onClick={() => trackCtaClick("home_ranking_more", { tab: activeTab })}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border t-border py-3 text-sm font-semibold t-text-secondary transition hover:bg-slate-50 dark:hover:bg-slate-800"
+        >
+          더 많은 데이터 보기
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      </div>
     </div>
   );
 }

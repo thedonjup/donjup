@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
 import ShareButtons from "@/components/ShareButtons";
+import { aptUrl } from "@/lib/apt-url";
 import { formatPrice, RATE_LABELS } from "@/lib/format";
 import type { DailyReport } from "@/types/db";
 
@@ -14,12 +15,15 @@ export const revalidate = 0;
 interface ReportTransaction {
   id: string;
   region_name: string;
+  region_code?: string | null;
   apt_name: string;
   size_sqm: number;
   trade_price: number;
   highest_price: number | null;
   change_rate: number | null;
   trade_date: string;
+  govt_complex_id?: string | null;
+  complex_slug?: string | null;
 }
 
 interface ReportRate {
@@ -147,6 +151,23 @@ export default async function DailyReportPage({
 
           <AdSlot slotId="daily-mid-infeed" format="infeed" />
 
+          <div className="rounded-2xl border-2 border-brand-100 bg-gradient-to-r from-brand-50/40 to-transparent p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-brand-900">오늘 리포트에서 본 단지, 바로 더 파고들기</p>
+                <p className="mt-1 text-xs text-brand-700">상세 페이지에서 거래 추이, 전세가율, 대출 계산까지 이어서 볼 수 있습니다.</p>
+              </div>
+              <div className="flex gap-2">
+                <Link href="/search" className="rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50">
+                  단지 검색하기
+                </Link>
+                <Link href="/rate/calculator" className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700">
+                  대출 계산기 보기
+                </Link>
+              </div>
+            </div>
+          </div>
+
           {/* 신고가 */}
           <section>
             <div className="flex items-center gap-2 mb-4">
@@ -253,6 +274,12 @@ function TxnCard({
   type: "drop" | "high";
 }) {
   const isDrop = type === "drop";
+  const detailHref = aptUrl({
+    govtComplexId: txn.govt_complex_id ?? undefined,
+    regionCode: txn.region_code ?? undefined,
+    slug: txn.complex_slug ?? undefined,
+  });
+
   return (
     <div className="card-hover flex items-center gap-3 rounded-xl border t-border bg-[var(--color-surface-card)] px-4 py-3.5">
       <div className={`rank-badge ${isDrop ? "rank-badge-drop" : "rank-badge-rise"}`}>
@@ -260,7 +287,9 @@ function TxnCard({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="truncate font-semibold t-text">{txn.apt_name}</p>
+          <Link href={detailHref} className="truncate font-semibold t-text hover:text-brand-600">
+            {txn.apt_name}
+          </Link>
           <span className="flex-shrink-0 text-xs t-text-tertiary">{txn.size_sqm}㎡</span>
         </div>
         <p className="mt-0.5 text-xs t-text-tertiary">
@@ -287,6 +316,11 @@ function TxnCard({
             {isDrop ? "▼" : "▲"} {Math.abs(txn.change_rate)}%
           </span>
         )}
+        <div>
+          <Link href={detailHref} className="mt-1 inline-block text-[11px] font-semibold text-brand-600 hover:text-brand-700">
+            상세 보기 →
+          </Link>
+        </div>
       </div>
     </div>
   );

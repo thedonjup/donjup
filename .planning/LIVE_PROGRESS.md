@@ -1,0 +1,21 @@
+# LIVE_PROGRESS
+
+- 2026-04-08 00:00 KST — live progress tracking started
+- v1.4 planning docs created and linked into planning state
+- Phase 26 calculator/CPA funnel docs added
+- Conversion funnel code updated:
+  - MiniLoanCalculator → full calculator CTA strengthened
+  - principal query handoff added
+  - calculator context banner added
+  - CTA click tracking helper added
+- Next focus: Phase 27 home/daily funnel optimization
+- 2026-04-08 00:10 KST — resumed work
+- Inspecting home ranking cards and daily report funnels for stronger internal navigation
+- 2026-04-08 00:12 KST — home ranking interactions strengthened
+  - ranking tab change tracked
+  - ranking detail click tracked
+  - more-data CTA tracked
+- 2026-04-08 00:14 KST — daily report funnel strengthened
+  - added mid-page bridge CTA (search + calculator)
+  - report cards now link to apartment detail when IDs/slugs are available
+  - added explicit detail CTA in report cards
