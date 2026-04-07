@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { trackCtaClick } from "@/lib/analytics/events";
 
 interface MiniLoanCalculatorProps {
   defaultPrice: number; // 만원 단위
@@ -112,14 +113,27 @@ export default function MiniLoanCalculator({ defaultPrice }: MiniLoanCalculatorP
         <p className="mt-1 text-lg font-extrabold tabular-nums text-brand-600">
           {monthlyPayment > 0 ? formatWon(monthlyPayment) : "-"}
         </p>
+        <p className="mt-1 text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+          이 단지 가격 기준으로 대략적인 월 부담을 빠르게 보는 용도입니다.
+        </p>
       </div>
 
       <Link
-        href="/rate/calculator"
-        className="mt-3 block text-center text-xs font-medium text-brand-600 hover:text-brand-700 transition"
+        href={`/rate/calculator?tab=loan&principal=${loanAmount.toLocaleString()}`}
+        onClick={() =>
+          trackCtaClick("apt_mini_calculator_to_full", {
+            principal_manwon: loanAmount,
+            rate,
+            years,
+          })
+        }
+        className="mt-3 block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-brand-700"
       >
-        상세 계산기 &rarr;
+        이 아파트 기준 상세 계산하기 &rarr;
       </Link>
+      <p className="mt-2 text-center text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+        금리 시나리오, 상환 방식 비교, 제휴 대출 비교까지 이어서 볼 수 있어요.
+      </p>
     </div>
   );
 }

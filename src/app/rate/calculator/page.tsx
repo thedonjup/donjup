@@ -6,6 +6,7 @@ import { TabId, TABS } from "./lib/calc-utils";
 import { LoanCalculatorTab } from "./components/LoanCalculatorTab";
 import { DsrCalculatorTab } from "./components/DsrCalculatorTab";
 import { JeonseConversionTab } from "./components/JeonseConversionTab";
+import { trackCtaClick } from "@/lib/analytics/events";
 
 export default function CalculatorPage() {
   return (
@@ -18,6 +19,7 @@ export default function CalculatorPage() {
 function CalculatorContent() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as TabId) || "loan";
+  const principalPreset = searchParams.get("principal") || "";
   const [activeTab, setActiveTab] = useState<TabId>(
     ["loan", "dsr", "jeonse"].includes(initialTab) ? initialTab : "loan"
   );
@@ -38,13 +40,26 @@ function CalculatorContent() {
       <p className="text-sm t-text-secondary">
         대출 이자, DSR, 전세-월세 전환을 한곳에서 계산하세요.
       </p>
+      {principalPreset && activeTab === "loan" && (
+        <div className="mt-4 rounded-2xl border border-brand-200 bg-brand-50/40 p-4">
+          <p className="text-sm font-bold text-brand-800">
+            단지 상세에서 가져온 금액으로 계산 중
+          </p>
+          <p className="mt-1 text-xs text-brand-700">
+            대출 원금이 {principalPreset}만원으로 미리 입력될 수 있도록 연결된 흐름입니다.
+          </p>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="mt-6 flex gap-1 rounded-xl bg-surface-100 p-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              trackCtaClick("calculator_tab_change", { tab: tab.id });
+            }}
             className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
               activeTab === tab.id
                 ? "bg-[var(--color-surface-card)] text-brand-700 shadow-sm"

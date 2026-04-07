@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { formatKrw } from "@/lib/format";
 import CoupangBanner from "@/components/CoupangBanner";
 import { trackCalculate } from "@/lib/analytics/events";
@@ -16,6 +17,7 @@ import { RateScenarioSlider } from "./RateScenarioSlider";
 import { CpaBanner } from "./CpaBanner";
 
 export function LoanCalculatorTab() {
+  const searchParams = useSearchParams();
   const [principal, setPrincipal] = useState("");
   const [rate, setRate] = useState("3.5");
   const [years, setYears] = useState("30");
@@ -25,13 +27,18 @@ export function LoanCalculatorTab() {
   const [bankMinRate, setBankMinRate] = useState<number | null>(null);
 
   useEffect(() => {
+    const preset = searchParams.get("principal");
+    if (preset && /^\d[\d,]*$/.test(preset)) {
+      setPrincipal(preset);
+    }
+
     fetch("/api/bank-rates")
       .then((res) => res.json())
       .then((data) => {
         if (data.minRate) setBankMinRate(data.minRate);
       })
       .catch(() => {});
-  }, []);
+  }, [searchParams]);
 
   const handleCalculate = async () => {
     const principalNum = parseManwon(principal);

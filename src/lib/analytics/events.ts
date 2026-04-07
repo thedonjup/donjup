@@ -54,3 +54,11 @@ export function trackViewDetail(contentType: string, contentId: string) {
     content_id: contentId,
   });
 }
+
+/** CTA 클릭 이벤트 */
+export function trackCtaClick(ctaName: string, params?: Record<string, string | number | boolean | undefined>) {
+  trackEvent("cta_click", {
+    cta_name: ctaName,
+    ...params,
+  });
+}
