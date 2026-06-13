@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { captureUtm, getStoredUtm } from "@/lib/analytics/utm";
+import { shouldSendClientPageview } from "@/lib/analytics/pageview-client-dedupe";
 
 /**
  * UTM 파라미터를 캡처하고, 페이지뷰에 UTM 데이터를 포함하여 전송하는 클라이언트 컴포넌트.
@@ -15,6 +16,14 @@ export default function UTMTracker() {
     // 2. 페이지뷰에 UTM 데이터 포함하여 전송
     const utm = getStoredUtm();
     const pagePath = window.location.pathname;
+    if (
+      !shouldSendClientPageview({
+        storage: window.sessionStorage,
+        pagePath,
+      })
+    ) {
+      return;
+    }
 
     fetch("/api/analytics/pageview", {
       method: "POST",

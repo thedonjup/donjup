@@ -1,55 +1,32 @@
 import { NextResponse } from "next/server";
+import { verifyAdminAuth } from "@/lib/api/admin-auth";
+import { listAdminUsers } from "@/lib/admin-users-list";
+import { parseAdminUsersQuery } from "@/lib/admin-users-query";
 import { getAdminAuth } from "@/lib/firebase/admin";
-import { isAdmin } from "@/lib/admin/auth";
 import { logger } from "@/lib/logger";
+import { serviceUnavailableResponse } from "@/lib/api/safe-error-response";
 
 export async function GET(request: Request) {
-  // --- Auth: verify caller is admin ---
-  const authHeader = request.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
+  const authError = await verifyAdminAuth(request);
+  if (authError) return authError;
+
+  const query = parseAdminUsersQuery(new URL(request.url).searchParams);
+  if (!query) {
+    return NextResponse.json({ error: "Invalid users query" }, { status: 400 });
+  }
 
   const adminAuth = getAdminAuth();
-
   if (!adminAuth) {
-    return NextResponse.json(
-      { error: "Firebase Admin SDK not configured" },
-      { status: 503 },
-    );
-  }
-
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return serviceUnavailableResponse();
   }
 
   try {
-    const decoded = await adminAuth.verifyIdToken(token);
-    if (!isAdmin(decoded.email ?? null)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-  } catch {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  // --- Fetch users ---
-  try {
-    const listResult = await adminAuth.listUsers(1000);
-    const users = listResult.users.map((u) => ({
-      uid: u.uid,
-      email: u.email ?? null,
-      displayName: u.displayName ?? null,
-      photoURL: u.photoURL ?? null,
-      lastSignInTime: u.metadata.lastSignInTime ?? null,
-      creationTime: u.metadata.creationTime ?? null,
-    }));
-
-    return NextResponse.json({ users, total: users.length });
+    return NextResponse.json(await listAdminUsers(adminAuth, query));
   } catch (e) {
     logger.error("Failed to list users", { error: e, route: "/api/admin/users" });
     return NextResponse.json(
       { error: "Failed to list users" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

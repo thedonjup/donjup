@@ -10,6 +10,8 @@
  * TODO: 실제 API 응답 형식에 따라 파싱 로직 검증 필요
  */
 
+import { logger } from "@/lib/logger";
+
 const API_BASE = "https://www.reb.or.kr/r-one/openapi";
 
 /** 17개 시/도 목록 */
@@ -80,7 +82,11 @@ async function fetchRebIndex(
     const text = await res.text();
     return parseXmlItems(text);
   } catch (error) {
-    console.error(`한국부동산원 API 요청 중 오류 (${endpoint}, ${sido}):`, error);
+    logger.error("REB API request failed", {
+      error,
+      endpoint,
+      sido,
+    });
     return [];
   }
 }
@@ -128,7 +134,10 @@ export async function fetchAptTradeIndex(
     const rows = await fetchRebIndex("getSidoAptTradeIndex", sido, startDate, endDate);
     return rowsToItems(rows, "apt_trade", sido);
   } catch (error) {
-    console.error(`매매가격지수 조회 실패 (${sido}):`, error);
+    logger.error("REB trade index fetch failed", {
+      error,
+      sido,
+    });
     return [];
   }
 }
@@ -145,7 +154,10 @@ export async function fetchAptJeonseIndex(
     const rows = await fetchRebIndex("getSidoAptJeonseIndex", sido, startDate, endDate);
     return rowsToItems(rows, "apt_jeonse", sido);
   } catch (error) {
-    console.error(`전세가격지수 조회 실패 (${sido}):`, error);
+    logger.error("REB jeonse index fetch failed", {
+      error,
+      sido,
+    });
     return [];
   }
 }
@@ -196,7 +208,10 @@ export async function fetchAllIndices(
       if (trade.status === "fulfilled") results.push(...trade.value);
       if (jeonse.status === "fulfilled") results.push(...jeonse.value);
     } catch (e) {
-      console.error(`${sido} 데이터 수집 실패:`, e);
+      logger.error("REB region index collection failed", {
+        error: e,
+        sido,
+      });
     }
 
     // API 호출 간 딜레이 (과부하 방지)

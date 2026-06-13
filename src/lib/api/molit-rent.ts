@@ -8,6 +8,8 @@
  *   contractType, contractTerm, preDeposit, preMonthlyRent 등
  */
 
+import { logger } from "@/lib/logger";
+
 interface MolitRentRawItem {
   aptNm: string;
   excluUseAr: string;
@@ -157,7 +159,10 @@ function parseXmlResponse(
         },
       });
     } catch (e) {
-      console.error("전월세 데이터 파싱 오류:", e);
+      logger.warn("MOLIT rent item parse failed", {
+        error: e,
+        regionCode,
+      });
     }
   }
 

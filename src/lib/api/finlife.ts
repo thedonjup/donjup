@@ -6,6 +6,8 @@
  * - mortgageLoanProductsSearch.json: 주택담보대출 상품 조회
  */
 
+import { logger } from "@/lib/logger";
+
 const API_BASE = "https://finlife.fss.or.kr/finlifeapi";
 
 /** 금융회사 구분 코드 */
@@ -21,8 +23,9 @@ export interface MortgageProduct {
 }
 
 interface FinLifeOptionRow {
-  kor_co_nm: string;
-  fin_prdt_nm: string;
+  kor_co_nm?: string;
+  fin_prdt_nm?: string;
+  fin_prdt_cd?: string;
   lend_rate_type_nm: string;
   lend_rate_min: number | null;
   lend_rate_max: number | null;
@@ -99,10 +102,14 @@ export async function fetchMortgageLoanProducts(
     const products: MortgageProduct[] = [];
     for (const opt of data.result.optionList ?? []) {
       if (opt.lend_rate_min == null || opt.lend_rate_max == null) continue;
+      const base = opt.fin_prdt_cd ? baseMap.get(opt.fin_prdt_cd) : null;
+      const bankName = opt.kor_co_nm || base?.bankName;
+      const productName = opt.fin_prdt_nm || base?.productName;
+      if (!bankName || !productName) continue;
 
       products.push({
-        bankName: opt.kor_co_nm,
-        productName: opt.fin_prdt_nm,
+        bankName,
+        productName,
         rateType: opt.lend_rate_type_nm ?? "기타",
         rateMin: opt.lend_rate_min,
         rateMax: opt.lend_rate_max,
@@ -112,7 +119,10 @@ export async function fetchMortgageLoanProducts(
 
     return products;
   } catch (error) {
-    console.error("FinLife API 요청 중 오류:", error);
+    logger.error("FinLife API request failed", {
+      error,
+      pageNo,
+    });
     return [];
   }
 }
@@ -139,6 +149,9 @@ export async function fetchAllMortgageProducts(): Promise<MortgageProduct[]> {
  * 은행명 → rate_type 코드 매핑
  */
 export function bankNameToRateType(bankName: string): string {
+  const normalizedBankName = bankName?.trim();
+  if (!normalizedBankName) return "BANK_UNKNOWN";
+
   const map: Record<string, string> = {
     "KB국민은행": "BANK_KB",
     "국민은행": "BANK_KB",
@@ -165,13 +178,13 @@ export function bankNameToRateType(bankName: string): string {
   };
 
   // 정확히 매칭되면 반환
-  if (map[bankName]) return map[bankName];
+  if (map[normalizedBankName]) return map[normalizedBankName];
 
   // 부분 매칭 시도
   for (const [key, value] of Object.entries(map)) {
-    if (bankName.includes(key) || key.includes(bankName)) return value;
+    if (normalizedBankName.includes(key) || key.includes(normalizedBankName)) return value;
   }
 
   // 매칭 안 되면 은행명에서 코드 생성
-  return `BANK_${bankName.replace(/[^a-zA-Z가-힣]/g, "").toUpperCase()}`;
+  return `BANK_${normalizedBankName.replace(/[^a-zA-Z가-힣]/g, "").toUpperCase()}`;
 }

@@ -1,0 +1,9 @@
+[Unit]
+Description=DonJup DB maintenance
+Documentation=file:{{DOC_PATH}}
+
+[Service]
+Type=oneshot
+WorkingDirectory={{WORKDIR}}
+Environment="PATH={{PATH}}"
+ExecStart={{PNPM}} --silent db:maintenance

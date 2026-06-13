@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { trackRetention } from "@/lib/analytics/events";
 
 interface FavoriteButtonProps {
@@ -37,12 +37,9 @@ function setFavorites(items: FavoriteItem[]) {
 }
 
 export default function FavoriteButton({ govtComplexId, aptName, regionName }: FavoriteButtonProps) {
-  const [isFavorited, setIsFavorited] = useState(false);
-
-  useEffect(() => {
-    const favorites = getFavorites();
-    setIsFavorited(favorites.some((f) => f.govtComplexId === govtComplexId || f.slug === govtComplexId));
-  }, [govtComplexId]);
+  const [isFavorited, setIsFavorited] = useState(() =>
+    getFavorites().some((f) => f.govtComplexId === govtComplexId || f.slug === govtComplexId)
+  );
 
   function handleToggle() {
     const favorites = getFavorites();

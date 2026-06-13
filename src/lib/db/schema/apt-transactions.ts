@@ -5,7 +5,6 @@ import {
   numeric,
   boolean,
   timestamp,
-  jsonb,
 } from "drizzle-orm/pg-core";
 
 export const aptTransactions = pgTable("apt_transactions", {
@@ -25,7 +24,6 @@ export const aptTransactions = pgTable("apt_transactions", {
   dealType: text("deal_type"),
   dropLevel: text("drop_level").notNull().default("none"),
   propertyType: integer("property_type").notNull().default(1),
-  rawData: jsonb("raw_data"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

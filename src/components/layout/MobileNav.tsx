@@ -127,14 +127,16 @@ export default function MobileNav() {
         style={{
           position: "fixed",
           top: 0,
-          right: open ? 0 : "-288px",
+          right: 0,
           zIndex: 9991,
           height: "100vh",
           width: "288px",
           backgroundColor: bg,
           boxShadow: open ? "-10px 0 30px rgba(0,0,0,0.3)" : "none",
-          transition: "right 0.3s ease-in-out",
+          transform: open ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 0.3s ease-in-out",
           overflowY: "auto",
+          visibility: open ? "visible" : "hidden",
         }}
       >
         {/* Header */}

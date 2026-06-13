@@ -18,31 +18,33 @@ interface LoginModalProps {
 
 export default function LoginModal({ open, onClose }: LoginModalProps) {
   const { signInWithGoogle } = useAuth();
-  const [mounted, setMounted] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     if (!open) return;
-    setLoginError(null);
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
   }, [open]);
 
-  if (!open || !mounted) return null;
+  if (!open || typeof document === "undefined") return null;
+
+  const handleClose = () => {
+    setLoginError(null);
+    onClose();
+  };
 
   const handleGoogle = async () => {
     setLoginError(null);
     try {
       await signInWithGoogle();
-      onClose();
-    } catch (e: any) {
-      if (e?.code === "auth/popup-closed-by-user") return;
+      handleClose();
+    } catch (e: unknown) {
+      const code = typeof e === "object" && e !== null && "code" in e
+        ? (e as { code?: string }).code
+        : undefined;
+      if (code === "auth/popup-closed-by-user") return;
       setLoginError("로그인에 실패했습니다. 다시 시도해주세요.");
     }
   };
@@ -62,11 +64,11 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
         padding: "16px",
         WebkitOverflowScrolling: "touch",
       }}
-      onClick={onClose}
+      onClick={handleClose}
       onTouchEnd={(e) => {
         if (e.target === e.currentTarget) {
           e.preventDefault();
-          onClose();
+          handleClose();
         }
       }}
       role="dialog"
@@ -101,7 +103,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
       >
         {/* 닫기 */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           style={{
             position: "absolute",
             top: "12px",

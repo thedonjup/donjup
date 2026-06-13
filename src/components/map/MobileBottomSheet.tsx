@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatPrice } from "@/lib/format";
+import { mapEmptyStateCopy } from "@/lib/map-state";
 import FilterChip from "./FilterChip";
 import { MapTransaction, getMarkerColor } from "./map-utils";
 
@@ -11,6 +12,7 @@ interface MobileBottomSheetProps {
   filter: "all" | "drop" | "high";
   setFilter: (f: "all" | "drop" | "high") => void;
   onItemClick: (item: MapTransaction) => void;
+  dataUnavailable?: boolean;
 }
 
 export default function MobileBottomSheet({
@@ -18,8 +20,11 @@ export default function MobileBottomSheet({
   filter,
   setFilter,
   onItemClick,
+  dataUnavailable = false,
 }: MobileBottomSheetProps) {
   const [expanded, setExpanded] = useState(false);
+  const emptyState =
+    transactions.length === 0 ? mapEmptyStateCopy(dataUnavailable, filter) : null;
 
   return (
     <div
@@ -77,7 +82,18 @@ export default function MobileBottomSheet({
 
       {/* Scrollable list */}
       <div className="overflow-y-auto px-4" style={{ maxHeight: "calc(100% - 70px)" }}>
-        {transactions.map((item) => (
+        {emptyState ? (
+          <div
+            className="flex min-h-20 flex-col justify-center gap-1 py-3 text-center text-xs"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            <p className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>
+              {emptyState.title}
+            </p>
+            <p>{emptyState.description}</p>
+          </div>
+        ) : (
+          transactions.map((item) => (
           <button
             key={item.id}
             onClick={() => {
@@ -122,7 +138,8 @@ export default function MobileBottomSheet({
               </span>
             </div>
           </button>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

@@ -1,82 +1,25 @@
-import { db } from "@/lib/db";
-import { aptComplexes, aptTransactions } from "@/lib/db/schema";
-import { desc, asc, lte, gte, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatRegion } from "@/lib/format";
 import { aptUrl } from "@/lib/apt-url";
 import AdSlot from "@/components/ads/AdSlot";
 import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  THEME_IDS,
+  getCachedThemeResults,
+  getThemeDefinition,
+  type ThemeResult,
+} from "@/lib/theme-query";
 
 export const revalidate = 3600;
-
-// ---------- 테마 정의 ----------
-
-interface ThemeDef {
-  id: string;
-  title: string;
-  description: string;
-  metaTitle: string;
-  metaDescription: string;
-  icon: string;
-  color: string;
-  bgColor: string;
-}
-
-const THEMES: Record<string, ThemeDef> = {
-  reconstruction: {
-    id: "reconstruction",
-    title: "재건축 임박",
-    description: "준공 30년 이상, 재건축 가능성이 높은 단지",
-    metaTitle: "재건축 임박 아파트 - 준공 30년 이상 단지 모음",
-    metaDescription:
-      "준공 30년 이상으로 재건축 가능성이 높은 전국 아파트 단지 목록. 재건축 투자 참고 자료를 확인하세요.",
-    icon: "🏗️",
-    color: "text-amber-600",
-    bgColor: "theme-bg-amber",
-  },
-  "large-complex": {
-    id: "large-complex",
-    title: "대단지 (1,000세대+)",
-    description: "1,000세대 이상 대규모 단지",
-    metaTitle: "대단지 아파트 - 1,000세대 이상 대규모 단지",
-    metaDescription:
-      "전국 1,000세대 이상 대단지 아파트 목록. 대단지만의 인프라와 커뮤니티 장점을 비교해보세요.",
-    icon: "🏢",
-    color: "text-blue-600",
-    bgColor: "theme-bg-blue",
-  },
-  "new-build": {
-    id: "new-build",
-    title: "신축 (2020년 이후)",
-    description: "2020년 이후 준공된 신축 단지",
-    metaTitle: "신축 아파트 - 2020년 이후 준공 단지",
-    metaDescription:
-      "2020년 이후 준공된 전국 신축 아파트 단지 목록. 최신 설계와 시설을 갖춘 단지를 확인하세요.",
-    icon: "✨",
-    color: "text-emerald-600",
-    bgColor: "theme-bg-emerald",
-  },
-  "crash-deals": {
-    id: "crash-deals",
-    title: "폭락 매물",
-    description: "최고가 대비 20% 이상 하락한 거래",
-    metaTitle: "폭락 매물 - 최고가 대비 20% 이상 하락 거래",
-    metaDescription:
-      "역대 최고가 대비 20% 이상 하락한 전국 아파트 실거래 내역. 급매 타이밍을 확인하세요.",
-    icon: "📉",
-    color: "text-red-600",
-    bgColor: "theme-bg-red",
-  },
-};
-
-const VALID_SLUGS = Object.keys(THEMES);
+export const dynamic = "force-dynamic";
 
 // ---------- Static params ----------
 
 export function generateStaticParams() {
-  return VALID_SLUGS.map((slug) => ({ slug }));
+  return THEME_IDS.map((slug) => ({ slug }));
 }
 
 // ---------- Metadata ----------
@@ -87,7 +30,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const theme = THEMES[slug];
+  const theme = getThemeDefinition(slug);
   if (!theme) return {};
 
   return {
@@ -101,22 +44,6 @@ export async function generateMetadata({
   };
 }
 
-// ---------- Data types ----------
-
-interface ThemeResult {
-  id: string;
-  apt_name: string;
-  region_code: string;
-  region_name: string;
-  slug?: string;
-  govt_complex_id?: string | null;
-  built_year?: number | null;
-  total_units?: number | null;
-  trade_price?: number;
-  change_rate?: number | null;
-  trade_date?: string;
-}
-
 // ---------- Page ----------
 
 export default async function ThemeDetailPage({
@@ -124,87 +51,20 @@ export default async function ThemeDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
-  const theme = THEMES[slug];
+  const { slug: rawSlug } = await params;
+  const slug = decodeURIComponent(rawSlug);
+  const theme = getThemeDefinition(slug);
   if (!theme) notFound();
 
   let results: ThemeResult[] = [];
 
   try {
-    const currentYear = new Date().getFullYear();
-
-    if (slug === "reconstruction") {
-      const cutoffYear = currentYear - 30;
-      const data = await db.select({
-        id: aptComplexes.id,
-        apt_name: aptComplexes.aptName,
-        region_code: aptComplexes.regionCode,
-        region_name: aptComplexes.regionName,
-        slug: aptComplexes.slug,
-        govt_complex_id: aptComplexes.govtComplexId,
-        built_year: aptComplexes.builtYear,
-        total_units: aptComplexes.totalUnits,
-      }).from(aptComplexes)
-        .where(lte(aptComplexes.builtYear, cutoffYear))
-        .orderBy(asc(aptComplexes.builtYear))
-        .limit(50);
-      results = data as unknown as ThemeResult[];
-    } else if (slug === "large-complex") {
-      const data = await db.select({
-        id: aptComplexes.id,
-        apt_name: aptComplexes.aptName,
-        region_code: aptComplexes.regionCode,
-        region_name: aptComplexes.regionName,
-        slug: aptComplexes.slug,
-        govt_complex_id: aptComplexes.govtComplexId,
-        built_year: aptComplexes.builtYear,
-        total_units: aptComplexes.totalUnits,
-      }).from(aptComplexes)
-        .where(gte(aptComplexes.totalUnits, 1000))
-        .orderBy(desc(aptComplexes.totalUnits))
-        .limit(50);
-      results = data as unknown as ThemeResult[];
-    } else if (slug === "new-build") {
-      const data = await db.select({
-        id: aptComplexes.id,
-        apt_name: aptComplexes.aptName,
-        region_code: aptComplexes.regionCode,
-        region_name: aptComplexes.regionName,
-        slug: aptComplexes.slug,
-        govt_complex_id: aptComplexes.govtComplexId,
-        built_year: aptComplexes.builtYear,
-        total_units: aptComplexes.totalUnits,
-      }).from(aptComplexes)
-        .where(gte(aptComplexes.builtYear, 2020))
-        .orderBy(desc(aptComplexes.builtYear))
-        .limit(50);
-      results = data as unknown as ThemeResult[];
-    } else if (slug === "crash-deals") {
-      const data = await db.select({
-        id: aptTransactions.id,
-        apt_name: aptTransactions.aptName,
-        region_code: aptTransactions.regionCode,
-        region_name: aptTransactions.regionName,
-        trade_price: aptTransactions.tradePrice,
-        change_rate: aptTransactions.changeRate,
-        trade_date: aptTransactions.tradeDate,
-        complex_slug: aptComplexes.slug,
-        govt_complex_id: aptComplexes.govtComplexId,
-      }).from(aptTransactions)
-        .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
-        .where(lte(aptTransactions.changeRate, "-20"))
-        .orderBy(asc(aptTransactions.changeRate))
-        .limit(50);
-      results = data.map((r) => ({
-        ...r,
-        trade_price: Number(r.trade_price),
-        change_rate: r.change_rate !== null ? Number(r.change_rate) : null,
-        slug: r.complex_slug ?? undefined,
-        govt_complex_id: r.govt_complex_id ?? null,
-      }));
-    }
+    results = await getCachedThemeResults(theme.id, 50);
   } catch (e) {
-    console.error("[ThemeDetail] query failed:", e);
+    logDatabaseFailure("Theme detail query failed", e, {
+      route: "/themes/[slug]",
+      slug,
+    });
   }
 
   return (
@@ -220,7 +80,7 @@ export default async function ThemeDetailPage({
         <ItemListJsonLd
           name={`${theme.title} 아파트 목록`}
           items={results.slice(0, 10).map((item, i) => ({
-            name: `${item.apt_name} (${item.region_name})`,
+            name: `${item.apt_name} (${formatRegion(item.region_code)})`,
             url: `https://donjup.com${aptUrl({ govtComplexId: item.govt_complex_id ?? null, regionCode: item.region_code, slug: item.slug ?? '' })}`,
             position: i + 1,
           }))}
@@ -267,7 +127,7 @@ export default async function ThemeDetailPage({
             데이터가 수집되면 자동으로 표시됩니다
           </p>
         </div>
-      ) : slug === "crash-deals" ? (
+      ) : theme.id === "crash-deals" ? (
         /* 폭락 매물: 거래 기반 */
         <div className="overflow-x-auto rounded-2xl border t-border t-card">
           <table className="w-full text-sm">
@@ -297,7 +157,7 @@ export default async function ThemeDetailPage({
                       {item.apt_name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 t-text-secondary">{item.region_name}</td>
+                  <td className="px-4 py-3 t-text-secondary">{formatRegion(item.region_code)}</td>
                   <td className="px-4 py-3 text-right font-bold tabular-nums t-text">
                     {item.trade_price ? formatPrice(item.trade_price) : "-"}
                   </td>
@@ -328,7 +188,7 @@ export default async function ThemeDetailPage({
                   #{i + 1}
                 </span>
               </div>
-              <p className="mt-1 text-xs t-text-tertiary">{item.region_name}</p>
+              <p className="mt-1 text-xs t-text-tertiary">{formatRegion(item.region_code)}</p>
               <div className="mt-3 flex items-center gap-3 text-xs t-text-secondary">
                 {item.built_year && <span>{item.built_year}년 준공</span>}
                 {item.total_units && (

@@ -1,8 +1,9 @@
 import { ImageResponse } from "next/og";
-import { db } from "@/lib/db";
-import { aptComplexes, aptTransactions } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
 import { formatPrice } from "@/lib/format";
+import {
+  getCachedAptDetailComplexByGovtId,
+  getCachedAptDetailSaleTransactions,
+} from "@/lib/apt-detail-query";
 
 export const runtime = "nodejs";
 export const alt = "돈줍 아파트 실거래가";
@@ -16,32 +17,20 @@ export default async function OgImage({
 }) {
   const { govtComplexId } = await params;
 
-  let complex: { apt_name: string; region_name: string; dong_name: string | null } | null = null;
+  const complex = await getCachedAptDetailComplexByGovtId(govtComplexId);
+  const latest = complex
+    ? (await getCachedAptDetailSaleTransactions(
+      complex.id,
+      complex.aptName,
+      complex.regionCode,
+      complex.propertyType,
+    ))[0] ?? null
+    : null;
 
-  const exactMatch = await db.select({
-    apt_name: aptComplexes.aptName,
-    region_name: aptComplexes.regionName,
-    dong_name: aptComplexes.dongName,
-  }).from(aptComplexes).where(eq(aptComplexes.govtComplexId, govtComplexId)).limit(1);
-
-  if (exactMatch[0]) {
-    complex = exactMatch[0];
-  }
-
-  const latestRows = await db.select({
-    trade_price: aptTransactions.tradePrice,
-    change_rate: aptTransactions.changeRate,
-  }).from(aptTransactions)
-    .where(eq(aptTransactions.aptName, complex?.apt_name ?? ""))
-    .orderBy(desc(aptTransactions.tradeDate))
-    .limit(1);
-
-  const latest = latestRows[0] ?? null;
-
-  const aptName = complex?.apt_name ?? "아파트";
-  const region = complex?.region_name ?? "";
-  const price = latest?.trade_price ? formatPrice(Number(latest.trade_price)) : "-";
-  const rate = latest?.change_rate ? Number(latest.change_rate) : null;
+  const aptName = complex?.aptName ?? "아파트";
+  const region = complex?.regionName ?? "";
+  const price = latest?.trade_price ? formatPrice(latest.trade_price) : "-";
+  const rate = latest?.change_rate ?? null;
 
   return new ImageResponse(
     (
@@ -79,7 +68,7 @@ export default async function OgImage({
               fontWeight: 900,
             }}
           >
-            ₩
+            DJ
           </div>
           <span style={{ color: "#64748b", fontSize: 20 }}>돈줍</span>
         </div>

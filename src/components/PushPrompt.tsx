@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { subscribeBrowserToPush } from "@/lib/push-subscription";
 
 export default function PushPrompt() {
   const [visible, setVisible] = useState(false);
@@ -20,31 +21,13 @@ export default function PushPrompt() {
   }, []);
 
   async function handleSubscribe() {
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidKey) return;
-
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer,
-      });
-
-      const json = sub.toJSON();
-      await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint: json.endpoint,
-          keys: json.keys,
-        }),
-      });
-
+    const result = await subscribeBrowserToPush();
+    if (result === "subscribed") {
       setVisible(false);
-    } catch {
-      // 사용자가 알림 권한 거부
-      handleDismiss();
+      return;
     }
+
+    handleDismiss();
   }
 
   function handleDismiss() {
@@ -82,15 +65,4 @@ export default function PushPrompt() {
       </div>
     </div>
   );
-}
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(base64);
-  const arr = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) {
-    arr[i] = raw.charCodeAt(i);
-  }
-  return arr;
 }

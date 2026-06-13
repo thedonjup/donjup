@@ -17,7 +17,7 @@ CREATE TABLE apt_rent_transactions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX idx_rent_region_date ON apt_rent_transactions(region_code, trade_date DESC);
-CREATE UNIQUE INDEX idx_rent_unique ON apt_rent_transactions(apt_name, size_sqm, floor, trade_date, deposit, monthly_rent);
+CREATE INDEX idx_rent_lookup ON apt_rent_transactions(apt_name, size_sqm, floor, trade_date, deposit, monthly_rent);
 ALTER TABLE apt_rent_transactions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON apt_rent_transactions FOR SELECT USING (true);
 

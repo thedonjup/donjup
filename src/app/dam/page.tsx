@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { fetchDamApi } from "@/lib/dam-api-client";
 
 interface KPIs {
   totalTransactions: number;
@@ -10,7 +12,7 @@ interface KPIs {
 }
 
 interface RecentTransaction {
-  id: number;
+  id: string;
   apt_name: string;
   deal_amount: number;
   deal_date: string;
@@ -18,7 +20,17 @@ interface RecentTransaction {
   region: string;
 }
 
+interface StatsResponse {
+  transactions?: number;
+  complexes?: number;
+  pushSubscribers?: number;
+  pageViews?: number;
+  nullHighestCount?: number;
+  recentTransactions?: Record<string, unknown>[];
+}
+
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const [kpis, setKpis] = useState<KPIs | null>(null);
   const [nullCount, setNullCount] = useState<number | null>(null);
   const [recentTx, setRecentTx] = useState<RecentTransaction[]>([]);
@@ -26,11 +38,19 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
+
+    const currentUser = user;
+    let cancelled = false;
+
     async function fetchData() {
       try {
-        const res = await fetch("/api/dam/stats");
-        if (!res.ok) throw new Error("API 요청 실패");
-        const data = await res.json();
+        setLoading(true);
+        setError(null);
+
+        const idToken = await currentUser.getIdToken();
+        const data = await fetchDamApi<StatsResponse>("/api/dam/stats", idToken);
+        if (cancelled) return;
 
         setKpis({
           totalTransactions: data.transactions ?? 0,
@@ -43,28 +63,38 @@ export default function AdminDashboard() {
 
         setRecentTx(
           (data.recentTransactions ?? []).map((row: Record<string, unknown>) => ({
-            id: row.id as number,
+            id: String(row.id ?? ""),
             apt_name: (row.apt_name as string) || "-",
-            deal_amount: (row.deal_amount as number) || 0,
-            deal_date: (row.deal_date as string) || "-",
-            area: (row.area as number) || 0,
-            region: (row.sido_name as string) || "-",
+            deal_amount: Number(row.trade_price ?? 0),
+            deal_date: (row.trade_date as string) || "-",
+            area: Number(row.area ?? 0),
+            region: (row.region_name as string) || "-",
           }))
         );
       } catch (err) {
-        setError(err instanceof Error ? err.message : "데이터 로딩 실패");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "데이터 로딩 실패");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    const timeout = setTimeout(() => {
+    const timeout = window.setTimeout(() => {
+      if (cancelled) return;
       setError("요청 시간 초과");
       setLoading(false);
     }, 15000);
 
-    fetchData().then(() => clearTimeout(timeout));
-  }, []);
+    void fetchData().finally(() => window.clearTimeout(timeout));
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [user]);
 
   if (loading) {
     return (

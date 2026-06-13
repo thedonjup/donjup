@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import {
   collection,
-  addDoc,
   query,
   orderBy,
   onSnapshot,
-  serverTimestamp,
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
@@ -68,13 +67,21 @@ export default function Comments({ aptSlug }: { aptSlug: string }) {
       setSubmitting(true);
       setSubmitError(null);
       try {
-        await addDoc(collection(db, "comments", aptSlug, "messages"), {
-          uid: user.uid,
-          displayName: user.displayName ?? "익명",
-          photoURL: user.photoURL ?? null,
-          text: text.trim(),
-          createdAt: serverTimestamp(),
+        const idToken = await user.getIdToken();
+        const res = await fetch("/api/comments", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ aptSlug, text }),
         });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(typeof body.error === "string" ? body.error : `HTTP ${res.status}`);
+        }
+
         setText("");
       } catch {
         setSubmitError("댓글 작성에 실패했습니다. 다시 시도해주세요.");
@@ -100,11 +107,14 @@ export default function Comments({ aptSlug }: { aptSlug: string }) {
         <form onSubmit={handleSubmit} className="mb-6">
           <div className="flex gap-3">
             {user.photoURL ? (
-              <img
+              <Image
                 src={user.photoURL}
                 alt=""
+                width={32}
+                height={32}
                 className="h-8 w-8 flex-shrink-0 rounded-full"
                 referrerPolicy="no-referrer"
+                unoptimized
               />
             ) : (
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
@@ -176,11 +186,14 @@ export default function Comments({ aptSlug }: { aptSlug: string }) {
           {comments.map((c) => (
             <div key={c.id} className="flex gap-3">
               {c.photoURL ? (
-                <img
+                <Image
                   src={c.photoURL}
                   alt=""
+                  width={32}
+                  height={32}
                   className="h-8 w-8 flex-shrink-0 rounded-full"
                   referrerPolicy="no-referrer"
+                  unoptimized
                 />
               ) : (
                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">

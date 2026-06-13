@@ -1,12 +1,28 @@
-import { db } from "@/lib/db";
-import { aptTransactions } from "@/lib/db/schema";
-import { eq, desc, asc, lt, isNotNull, gte, and, inArray, sql } from "drizzle-orm";
-import Link from "next/link";
 import type { Metadata } from "next";
-import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
-import { computeMedianPrice, isDirectDeal } from "@/lib/price-normalization";
+import TrackedLink from "@/components/analytics/TrackedLink";
+import SignalLandingFooter from "@/components/landing/SignalLandingFooter";
+import SignalLandingHeader from "@/components/landing/SignalLandingHeader";
+import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import {
+  activeMarketRegionCount,
+  highestMarketHigh,
+  marketTrendEmptyStateCopy,
+  strongestMarketDrop,
+  totalMarketCount,
+  totalSigunguCount,
+} from "@/lib/market-trend-landing";
+import {
+  isDatabaseResourceLimitError,
+} from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  getMarketSidoEntries,
+  type MarketSidoStat,
+} from "@/lib/market-dashboard-data";
+import { getCachedMarketSidoStats } from "@/lib/market-dashboard-query";
+import { parsePropertyTypeParam } from "@/lib/transaction-signal-data";
 
 export const revalidate = 3600;
 
@@ -21,6 +37,19 @@ export const metadata: Metadata = {
     "전국 부동산",
   ],
   alternates: { canonical: "/market" },
+  openGraph: {
+    title: "전국 시도별 아파트 시세 - 폭락 순위 & 신고가",
+    description:
+      "전국 17개 시·도별 아파트 실거래가, 최대 하락, 신고가, 최근 3개월 중위가를 비교하세요.",
+    url: "/market",
+    type: "website",
+    images: [{ url: "/market/opengraph-image", width: 1200, height: 630, alt: "전국 아파트 시장 현황" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "전국 시도별 아파트 시세 - 폭락 순위 & 신고가",
+    description: "지역별 실거래가 신호와 최근 가격 흐름을 돈줍에서 확인하세요.",
+  },
 };
 
 export default async function MarketIndexPage({
@@ -29,139 +58,125 @@ export default async function MarketIndexPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { type: typeParam } = await searchParams;
-  const propertyType = typeof typeParam === "string" ? parseInt(typeParam, 10) : 1;
-  const validType = [0, 1, 2, 3].includes(propertyType) ? propertyType : 1;
+  const validType = parsePropertyTypeParam(typeParam);
 
-  const sidoEntries = Object.entries(REGION_HIERARCHY);
-
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-  const cutoff = threeMonthsAgo.toISOString().split("T")[0];
-
-  let sidoStats: {
-    code: string;
-    name: string;
-    shortName: string;
-    slug: string;
-    sigunguCount: number;
-    count: number;
-    topDrop: { apt_name: string; change_rate: number; trade_price: number } | null;
-    topHigh: { apt_name: string; trade_price: number } | null;
-    medianPrice: number;
-    avgPrice: number;
-  }[] = [];
+  const sidoEntries = getMarketSidoEntries();
+  let sidoStats: MarketSidoStat[] = [];
+  let dataUnavailable = false;
 
   try {
-    sidoStats = await Promise.all(
-      sidoEntries.map(async ([sidoCode, sido]) => {
-        const sigunguCodes = Object.keys(sido.sigungu);
-        const typeFilter = validType !== 0 ? eq(aptTransactions.propertyType, validType) : undefined;
-
-        const [countResult, dropResult, highResult, priceResult] = await Promise.all([
-          db.select({ count: sql<number>`count(*)` }).from(aptTransactions)
-            .where(and(inArray(aptTransactions.regionCode, sigunguCodes), typeFilter)),
-          db.select({
-            apt_name: aptTransactions.aptName,
-            change_rate: aptTransactions.changeRate,
-            trade_price: aptTransactions.tradePrice,
-          }).from(aptTransactions)
-            .where(and(
-              inArray(aptTransactions.regionCode, sigunguCodes),
-              isNotNull(aptTransactions.changeRate),
-              lt(aptTransactions.changeRate, "0"),
-              typeFilter,
-            ))
-            .orderBy(asc(aptTransactions.changeRate))
-            .limit(1),
-          db.select({
-            apt_name: aptTransactions.aptName,
-            trade_price: aptTransactions.tradePrice,
-          }).from(aptTransactions)
-            .where(and(
-              inArray(aptTransactions.regionCode, sigunguCodes),
-              eq(aptTransactions.isNewHigh, true),
-              typeFilter,
-            ))
-            .orderBy(desc(aptTransactions.tradeDate))
-            .limit(1),
-          db.select({
-            trade_price: aptTransactions.tradePrice,
-            deal_type: aptTransactions.dealType,
-          }).from(aptTransactions)
-            .where(and(
-              inArray(aptTransactions.regionCode, sigunguCodes),
-              gte(aptTransactions.tradeDate, cutoff),
-              typeFilter,
-            )),
-        ]);
-
-        type PriceRow = { trade_price: number; deal_type: string | null };
-        const priceRows: PriceRow[] = priceResult as PriceRow[];
-        const validPrices: number[] = priceRows
-          .filter((t) => !isDirectDeal(t.deal_type))
-          .map((t) => Number(t.trade_price));
-        const medianPrice = computeMedianPrice(validPrices);
-        const avgPrice = validPrices.length
-          ? Math.round(validPrices.reduce((a: number, b: number) => a + b, 0) / validPrices.length)
-          : 0;
-
-        const topDropRaw = dropResult[0] ?? null;
-        const topHighRaw = highResult[0] ?? null;
-
-        return {
-          code: sidoCode,
-          name: sido.name,
-          shortName: sido.shortName,
-          slug: sido.slug,
-          sigunguCount: sigunguCodes.length,
-          count: Number(countResult[0]?.count ?? 0),
-          topDrop: topDropRaw ? {
-            apt_name: topDropRaw.apt_name,
-            change_rate: Number(topDropRaw.change_rate),
-            trade_price: Number(topDropRaw.trade_price),
-          } : null,
-          topHigh: topHighRaw ? {
-            apt_name: topHighRaw.apt_name,
-            trade_price: Number(topHighRaw.trade_price),
-          } : null,
-          medianPrice,
-          avgPrice,
-        };
-      })
-    );
+    sidoStats = await getCachedMarketSidoStats(validType);
   } catch (error) {
-    console.error("시도별 통계 조회 실패:", error);
+    dataUnavailable = isDatabaseResourceLimitError(error);
+    logDatabaseFailure("Market page query failed", error, {
+      route: "/market",
+    });
   }
 
   const sorted = [...sidoStats].sort((a, b) => b.count - a.count);
-  const totalCount = sidoStats.reduce((a, b) => a + b.count, 0);
+  const totalCount = totalMarketCount(sidoStats);
+  const activeSidoCount = activeMarketRegionCount(sidoStats);
+  const sigunguCount = totalSigunguCount(sidoStats);
+  const topDrop = strongestMarketDrop(sidoStats);
+  const topHigh = highestMarketHigh(sidoStats);
+  const totalSidoCount = sidoEntries.length;
+  const emptyState = marketTrendEmptyStateCopy("market", dataUnavailable);
+  const basisLabel = activeSidoCount > 0
+    ? `최근 3개월 가격 통계 · ${activeSidoCount}/${totalSidoCount}개 시·도 거래 신호`
+    : emptyState.basisLabel;
 
   return (
     <div>
+      <BreadcrumbJsonLd
+        items={[
+          { name: "홈", href: "/" },
+          { name: "지역별 시세", href: "/market" },
+        ]}
+      />
       <PropertyTypeFilter currentType={validType} />
+      <SignalLandingHeader
+        eyebrow="지역 시세 레이더"
+        title="전국 시·도별 아파트 시세"
+        description="전국 17개 시·도별 거래량, 최대 하락, 신고가, 최근 가격대를 한 화면에서 비교하세요."
+        basisLabel={basisLabel}
+        stats={[
+          {
+            label: "수집 거래",
+            value: `${totalCount.toLocaleString()}건`,
+            hint: "거래량순으로 지역을 정렬합니다",
+          },
+          {
+            label: "탐색 지역",
+            value: `${sigunguCount.toLocaleString()}곳`,
+            hint: "시군구 단위로 한 단계 더 들어갑니다",
+          },
+          {
+            label: "최대 하락",
+            value: topDrop ? `▼ ${Math.abs(topDrop.change_rate).toFixed(1)}%` : "-",
+            hint: topDrop?.apt_name ?? "하락 신호가 준비 중입니다",
+          },
+          {
+            label: "최고 신고가",
+            value: topHigh ? formatPrice(topHigh.trade_price) : "-",
+            hint: topHigh?.apt_name ?? "신고가 신호가 준비 중입니다",
+          },
+        ]}
+        primaryHref="/today"
+        primaryLabel="오늘 하락 보기"
+        secondaryHref="/trend"
+        secondaryLabel="거래량 흐름 보기"
+        eventScope="market"
+        tone="neutral"
+      />
       <div className="mx-auto max-w-6xl px-4 py-8">
-      <section className="mb-8">
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-          <h1 className="text-2xl font-extrabold t-text sm:text-3xl">
-            전국 시·도별 아파트 시세
-          </h1>
-        </div>
-        <p className="mt-2 text-sm t-text-secondary">
-          전국 17개 시·도별 폭락 순위, 신고가, 최근 거래 현황을 한눈에 비교하세요.
-        </p>
-        <div className="mt-4 flex items-center gap-4 text-xs t-text-tertiary">
-          <span>총 {totalCount.toLocaleString()}건 수집</span>
-          <span>·</span>
-          <span>거래량순 정렬</span>
-        </div>
-      </section>
+        <section className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-extrabold t-text">시도별 탐색</h2>
+            <p className="mt-1 text-sm t-text-secondary">
+              거래가 많은 지역부터 훑고, 카드 안의 하락·신고가 신호로 다음 탐색 지역을 고르세요.
+            </p>
+          </div>
+          <p className="text-xs font-semibold t-text-tertiary">
+            총 {totalCount.toLocaleString()}건 · 거래량순 정렬
+          </p>
+        </section>
 
+      {sorted.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed t-border p-10 text-center">
+          <p className="text-sm font-semibold t-text-secondary">{emptyState.title}</p>
+          <p className="mt-1 text-xs t-text-tertiary">{emptyState.description}</p>
+          {dataUnavailable && (
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <TrackedLink
+                href="/market"
+                ctaName="market_unavailable_retry_click"
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+              >
+                다시 시도
+              </TrackedLink>
+              <TrackedLink
+                href="/today"
+                ctaName="market_unavailable_today_click"
+                className="rounded-lg border t-border px-4 py-2 text-sm font-bold t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
+              >
+                최신 거래 보기
+              </TrackedLink>
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.map((sido, i) => (
-          <Link
+          <TrackedLink
             key={sido.code}
             href={`/market/${sido.slug}`}
+            ctaName="market_sido_card_click"
+            params={{
+              rank: i + 1,
+              sido: sido.slug,
+              transaction_count: sido.count,
+              top_drop_rate: sido.topDrop?.change_rate,
+            }}
             className="card-hover block rounded-2xl border t-border t-card p-5"
           >
             <div className="flex items-center justify-between">
@@ -222,9 +237,43 @@ export default async function MarketIndexPage({
                 </div>
               </div>
             )}
-          </Link>
+          </TrackedLink>
         ))}
       </div>
+      )}
+
+        <SignalLandingFooter
+          eventScope="market"
+          methodTitle="지역 시세 기준"
+          methodItems={[
+            "거래량은 돈줍에 수집된 실거래 데이터를 기준으로 집계합니다.",
+            "최근 3개월 중위가와 평균가는 직거래를 제외한 가격으로 계산합니다.",
+            "최대 하락은 과거 최고가 대비 변동률이 확인된 거래 중 가장 큰 하락 신호입니다.",
+            "지역 카드를 누르면 시군구별 신호로 좁혀 볼 수 있습니다.",
+          ]}
+          relatedLinks={[
+            {
+              href: "/trend",
+              title: "거래량 트렌드",
+              description: "최근 6개월 거래량과 시도별 평균 거래가를 함께 봅니다.",
+            },
+            {
+              href: "/new-highs",
+              title: "오늘 신고가",
+              description: "지역별 신고가가 어디서 나오는지 확인합니다.",
+            },
+            {
+              href: "/rent",
+              title: "전월세 실거래",
+              description: "매매 신호와 전월세 가격대를 같이 비교합니다.",
+            },
+            {
+              href: "/search",
+              title: "단지 검색",
+              description: "관심 단지명이나 동네명으로 바로 이동합니다.",
+            },
+          ]}
+        />
     </div>
     </div>
   );

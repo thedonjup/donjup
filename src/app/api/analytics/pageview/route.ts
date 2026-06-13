@@ -1,47 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { pageViews } from "@/lib/db/schema";
-import { sql } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { isAllowedSiteRequest } from "@/lib/api/site-origin";
+import { recordPageview } from "@/lib/analytics-pageview";
+import {
+  pageviewClientFingerprint,
+  shouldRecordPageview,
+} from "@/lib/analytics-pageview-dedupe";
+import { parsePageviewRequest } from "@/lib/analytics-pageview-request";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  pageviewWriteSampleRate,
+  pageviewWriteWeight,
+  shouldSamplePageviewWrite,
+} from "@/lib/pageview-write-sampling";
 
 export async function POST(request: NextRequest) {
-  try {
-    const { pagePath, pageType } = await request.json();
+  if (!isAllowedSiteRequest(request.headers)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-    if (!pagePath) {
-      return NextResponse.json(
-        { error: "pagePath는 필수입니다." },
-        { status: 400 }
-      );
+  try {
+    const parsed = parsePageviewRequest(await request.json().catch(() => null));
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const clientFingerprint = pageviewClientFingerprint(request.headers);
+    const sampleRate = pageviewWriteSampleRate();
 
-    try {
-      await db
-        .insert(pageViews)
-        .values({
-          pagePath,
-          pageType: pageType || null,
-          viewDate: today,
-          viewCount: 1,
-        })
-        .onConflictDoUpdate({
-          target: [pageViews.pagePath, pageViews.viewDate],
-          set: {
-            viewCount: sql`${pageViews.viewCount} + 1`,
-          },
+    if (
+      shouldRecordPageview({
+        clientFingerprint,
+        pagePath: parsed.pagePath,
+      }) &&
+      shouldSamplePageviewWrite({
+        clientFingerprint,
+        pagePath: parsed.pagePath,
+        sampleRate,
+      })
+    ) {
+      try {
+        await recordPageview(
+          parsed.pagePath,
+          parsed.pageType,
+          undefined,
+          pageviewWriteWeight(sampleRate)
+        );
+      } catch (e) {
+        logDatabaseFailure("Failed to track page view", e, {
+          route: "/api/analytics/pageview",
         });
-    } catch (e) {
-      // page_views upsert 실패 시에도 200 반환 (분석은 best-effort)
-      logger.warn("Failed to track page view", { error: e, route: "/api/analytics/pageview" });
+      }
     }
 
     return NextResponse.json({ success: true });
   } catch {
-    return NextResponse.json(
-      { error: "요청을 처리할 수 없습니다." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 }

@@ -1,6 +1,12 @@
 import type { MetadataRoute } from "next";
+import {
+  createAptSitemapIndexUrl,
+  createDailySitemapUrl,
+} from "@/lib/sitemap-config";
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = "https://donjup.com";
+
   return {
     rules: [
       {
@@ -10,8 +16,9 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: [
-      "https://donjup.com/sitemap.xml",
-      "https://donjup.com/apt/sitemap.xml",
+      `${baseUrl}/sitemap.xml`,
+      createDailySitemapUrl(baseUrl),
+      createAptSitemapIndexUrl(baseUrl),
     ],
   };
 }

@@ -1,7 +1,3 @@
-import { db } from "@/lib/db";
-import { financeRates } from "@/lib/db/schema";
-import { desc, ne } from "drizzle-orm";
-import Link from "next/link";
 import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";
 import { RATE_LABELS, RATE_DESCRIPTIONS, RATE_ORDER } from "@/lib/format";
@@ -11,14 +7,46 @@ import RateIndicatorAccordion from "@/components/rate/RateIndicatorAccordion";
 import type { IndicatorItem } from "@/components/rate/RateIndicatorAccordion";
 import BankRateExpandable from "@/components/rate/BankRateExpandable";
 import type { BankRateItem } from "@/components/rate/BankRateExpandable";
+import SignalLandingHeader from "@/components/landing/SignalLandingHeader";
+import SignalLandingFooter from "@/components/landing/SignalLandingFooter";
+import TrackedLink from "@/components/analytics/TrackedLink";
+import {
+  averageChangeBp,
+  averageRateValue,
+  latestBaseDate,
+  rateRentEmptyStateCopy,
+  rateValueRange,
+} from "@/lib/rate-rent-landing";
+import {
+  isDatabaseResourceLimitError,
+} from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import { isDisplayBankRateType } from "@/lib/rate-dashboard-data";
+import { getCachedRateDashboardRates } from "@/lib/rate-dashboard-query";
 
 export const metadata: Metadata = {
-  title: "금리 현황",
-  description: "한국은행 기준금리, COFIX, CD금리, 국고채 금리 실시간 추이. 매일 자동 업데이트.",
+  title: "주택담보대출 금리 현황 | 기준금리·COFIX·은행별 금리",
+  description: "한국은행 기준금리, COFIX, CD금리, 국고채, 은행별 주택담보대출 금리를 한 번에 확인하고 대출 이자 계산기로 월 상환액을 계산하세요.",
+  keywords: ["주택담보대출 금리", "COFIX 금리", "기준금리", "대출 이자 계산기", "은행별 주담대 금리"],
   alternates: { canonical: "/rate" },
+  openGraph: {
+    title: "주택담보대출 금리 현황 | 돈줍",
+    description: "기준금리, COFIX, 은행별 주담대 금리와 월 상환 부담을 확인하세요.",
+    url: "https://donjup.com/rate",
+    siteName: "돈줍 DonJup",
+    images: [{ url: "https://donjup.com/rate/opengraph-image", width: 1200, height: 630 }],
+    locale: "ko_KR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "주택담보대출 금리 현황 | 돈줍",
+    description: "기준금리, COFIX, 은행별 주담대 금리와 월 상환 부담을 확인하세요.",
+    images: ["https://donjup.com/rate/opengraph-image"],
+  },
 };
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 /** 은행 코드 → 한글명 매핑 */
 const BANK_LABELS: Record<string, string> = {
@@ -44,57 +72,16 @@ const BANK_LABELS: Record<string, string> = {
 };
 
 export default async function RateDashboardPage() {
-  let allRates: FinanceRate[] | null = null;
-  let bankRatesRaw: FinanceRate[] | null = null;
+  let allRates: FinanceRate[] = [];
+  let dataUnavailable = false;
 
   try {
-    const [ratesRes, bankRes] = await Promise.all([
-      db.select({
-        id: financeRates.id,
-        rate_type: financeRates.rateType,
-        rate_value: financeRates.rateValue,
-        prev_value: financeRates.prevValue,
-        change_bp: financeRates.changeBp,
-        base_date: financeRates.baseDate,
-        source: financeRates.source,
-        created_at: financeRates.createdAt,
-      }).from(financeRates)
-        .orderBy(desc(financeRates.baseDate))
-        .limit(100),
-      db.select({
-        id: financeRates.id,
-        rate_type: financeRates.rateType,
-        rate_value: financeRates.rateValue,
-        prev_value: financeRates.prevValue,
-        change_bp: financeRates.changeBp,
-        base_date: financeRates.baseDate,
-        source: financeRates.source,
-        created_at: financeRates.createdAt,
-      }).from(financeRates)
-        .where(ne(financeRates.rateType, "BANK_PRODUCTS_ALL"))
-        .orderBy(desc(financeRates.baseDate))
-        .limit(100),
-    ]);
-
-    allRates = ratesRes.map((r) => ({
-      ...r,
-      rate_value: Number(r.rate_value),
-      prev_value: r.prev_value !== null ? Number(r.prev_value) : null,
-      base_date: String(r.base_date),
-      created_at: r.created_at ? String(r.created_at) : "",
-    })) as FinanceRate[];
-
-    bankRatesRaw = bankRes
-      .filter((r) => r.rate_type.startsWith("BANK_"))
-      .map((r) => ({
-        ...r,
-        rate_value: Number(r.rate_value),
-        prev_value: r.prev_value !== null ? Number(r.prev_value) : null,
-        base_date: String(r.base_date),
-        created_at: r.created_at ? String(r.created_at) : "",
-      })) as FinanceRate[];
-  } catch {
-    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+    allRates = await getCachedRateDashboardRates();
+  } catch (error) {
+    dataUnavailable = isDatabaseResourceLimitError(error);
+    logDatabaseFailure("Rate page query failed", error, {
+      route: "/rate",
+    });
   }
 
   // 은행별 최신 금리만 추출
@@ -105,7 +92,11 @@ export default async function RateDashboardPage() {
     change_bp: number | null;
     base_date: string;
   }>();
-  for (const r of bankRatesRaw ?? []) {
+  for (const r of allRates) {
+    if (!isDisplayBankRateType(r.rate_type)) {
+      continue;
+    }
+
     if (!bankRates.has(r.rate_type)) {
       bankRates.set(r.rate_type, { ...r, base_date: String(r.base_date ?? "") });
     }
@@ -124,7 +115,7 @@ export default async function RateDashboardPage() {
 
   const historyByType = new Map<string, Array<{ date: string; value: number }>>();
 
-  for (const r of allRates ?? []) {
+  for (const r of allRates) {
     const baseDateStr = String(r.base_date ?? "");
     if (!latestByType.has(r.rate_type)) {
       latestByType.set(r.rate_type, { ...r, base_date: baseDateStr });
@@ -138,16 +129,12 @@ export default async function RateDashboardPage() {
 
   // Hero card computation — filter out BANK_UNKNOWN per D-02
   const validBanks = sortedBankRates.filter(r => r.rate_type !== "BANK_UNKNOWN");
-  const avgRate = validBanks.length > 0
-    ? parseFloat((validBanks.reduce((s, r) => s + r.rate_value, 0) / validBanks.length).toFixed(2))
-    : null;
-  const minRate = validBanks[0]?.rate_value ?? null;
-  const maxRate = validBanks[validBanks.length - 1]?.rate_value ?? null;
-  const heroBaseDate = validBanks[0]?.base_date ?? "";
-  const bpItems = validBanks.filter(r => r.change_bp !== null).map(r => r.change_bp!);
-  const avgChangeBp = bpItems.length > 0
-    ? Math.round(bpItems.reduce((s, v) => s + v, 0) / bpItems.length)
-    : null;
+  const avgRate = averageRateValue(validBanks);
+  const rateRange = rateValueRange(validBanks);
+  const minRate = rateRange?.min ?? null;
+  const maxRate = rateRange?.max ?? null;
+  const heroBaseDate = latestBaseDate(validBanks) ?? "";
+  const avgChangeBp = averageChangeBp(validBanks);
 
   // Props for RateIndicatorAccordion
   const indicators: IndicatorItem[] = RATE_ORDER.map((type) => {
@@ -174,8 +161,14 @@ export default async function RateDashboardPage() {
     base_date: b.base_date,
   }));
 
+  const indicatorCount = indicators.filter((indicator) => indicator.rateValue !== null).length;
+  const emptyState = rateRentEmptyStateCopy("rate", dataUnavailable);
+  const basisLabel = heroBaseDate
+    ? `${heroBaseDate} 기준 은행 금리 ${validBanks.length.toLocaleString()}개`
+    : emptyState.basisLabel;
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div>
       <BreadcrumbJsonLd items={[{ name: "홈", href: "/" }, { name: "금리 현황", href: "/rate" }]} />
       <FaqJsonLd
         items={[
@@ -196,15 +189,42 @@ export default async function RateDashboardPage() {
           },
         ]}
       />
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-          <h1 className="text-2xl font-extrabold t-text">금리 현황</h1>
-        </div>
-        <p className="text-sm t-text-secondary">
-          주택담보대출과 관련된 주요 금리 지표를 한눈에 확인하세요.
-        </p>
-      </div>
+      <SignalLandingHeader
+        eyebrow="Loan rate signal"
+        title="주택담보대출 금리 현황"
+        description="기준금리, COFIX, CD금리, 국고채와 은행별 주담대 금리를 함께 정리했습니다. 거래가를 본 뒤 월 상환 부담까지 이어서 계산해보세요."
+        basisLabel={basisLabel}
+        tone="rate"
+        eventScope="rate"
+        primaryHref="/rate/calculator"
+        primaryLabel="대출 이자 계산"
+        secondaryHref="/today"
+        secondaryLabel="오늘 거래 보기"
+        stats={[
+          {
+            label: "시중 평균",
+            value: avgRate !== null ? `${avgRate}%` : "-",
+            hint: "BANK_UNKNOWN 제외 평균",
+          },
+          {
+            label: "최저~최고",
+            value: minRate !== null && maxRate !== null ? `${minRate}% ~ ${maxRate}%` : "-",
+            hint: "은행별 최신 주담대 금리",
+          },
+          {
+            label: "평균 변동",
+            value: avgChangeBp !== null ? `${avgChangeBp > 0 ? "+" : ""}${avgChangeBp}bp` : "-",
+            hint: "은행별 변동폭 평균",
+          },
+          {
+            label: "주요 지표",
+            value: `${indicatorCount.toLocaleString()}개`,
+            hint: "기준금리, COFIX, CD, 국고채",
+          },
+        ]}
+      />
+
+      <div className="mx-auto max-w-6xl px-4 py-8">
 
       {hasData ? (
         <>
@@ -251,12 +271,26 @@ export default async function RateDashboardPage() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl t-elevated text-xl">
             📊
           </div>
-          <p className="mt-3 text-sm t-text-secondary">
-            아직 수집된 금리 데이터가 없습니다.
-          </p>
-          <p className="mt-1 text-xs t-text-tertiary">
-            ECOS API 키가 설정되면 매일 자동으로 금리 데이터가 수집됩니다.
-          </p>
+          <p className="mt-3 text-sm font-semibold t-text-secondary">{emptyState.title}</p>
+          <p className="mt-1 text-xs t-text-tertiary">{emptyState.description}</p>
+          {dataUnavailable && (
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <TrackedLink
+                href="/rate"
+                ctaName="rate_unavailable_retry_click"
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+              >
+                다시 시도
+              </TrackedLink>
+              <TrackedLink
+                href="/rate/calculator"
+                ctaName="rate_unavailable_calculator_click"
+                className="rounded-lg border t-border px-4 py-2 text-sm font-bold t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
+              >
+                계산기 열기
+              </TrackedLink>
+            </div>
+          )}
         </div>
       )}
 
@@ -264,8 +298,10 @@ export default async function RateDashboardPage() {
       <section className="mt-10">
         <h2 className="mb-4 text-lg font-bold t-text">대출/부동산 도구</h2>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Link
+          <TrackedLink
             href="/rate/calculator"
+            ctaName="rate_tool_click"
+            params={{ tool: "loan" }}
             className="card-hover rounded-2xl border-2 brand-tint-border p-6 text-center t-card"
           >
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl brand-tint-icon-bg text-sm font-bold text-brand-600">
@@ -275,9 +311,11 @@ export default async function RateDashboardPage() {
             <p className="mt-1 text-sm text-brand-600">
               원리금균등/원금균등 비교 계산
             </p>
-          </Link>
-          <Link
+          </TrackedLink>
+          <TrackedLink
             href="/rate/calculator?tab=dsr"
+            ctaName="rate_tool_click"
+            params={{ tool: "dsr" }}
             className="card-hover rounded-2xl border-2 brand-tint-border p-6 text-center t-card"
           >
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl brand-tint-icon-bg text-sm font-bold text-brand-600">
@@ -287,9 +325,11 @@ export default async function RateDashboardPage() {
             <p className="mt-1 text-sm text-brand-600">
               총부채원리금상환비율 확인
             </p>
-          </Link>
-          <Link
+          </TrackedLink>
+          <TrackedLink
             href="/rate/calculator?tab=jeonse"
+            ctaName="rate_tool_click"
+            params={{ tool: "jeonse" }}
             className="card-hover rounded-2xl border t-border t-card p-6 text-center"
           >
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl t-elevated text-sm font-bold t-text">
@@ -299,14 +339,16 @@ export default async function RateDashboardPage() {
             <p className="mt-1 text-sm t-text-secondary">
               전세 보증금을 월세로 환산
             </p>
-          </Link>
+          </TrackedLink>
         </div>
       </section>
 
       {/* Quick Links */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <Link
+        <TrackedLink
           href="/"
+          ctaName="rate_related_link_click"
+          params={{ href: "/" }}
           className="card-hover rounded-2xl border t-border t-card p-5 flex items-center gap-4"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-dark-900 text-sm font-bold text-white">
@@ -316,9 +358,11 @@ export default async function RateDashboardPage() {
             <p className="font-bold t-text">폭락/신고가 랭킹</p>
             <p className="text-sm t-text-secondary">오늘 가장 많이 떨어진 아파트 확인</p>
           </div>
-        </Link>
-        <Link
+        </TrackedLink>
+        <TrackedLink
           href="/daily/archive"
+          ctaName="rate_related_link_click"
+          params={{ href: "/daily/archive" }}
           className="card-hover rounded-2xl border t-border t-card p-5 flex items-center gap-4"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl t-elevated text-sm font-bold t-text">
@@ -328,7 +372,41 @@ export default async function RateDashboardPage() {
             <p className="font-bold t-text">데일리 리포트</p>
             <p className="text-sm t-text-secondary">매일 업데이트되는 시장 동향</p>
           </div>
-        </Link>
+        </TrackedLink>
+      </div>
+
+      <SignalLandingFooter
+        eventScope="rate"
+        methodTitle="금리 데이터 기준"
+        methodItems={[
+          "기준금리, COFIX, CD, 국고채 등 주요 지표를 최신 기준일 순으로 정리합니다.",
+          "은행별 주담대 금리는 BANK_UNKNOWN을 제외하고 평균, 최저, 최고 값을 계산합니다.",
+          "금리 변동폭은 bp 단위로 표시하며, 실제 적용 금리는 개인 조건과 우대금리에 따라 달라질 수 있습니다.",
+          "계산기에서는 대출 원금, 기간, 금리를 바꿔 월 상환액을 직접 비교할 수 있습니다.",
+        ]}
+        relatedLinks={[
+          {
+            href: "/rate/calculator",
+            title: "대출 이자 계산기",
+            description: "오늘 금리를 내 대출 원금에 적용해 월 상환액을 계산합니다.",
+          },
+          {
+            href: "/today",
+            title: "오늘의 실거래가",
+            description: "거래가를 먼저 보고 금리 부담을 이어서 확인합니다.",
+          },
+          {
+            href: "/rent",
+            title: "전월세 실거래가",
+            description: "매매 대신 전세·월세 부담 흐름을 같이 봅니다.",
+          },
+          {
+            href: "/daily/archive",
+            title: "데일리 리포트",
+            description: "날짜별 금리와 거래 신호를 요약해서 확인합니다.",
+          },
+        ]}
+      />
       </div>
     </div>
   );

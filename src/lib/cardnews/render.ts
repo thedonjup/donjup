@@ -8,9 +8,14 @@ import type { CardType, RankItem } from "./types";
 const NOTO_SANS_KR_URL =
   "https://fonts.gstatic.com/s/notosanskr/v36/PbyxFmXiEBPT4ITbgNA5Cgms3VYcOA-vvnIzzuoyeLGC.ttf";
 
+let fontBuffer: ArrayBuffer | null = null;
+
 async function loadFont(): Promise<ArrayBuffer> {
+  if (fontBuffer) return fontBuffer;
   const res = await fetch(NOTO_SANS_KR_URL);
-  return res.arrayBuffer();
+  if (!res.ok) throw new Error(`Failed to fetch font: ${res.statusText}`);
+  fontBuffer = await res.arrayBuffer();
+  return fontBuffer;
 }
 
 const SIZE = { width: 1080, height: 1080 };

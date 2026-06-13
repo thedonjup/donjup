@@ -7,6 +7,8 @@
  *   umdNm, excluUseAr, floor, buildYear, sggCd 등
  */
 
+import { logger } from "@/lib/logger";
+
 interface MolitRawItem {
   dealAmount: string;
   buildYear: string;
@@ -129,7 +131,10 @@ function parseXmlResponse(
         },
       });
     } catch (e) {
-      console.error("거래 데이터 파싱 오류:", e);
+      logger.warn("MOLIT transaction item parse failed", {
+        error: e,
+        regionCode,
+      });
     }
   }
 

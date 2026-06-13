@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/components/providers/AuthProvider";
 import LoginModal from "@/components/auth/LoginModal";
 import { getRecentComplexes, type RecentComplexItem } from "@/lib/recent-complexes";
@@ -14,30 +15,33 @@ interface FavoriteItem {
   regionName: string;
 }
 
+function getStoredFavorites(): FavoriteItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = localStorage.getItem("donjup-favorites");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function getStoredRecentComplexes(): RecentComplexItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    return getRecentComplexes();
+  } catch {
+    return [];
+  }
+}
+
 export default function ProfilePage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
-  const [recentComplexes, setRecentComplexes] = useState<RecentComplexItem[]>([]);
-  const [showLogin, setShowLogin] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      setShowLogin(true);
-    }
-  }, [user, loading]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("donjup-favorites");
-      if (raw) {
-        setFavorites(JSON.parse(raw));
-      }
-      setRecentComplexes(getRecentComplexes());
-    } catch {
-      // ignore
-    }
-  }, []);
+  const [favorites] = useState<FavoriteItem[]>(getStoredFavorites);
+  const [recentComplexes] = useState<RecentComplexItem[]>(getStoredRecentComplexes);
+  const [showLogin, setShowLogin] = useState(true);
 
   if (loading) {
     return (
@@ -73,11 +77,14 @@ export default function ProfilePage() {
       >
         <div className="flex items-center gap-4">
           {user.photoURL ? (
-            <img
+            <Image
               src={user.photoURL}
               alt=""
+              width={64}
+              height={64}
               className="h-16 w-16 rounded-full"
               referrerPolicy="no-referrer"
+              unoptimized
             />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-600 text-xl font-bold text-white">

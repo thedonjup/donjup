@@ -1,13 +1,41 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { aptUrl } from "@/lib/apt-url";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatRegion } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import SearchTracker from "@/components/analytics/SearchTracker";
+import TrackedLink from "@/components/analytics/TrackedLink";
+import SignalLandingFooter from "@/components/landing/SignalLandingFooter";
+import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import HighlightedText from "@/components/search/HighlightedText";
+import { buildCompareHref } from "@/lib/compare-selection";
 import { PricePresets, SizePresets, YearPresets } from "@/components/search/FilterPresets";
-import { db } from "@/lib/db";
-import { sql } from "drizzle-orm";
+import RecentSearches from "@/components/search/RecentSearches";
+import {
+  SEARCH_SUGGESTIONS,
+  searchEmptyTitle,
+  searchFailureCopy,
+  searchResultLabel,
+  searchSuggestionHref,
+} from "@/lib/search-landing";
+import {
+  isDatabaseResourceLimitError,
+} from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  filterInputValue,
+  hasSearchFilters,
+  normalizeSearchQuery,
+  parsePropertyType,
+  parseSearchFilters,
+} from "@/lib/search-filters";
+import { getCachedSearchResults } from "@/lib/search-query";
+import type { SearchResult } from "@/lib/search-query-data";
+import {
+  parseSearchSort,
+  SEARCH_SORT_OPTIONS,
+  type SearchSortKey,
+} from "@/lib/search-sort";
 
 type SearchPageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -17,7 +45,7 @@ export async function generateMetadata({
   searchParams,
 }: SearchPageProps): Promise<Metadata> {
   const { q } = await searchParams;
-  const query = typeof q === "string" ? q.trim() : "";
+  const query = normalizeSearchQuery(q);
 
   if (query) {
     return {
@@ -32,6 +60,17 @@ export async function generateMetadata({
         "아파트 실거래가",
         "아파트 시세 조회",
       ],
+      openGraph: {
+        title: `"${query}" 아파트 검색 결과`,
+        description: `"${query}" 관련 실거래가와 단지 정보를 돈줍에서 확인하세요.`,
+        url: `/search?q=${encodeURIComponent(query)}`,
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `"${query}" 아파트 검색 결과`,
+        description: "검색한 단지의 최근 실거래가와 기본 정보를 확인하세요.",
+      },
     };
   }
 
@@ -46,6 +85,18 @@ export async function generateMetadata({
       "전국 아파트",
       "부동산 검색",
     ],
+    alternates: { canonical: "/search" },
+    openGraph: {
+      title: "아파트 검색",
+      description: "전국 아파트 단지명과 지역명을 검색하고 최근 실거래가를 확인하세요.",
+      url: "/search",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "아파트 검색",
+      description: "지역과 아파트명으로 실거래가를 빠르게 찾아보세요.",
+    },
   };
 }
 
@@ -53,100 +104,115 @@ export default async function SearchPage({
   searchParams,
 }: SearchPageProps) {
   const params = await searchParams;
-  const { q, type: typeParam, priceMin, priceMax, sizeMin, sizeMax, builtYearMin } = params;
-  const query = typeof q === "string" ? q.trim() : "";
-  const propertyType = typeof typeParam === "string" ? parseInt(typeParam, 10) : 1;
-  const validType = [0, 1, 2, 3].includes(propertyType) ? propertyType : 1;
+  const { q, type: typeParam, sort: sortParam } = params;
+  const query = normalizeSearchQuery(q);
+  const validType = parsePropertyType(typeParam);
+  const filters = parseSearchFilters(params);
+  const sort = parseSearchSort(sortParam);
 
-  // Parse filter values for display
-  const filterPriceMin = typeof priceMin === "string" ? priceMin : "";
-  const filterPriceMax = typeof priceMax === "string" ? priceMax : "";
-  const filterSizeMin = typeof sizeMin === "string" ? sizeMin : "";
-  const filterSizeMax = typeof sizeMax === "string" ? sizeMax : "";
-  const filterBuiltYearMin = typeof builtYearMin === "string" ? builtYearMin : "";
+  const filterPriceMin = filterInputValue(filters.priceMin);
+  const filterPriceMax = filterInputValue(filters.priceMax);
+  const filterSizeMin = filterInputValue(filters.sizeMin);
+  const filterSizeMax = filterInputValue(filters.sizeMax);
+  const filterBuiltYearMin = filterInputValue(filters.builtYearMin);
 
-  const hasFilters = filterPriceMin || filterPriceMax || filterSizeMin || filterSizeMax || filterBuiltYearMin;
+  const hasFilters = hasSearchFilters(filters);
   const hasSearch = query.length > 0 || hasFilters;
 
-  let results: Array<{
-    id: string;
-    apt_name: string;
-    region_code: string;
-    region_name: string;
-    dong_name: string | null;
-    sido_name: string | null;
-    sigungu_name: string | null;
-    built_year: number | null;
-    slug: string;
-    govt_complex_id: string | null;
-    latest_trade_price: number | null;
-  }> = [];
+  let results: SearchResult[] = [];
+  let searchFailure: ReturnType<typeof searchFailureCopy> | null = null;
 
   if (hasSearch) {
     try {
-      type SqlChunk = ReturnType<typeof sql>;
-      const conditions: SqlChunk[] = [];
-
-      if (query.length > 0) {
-        const parts = query.split(/\s+/).filter(Boolean);
-
-        if (parts.length >= 2) {
-          // "동대문 두산" → 지역 + 아파트명 분리 검색
-          const regionPart = parts[0];
-          const aptPart = parts.slice(1).join(" ");
-          conditions.push(sql`(c.region_name ILIKE ${`%${regionPart}%`} OR c.dong_name ILIKE ${`%${regionPart}%`})`);
-          conditions.push(sql`c.apt_name ILIKE ${`%${aptPart}%`}`);
-        } else {
-          // 단일 키워드 — 아파트명/지역명/동명 모두 검색
-          conditions.push(sql`(c.apt_name ILIKE ${`%${parts[0]}%`} OR c.region_name ILIKE ${`%${parts[0]}%`} OR c.dong_name ILIKE ${`%${parts[0]}%`})`);
-        }
-      }
-
-      if (filterBuiltYearMin) {
-        const year = parseInt(filterBuiltYearMin, 10);
-        if (!isNaN(year)) {
-          conditions.push(sql`c.built_year >= ${year}`);
-        }
-      }
-
-      const complexWhere = conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`;
-
-      const dbQuery = sql`SELECT id, apt_name, region_code, region_name, dong_name, built_year, slug, govt_complex_id
-                   FROM apt_complexes c
-                   WHERE ${complexWhere}
-                   ORDER BY c.apt_name LIMIT 50`;
-
-      const result = await db.execute(dbQuery);
-      results = (result.rows as { id: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; slug: string; govt_complex_id: string | null }[]).map((d) => ({
-        ...d,
-        sido_name: null,
-        sigungu_name: null,
-        latest_trade_price: null,
-      }));
-    } catch {
-      // DB 연결 실패 시 빈 데이터로 페이지 렌더링
+      results = await getCachedSearchResults({
+        query,
+        propertyType: validType,
+        filters,
+        sort,
+      });
+    } catch (error) {
+      searchFailure = searchFailureCopy(isDatabaseResourceLimitError(error));
+      logDatabaseFailure("Search page query failed", error, {
+        route: "/search",
+        query,
+        hasFilters,
+        sort,
+      });
     }
   }
 
+  const resultLabel = searchResultLabel({
+    query,
+    hasFilters,
+    resultCount: results.length,
+  });
+  const emptyTitle = searchEmptyTitle({ query, hasFilters });
+  const searchModeLabel = query
+    ? "검색어 기준"
+    : hasFilters
+      ? "필터 기준"
+      : "검색 전";
+  const retryParams = new URLSearchParams();
+  if (query) retryParams.set("q", query);
+  if (validType !== 1) retryParams.set("type", String(validType));
+  if (sort !== "relevance") retryParams.set("sort", sort);
+  if (filterPriceMin) retryParams.set("priceMin", filterPriceMin);
+  if (filterPriceMax) retryParams.set("priceMax", filterPriceMax);
+  if (filterSizeMin) retryParams.set("sizeMin", filterSizeMin);
+  if (filterSizeMax) retryParams.set("sizeMax", filterSizeMax);
+  if (filterBuiltYearMin) retryParams.set("builtYearMin", filterBuiltYearMin);
+  const retryQueryString = retryParams.toString();
+  const retryHref = retryQueryString
+    ? `/search?${retryQueryString}`
+    : "/search";
+
+  const createSortHref = (nextSort: SearchSortKey) => {
+    const nextParams = new URLSearchParams();
+    if (query) nextParams.set("q", query);
+    if (validType !== 1) nextParams.set("type", String(validType));
+    if (nextSort !== "relevance") nextParams.set("sort", nextSort);
+    if (filterPriceMin) nextParams.set("priceMin", filterPriceMin);
+    if (filterPriceMax) nextParams.set("priceMax", filterPriceMax);
+    if (filterSizeMin) nextParams.set("sizeMin", filterSizeMin);
+    if (filterSizeMax) nextParams.set("sizeMax", filterSizeMax);
+    if (filterBuiltYearMin) nextParams.set("builtYearMin", filterBuiltYearMin);
+
+    const queryString = nextParams.toString();
+    return queryString ? `/search?${queryString}` : "/search";
+  };
+
   return (
     <div>
+      <BreadcrumbJsonLd
+        items={[
+          { name: "홈", href: "/" },
+          { name: "아파트 검색", href: "/search" },
+        ]}
+      />
       <PropertyTypeFilter currentType={validType} />
-      {hasSearch && <SearchTracker query={query} resultCount={results.length} />}
+      {hasSearch && (
+        <SearchTracker
+          query={query}
+          resultCount={results.length}
+          propertyType={validType}
+        />
+      )}
       <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* Search Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-          <h1 className="text-2xl font-extrabold t-text">아파트 검색</h1>
+      <section className="mb-6">
+        <div className="inline-flex items-center rounded-full border t-border bg-[var(--color-surface-card)] px-3 py-1 text-xs font-semibold t-text-secondary">
+          <span className="mr-2 h-2 w-2 rounded-full bg-brand-500" />
+          {searchModeLabel}
         </div>
-        <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-          지역 + 아파트명으로 검색하고, 필터로 조건을 좁혀보세요
+        <h1 className="mt-3 text-3xl font-black t-text sm:text-4xl">아파트 검색</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 t-text-secondary">
+          지역명과 단지명을 함께 입력하면 결과가 빠르게 좁혀집니다. 가격, 면적, 준공년도 필터로 관심 조건만 남겨보세요.
         </p>
-      </div>
+      </section>
 
       {/* Search Form with Filters */}
       <form action="/search" method="GET" className="mb-8">
         {validType !== 1 && <input type="hidden" name="type" value={validType} />}
+        {sort !== "relevance" && <input type="hidden" name="sort" value={sort} />}
 
         {/* Main search input */}
         <div className="flex gap-2 mb-4">
@@ -171,6 +237,26 @@ export default async function SearchPage({
             검색
           </button>
         </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold t-text-tertiary">추천 검색</span>
+          {SEARCH_SUGGESTIONS.map((suggestion) => (
+            <TrackedLink
+              key={suggestion.query}
+              href={searchSuggestionHref(suggestion.query, validType)}
+              ctaName="search_suggestion_click"
+              params={{
+                query: suggestion.query,
+                property_type: validType,
+                surface: "form",
+              }}
+              className="rounded-full border t-border px-3 py-1.5 text-xs font-semibold t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
+            >
+              {suggestion.label}
+            </TrackedLink>
+          ))}
+        </div>
+        <RecentSearches currentPropertyType={validType} />
 
         {/* Filter Section */}
         <details className="rounded-xl border t-border" style={{ background: "var(--color-surface-card)" }}>
@@ -289,12 +375,13 @@ export default async function SearchPage({
               >
                 필터 적용
               </button>
-              <Link
+              <TrackedLink
                 href="/search"
+                ctaName="search_filter_reset_click"
                 className="rounded-lg border t-border px-4 py-2 text-sm font-medium t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
               >
                 필터 초기화
-              </Link>
+              </TrackedLink>
             </div>
           </div>
         </details>
@@ -332,79 +419,278 @@ export default async function SearchPage({
         </div>
       )}
 
+      {hasSearch && results.length > 0 && (
+        <div className="mb-4 flex flex-col gap-3 border-y t-border py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold t-text-tertiary">정렬</p>
+            <p className="mt-0.5 text-sm font-semibold t-text">{resultLabel}</p>
+          </div>
+          <div className="flex flex-wrap gap-2" role="list" aria-label="검색 결과 정렬">
+            {SEARCH_SORT_OPTIONS.map((option) => {
+              const isActive = option.value === sort;
+
+              return (
+                <TrackedLink
+                  key={option.value}
+                  href={createSortHref(option.value)}
+                  ctaName="search_sort_click"
+                  params={{
+                    sort: option.value,
+                    previous_sort: sort,
+                    query: query || undefined,
+                    has_filters: hasFilters,
+                    result_count: results.length,
+                  }}
+                  ariaLabel={`${option.label}: ${option.description}`}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                    isActive
+                      ? "bg-brand-600 text-white"
+                      : "border t-border t-text-secondary hover:bg-[var(--color-surface-elevated)]"
+                  }`}
+                >
+                  {option.label}
+                </TrackedLink>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Results */}
       {!hasSearch ? (
-        <div
-          className="rounded-2xl border-2 border-dashed p-12 text-center"
-          style={{ borderColor: "var(--color-border)" }}
-        >
+        <div className="rounded-2xl border-2 border-dashed p-8 text-center sm:p-12" style={{ borderColor: "var(--color-border)" }}>
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl text-2xl" style={{ background: "var(--color-surface-elevated)" }}>
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "var(--color-text-tertiary)" }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <p className="mt-4 font-semibold t-text">아파트명 또는 지역명을 검색하세요</p>
+          <p className="mt-4 font-semibold t-text">{emptyTitle}</p>
           <p className="mt-1 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
-            전국 아파트의 실거래가와 시세 변동을 확인할 수 있습니다
+            전국 아파트의 최근 실거래가와 단지 기본 정보를 확인할 수 있습니다.
           </p>
+          <div className="mx-auto mt-5 flex max-w-2xl flex-wrap justify-center gap-2">
+            {SEARCH_SUGGESTIONS.map((suggestion) => (
+              <TrackedLink
+                key={suggestion.query}
+                href={searchSuggestionHref(suggestion.query, validType)}
+                ctaName="search_suggestion_click"
+                params={{
+                  query: suggestion.query,
+                  property_type: validType,
+                  surface: "empty_state",
+                }}
+                className="rounded-full border t-border px-3 py-1.5 text-xs font-semibold t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
+              >
+                {suggestion.label}
+              </TrackedLink>
+            ))}
+          </div>
+        </div>
+      ) : searchFailure ? (
+        <div className="rounded-2xl border-2 border-dashed p-8 text-center sm:p-12" style={{ borderColor: "var(--color-border)" }}>
+          <p className="font-semibold t-text">{searchFailure.title}</p>
+          <p className="mt-1 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+            {searchFailure.description}
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <TrackedLink
+              href={retryHref}
+              ctaName="search_unavailable_retry_click"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+            >
+              다시 시도
+            </TrackedLink>
+            <TrackedLink
+              href="/market"
+              ctaName="search_unavailable_market_click"
+              className="rounded-lg border t-border px-4 py-2 text-sm font-bold t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
+            >
+              지역별 시세 보기
+            </TrackedLink>
+          </div>
         </div>
       ) : results.length === 0 ? (
-        <div
-          className="rounded-2xl border-2 border-dashed p-12 text-center"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <p className="font-semibold t-text">
-            {query ? `"${query}"` : "해당 조건의"} 검색 결과가 없습니다
-          </p>
+        <div className="rounded-2xl border-2 border-dashed p-8 text-center sm:p-12" style={{ borderColor: "var(--color-border)" }}>
+          <p className="font-semibold t-text">{emptyTitle}</p>
           <p className="mt-1 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
-            다른 검색어 또는 필터 조건으로 다시 시도해 주세요
+            검색어를 짧게 줄이거나 가격·면적 필터를 낮춰 다시 시도해 주세요.
           </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <TrackedLink
+              href="/search"
+              ctaName="search_empty_reset_click"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+            >
+              조건 초기화
+            </TrackedLink>
+            <TrackedLink
+              href="/market"
+              ctaName="search_empty_market_click"
+              className="rounded-lg border t-border px-4 py-2 text-sm font-bold t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
+            >
+              지역별 시세 보기
+            </TrackedLink>
+          </div>
         </div>
       ) : (
         <>
-          <p className="mb-4 text-sm" style={{ color: "var(--color-text-secondary)" }}>
-            {query ? `"${query}"` : "필터"} 검색 결과 {results.length}건
-          </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((apt) => (
-              <Link
-                key={apt.id}
-                href={aptUrl({ govtComplexId: apt.govt_complex_id, regionCode: apt.region_code, slug: apt.slug })}
-                className="card-hover block rounded-2xl border p-5 transition"
-                style={{
-                  borderColor: "var(--color-border)",
-                  background: "var(--color-surface-card)",
-                }}
-              >
-                <p className="font-bold t-text truncate">{apt.apt_name}</p>
-                <p className="mt-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                  {[apt.sido_name, apt.sigungu_name, apt.dong_name]
-                    .filter(Boolean)
-                    .join(" ")}
-                </p>
-                <div className="mt-3 flex items-center justify-between">
-                  {apt.built_year && (
-                    <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                      {apt.built_year}년 준공
-                    </span>
-                  )}
-                  {apt.latest_trade_price ? (
-                    <span className="text-sm font-bold tabular-nums t-text">
-                      {formatPrice(apt.latest_trade_price)}
-                    </span>
-                  ) : (
-                    <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                      거래 정보 없음
-                    </span>
-                  )}
-                </div>
-              </Link>
-            ))}
+            {results.map((apt, index) => {
+              const detailHref = aptUrl({
+                govtComplexId: apt.govt_complex_id,
+                regionCode: apt.region_code,
+                slug: apt.slug,
+              });
+              const compareHref = buildCompareHref([apt.id]);
+              const trackingParams = {
+                rank: index + 1,
+                query: query || undefined,
+                has_filters: hasFilters,
+                sort,
+                region_code: apt.region_code,
+                latest_trade_price: apt.latest_trade_price ?? undefined,
+                latest_change_rate: apt.latest_change_rate ?? undefined,
+              };
+
+              return (
+                <article
+                  key={apt.id}
+                  className="card-hover rounded-2xl border p-5 transition"
+                  style={{
+                    borderColor: "var(--color-border)",
+                    background: "var(--color-surface-card)",
+                  }}
+                >
+                  <TrackedLink
+                    href={detailHref}
+                    ctaName="search_result_title_click"
+                    params={trackingParams}
+                    className="block"
+                  >
+                    <p className="font-bold t-text truncate">
+                      <HighlightedText text={apt.apt_name} query={query} />
+                    </p>
+                    <p className="mt-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                      <HighlightedText
+                        text={[formatRegion(apt.region_code), apt.dong_name]
+                          .filter(Boolean)
+                          .join(" ")}
+                        query={query}
+                        markClassName="rounded bg-brand-50 px-0.5 text-brand-700"
+                      />
+                    </p>
+                  </TrackedLink>
+                  <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1">
+                    {apt.built_year && (
+                      <span className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+                        {apt.built_year}년 준공
+                      </span>
+                    )}
+                    {apt.total_units && (
+                      <span className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+                        {apt.total_units.toLocaleString()}세대
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-end justify-between gap-3 border-t t-border pt-2">
+                    <div className="min-w-0">
+                      <span className="block text-[11px] font-medium" style={{ color: "var(--color-text-tertiary)" }}>
+                        최근 실거래
+                      </span>
+                      {apt.latest_trade_date && (
+                        <span className="block truncate text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+                          {apt.latest_trade_date}
+                        </span>
+                      )}
+                    </div>
+                    {apt.latest_trade_price ? (
+                      <div className="shrink-0 text-right">
+                        <span className="block text-sm font-bold tabular-nums t-text">
+                          {formatPrice(apt.latest_trade_price)}
+                        </span>
+                        {apt.latest_change_rate !== null && (
+                          <span
+                            className={`block text-[11px] font-bold tabular-nums ${
+                              apt.latest_change_rate < 0
+                                ? "t-drop"
+                                : apt.latest_change_rate > 0
+                                  ? "t-rise"
+                                  : "t-text-tertiary"
+                            }`}
+                          >
+                            {apt.latest_change_rate > 0 ? "+" : ""}
+                            {apt.latest_change_rate.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="shrink-0 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                        거래 정보 없음
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <TrackedLink
+                      href={detailHref}
+                      ctaName="search_result_to_detail"
+                      params={trackingParams}
+                      className="inline-flex min-h-10 items-center justify-center rounded-lg bg-brand-600 px-3 text-xs font-bold text-white transition hover:bg-brand-700"
+                    >
+                      상세 보기
+                    </TrackedLink>
+                    <TrackedLink
+                      href={compareHref}
+                      ctaName="search_result_compare_start"
+                      params={{
+                        ...trackingParams,
+                        complex_id: apt.id,
+                      }}
+                      className="inline-flex min-h-10 items-center justify-center rounded-lg border t-border px-3 text-xs font-bold t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
+                    >
+                      비교 담기
+                    </TrackedLink>
+                  </div>
+                </article>
+              );
+            })}
           </div>
 
           <AdSlot slotId="search-infeed" format="infeed" className="mt-6" />
         </>
       )}
+
+        <SignalLandingFooter
+          eventScope="search"
+          methodTitle="검색 사용 기준"
+          methodItems={[
+            "검색어는 공백을 정리하고 최대 80자까지만 반영합니다.",
+            "두 단어 이상 입력하면 첫 단어는 지역, 나머지는 단지명 중심으로 좁혀 찾습니다.",
+            "가격·면적 필터는 최근 실거래가가 해당 조건에 맞는 단지를 우선 보여줍니다.",
+            "검색 결과 카드를 누르면 단지 상세에서 가격 흐름, 거래 이력, 관심단지 저장을 이어갈 수 있습니다.",
+          ]}
+          relatedLinks={[
+            {
+              href: "/market",
+              title: "지역별 시세",
+              description: "검색 전 지역 흐름부터 넓게 훑어봅니다.",
+            },
+            {
+              href: "/today",
+              title: "오늘 하락 거래",
+              description: "하락 신호가 강한 단지를 먼저 확인합니다.",
+            },
+            {
+              href: "/new-highs",
+              title: "오늘 신고가",
+              description: "신고가가 나온 단지를 따로 모아봅니다.",
+            },
+            {
+              href: "/rate",
+              title: "대출 금리",
+              description: "관심 단지 가격을 금리 부담과 함께 계산합니다.",
+            },
+          ]}
+        />
     </div>
     </div>
   );

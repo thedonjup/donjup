@@ -34,6 +34,10 @@ export default function ShareButtons({ url, title, description, imageUrl }: Shar
 
   async function handleNativeShare() {
     try {
+      if (!("share" in navigator)) {
+        await handleCopy();
+        return;
+      }
       await navigator.share({ title, text: description, url: fullUrl("native") });
       trackShare("native", url);
     } catch {
@@ -66,28 +70,24 @@ export default function ShareButtons({ url, title, description, imageUrl }: Shar
     }
   }
 
-  const canNativeShare = typeof navigator !== "undefined" && "share" in navigator;
-
   return (
-    <div className="flex items-center gap-2">
-      {canNativeShare && (
-        <button
-          onClick={handleNativeShare}
-          className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-80"
-          style={{
-            borderColor: "var(--color-border)",
-            color: "var(--color-text-secondary)",
-            background: "var(--color-surface-card)",
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
-            <polyline points="16 6 12 2 8 6" />
-            <line x1="12" y1="2" x2="12" y2="15" />
-          </svg>
-          공유
-        </button>
-      )}
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        onClick={handleNativeShare}
+        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-80"
+        style={{
+          borderColor: "var(--color-border)",
+          color: "var(--color-text-secondary)",
+          background: "var(--color-surface-card)",
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+          <polyline points="16 6 12 2 8 6" />
+          <line x1="12" y1="2" x2="12" y2="15" />
+        </svg>
+        공유
+      </button>
 
       <button
         onClick={handleKakao}

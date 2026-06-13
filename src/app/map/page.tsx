@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { db } from "@/lib/db";
-import { aptTransactions, aptComplexes } from "@/lib/db/schema";
-import { desc, isNotNull, eq } from "drizzle-orm";
 import KakaoMap from "@/components/map/KakaoMap";
 import type { MapTransaction } from "@/components/map/KakaoMap";
+import { parseCompareIds } from "@/lib/compare-selection";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import { formatRegion } from "@/lib/format";
+import { getCachedMapTransactions } from "@/lib/map-dashboard-query";
 
 export const metadata: Metadata = {
   title: "지도로 보는 실거래가",
@@ -16,56 +17,37 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function MapPage() {
-  // Fetch recent transactions that have geocoded complexes
-  const rows = await db
-    .select({
-      id: aptTransactions.id,
-      apt_name: aptTransactions.aptName,
-      region_name: aptTransactions.regionName,
-      trade_price: aptTransactions.tradePrice,
-      change_rate: aptTransactions.changeRate,
-      is_new_high: aptTransactions.isNewHigh,
-      size_sqm: aptTransactions.sizeSqm,
-      trade_date: aptTransactions.tradeDate,
-      complex_slug: aptComplexes.slug,
-      dong_name: aptComplexes.dongName,
-      latitude: aptComplexes.latitude,
-      longitude: aptComplexes.longitude,
-    })
-    .from(aptTransactions)
-    .innerJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
-    .where(isNotNull(aptComplexes.latitude))
-    .orderBy(desc(aptTransactions.tradeDate))
-    .limit(500)
-    .catch(() => []);
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { complex } = await searchParams;
+  const initialComplexId = parseCompareIds(
+    typeof complex === "string" ? complex : Array.isArray(complex) ? complex[0] : null,
+  )[0];
 
-  const mapTransactions: MapTransaction[] = rows
-    .filter((t) => t.latitude !== null && t.longitude !== null)
-    .map((t) => ({
-      id: t.id,
-      apt_name: t.apt_name,
-      region_name: t.region_name,
-      dong_name: t.dong_name ?? null,
-      trade_price: Number(t.trade_price),
-      change_rate: t.change_rate !== null ? Number(t.change_rate) : null,
-      is_new_high: t.is_new_high,
-      slug: t.complex_slug ?? "",
-      latitude: Number(t.latitude),
-      longitude: Number(t.longitude),
-      size_sqm: Number(t.size_sqm),
-      trade_date: t.trade_date,
-    }));
+  let mapTransactions: MapTransaction[] = [];
+  let mapDataUnavailable = false;
+
+  try {
+    mapTransactions = await getCachedMapTransactions();
+  } catch (error) {
+    mapDataUnavailable = true;
+    logDatabaseFailure("map transaction query failed", error, {
+      route: "/map",
+    });
+  }
 
   // 거래 데이터 요약 (SSR용)
   const totalCount = mapTransactions.length;
   const newHighCount = mapTransactions.filter(t => t.is_new_high).length;
   const dropCount = mapTransactions.filter(t => t.change_rate !== null && t.change_rate <= -10).length;
 
-  // 지역별 거래 수 상위 5개
+  // 지역별 거래 수 상위 5개 (region_code 기반으로 집계 후 변환)
   const regionCounts: Record<string, number> = {};
   for (const t of mapTransactions) {
-    regionCounts[t.region_name] = (regionCounts[t.region_name] || 0) + 1;
+    regionCounts[t.region_code] = (regionCounts[t.region_code] || 0) + 1;
   }
   const topRegions = Object.entries(regionCounts)
     .sort((a, b) => b[1] - a[1])
@@ -73,7 +55,11 @@ export default async function MapPage() {
 
   return (
     <>
-      <KakaoMap transactions={mapTransactions} />
+      <KakaoMap
+        transactions={mapTransactions}
+        initialComplexId={initialComplexId}
+        dataUnavailable={mapDataUnavailable}
+      />
       {/* 크롤러용 SSR 텍스트 - 시각적으로 숨김 처리 */}
       <section className="sr-only" aria-label="지도 거래 요약">
         <h1>전국 아파트 실거래가 지도</h1>
@@ -85,8 +71,8 @@ export default async function MapPage() {
           <>
             <h2>주요 거래 지역</h2>
             <ul>
-              {topRegions.map(([region, count]) => (
-                <li key={region}>{region}: {count}건</li>
+              {topRegions.map(([code, count]) => (
+                <li key={code}>{formatRegion(code)}: {count}건</li>
               ))}
             </ul>
           </>

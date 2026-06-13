@@ -1,61 +1,50 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { pushSubscriptions } from "@/lib/db/schema";
+import { isAllowedSiteOrigin } from "@/lib/api/site-origin";
 import { logger } from "@/lib/logger";
-
-const ALLOWED_ORIGINS = [
-  "https://donjup.com",
-  "https://www.donjup.com",
-];
+import { parsePushSubscriptionRequest } from "@/lib/push-subscription-request";
+import { publicDatabaseError } from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  forgetPushSubscriptionDedupe,
+  shouldStorePushSubscription,
+} from "@/lib/push-subscription-dedupe";
+import { savePushSubscription } from "@/lib/push-subscription-store";
 
 export async function POST(request: Request) {
-  // Origin validation
-  const origin = request.headers.get("origin");
-  const isDev = process.env.NODE_ENV === "development";
-
-  if (!isDev && origin && !ALLOWED_ORIGINS.includes(origin)) {
+  if (!isAllowedSiteOrigin(request.headers.get("origin"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    const body = await request.json();
-    const { endpoint, keys } = body as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } };
+    const parsed = parsePushSubscriptionRequest(await request.json().catch(() => null));
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
 
-    // Input validation
-    if (
-      typeof endpoint !== "string" ||
-      !endpoint.startsWith("https://") ||
-      typeof keys?.p256dh !== "string" ||
-      !keys.p256dh ||
-      typeof keys?.auth !== "string" ||
-      !keys.auth
-    ) {
-      return NextResponse.json(
-        { error: "Invalid subscription data" },
-        { status: 400 }
-      );
+    if (!shouldStorePushSubscription(parsed)) {
+      return NextResponse.json({ success: true });
     }
 
     try {
-      await db
-        .insert(pushSubscriptions)
-        .values({
-          endpoint,
-          p256dh: keys.p256dh,
-          auth: keys.auth,
-        })
-        .onConflictDoNothing();
+      await savePushSubscription(parsed);
     } catch (e) {
-      logger.error("Failed to save push subscription", { error: e, route: "/api/push/subscribe" });
+      forgetPushSubscriptionDedupe(parsed);
+
+      const publicError = publicDatabaseError(e);
+
+      logDatabaseFailure("Failed to save push subscription", e, {
+        route: "/api/push/subscribe",
+      });
+
       return NextResponse.json(
-        { error: "서버 오류가 발생했습니다" },
-        { status: 500 }
+        { error: publicError.message, code: publicError.code },
+        { status: publicError.status }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (e) {
     logger.error("Unexpected error in push subscribe", { error: e, route: "/api/push/subscribe" });
-    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

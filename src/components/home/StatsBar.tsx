@@ -33,10 +33,10 @@ export default function StatsBar({ totalTxns, totalComplexes, dropCount, highCou
   return (
     <section className="border-b t-border t-card">
       <div className="mx-auto flex max-w-6xl items-stretch gap-0 overflow-x-auto">
-        <StatBarItem label="오늘 거래건수" value={totalTxns} suffix="건" accent="t-drop" />
-        <StatBarItem label="전국 단지수" value={totalComplexes} suffix="개" accent="text-brand-600" />
-        <StatBarItem label="폭락 건수" value={dropCount} suffix="건" accent="t-drop" />
-        <StatBarItem label="신고가 건수" value={highCount} suffix="건" accent="t-rise" />
+        <StatBarItem label="누적 거래" value={totalTxns} suffix="건" accent="t-drop" />
+        <StatBarItem label="추적 단지" value={totalComplexes} suffix="개" accent="text-brand-600" />
+        <StatBarItem label="하락 신호" value={dropCount} suffix="건" accent="t-drop" />
+        <StatBarItem label="신고가 신호" value={highCount} suffix="건" accent="t-rise" />
       </div>
     </section>
   );

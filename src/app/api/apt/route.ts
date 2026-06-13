@@ -1,47 +1,45 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { aptComplexes } from "@/lib/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { publicApiCacheHeaders } from "@/lib/api/cache-headers";
+import { getCachedAptComplexList } from "@/lib/apt-list-query";
+import { publicDatabaseError } from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  parseBoundedPositiveInt,
+  parsePositivePage,
+} from "@/lib/pagination";
+import { parseSigunguRegionCode } from "@/lib/region-filter";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const region = searchParams.get("region"); // region_code
-  const page = parseInt(searchParams.get("page") ?? "1", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 50);
+  const regionParam = searchParams.get("region");
+  const region = parseSigunguRegionCode(regionParam);
+  const page = parsePositivePage(searchParams.get("page"));
+  const limit = parseBoundedPositiveInt(searchParams.get("limit"), {
+    defaultValue: 20,
+    max: 50,
+  });
+
+  if (regionParam?.trim() && !region) {
+    return NextResponse.json({ error: "Invalid region code" }, { status: 400 });
+  }
 
   try {
-    const offset = (page - 1) * limit;
+    const result = await getCachedAptComplexList(region, page, limit);
 
-    const whereClause = region ? eq(aptComplexes.regionCode, region) : undefined;
-
-    const [data, countResult] = await Promise.all([
-      db
-        .select()
-        .from(aptComplexes)
-        .where(whereClause)
-        .orderBy(desc(aptComplexes.updatedAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(aptComplexes)
-        .where(whereClause),
-    ]);
-
-    const count = Number(countResult[0]?.count ?? 0);
-
-    return NextResponse.json({
-      data,
-      pagination: {
-        page,
-        limit,
-        total: count,
-        totalPages: Math.ceil(count / limit),
-      },
-    });
+    return NextResponse.json(
+      result,
+      { headers: publicApiCacheHeaders() }
+    );
   } catch (e) {
-    logger.error("Failed to fetch apt complexes", { error: e, route: "/api/apt" });
-    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+    const publicError = publicDatabaseError(e);
+
+    logDatabaseFailure("Failed to fetch apt complexes", e, {
+      route: "/api/apt",
+    });
+
+    return NextResponse.json(
+      { error: publicError.message, code: publicError.code },
+      { status: publicError.status }
+    );
   }
 }

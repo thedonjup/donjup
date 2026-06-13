@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { TabId, TABS } from "./lib/calc-utils";
 import { LoanCalculatorTab } from "./components/LoanCalculatorTab";
@@ -23,13 +23,6 @@ function CalculatorContent() {
   const [activeTab, setActiveTab] = useState<TabId>(
     ["loan", "dsr", "jeonse"].includes(initialTab) ? initialTab : "loan"
   );
-
-  useEffect(() => {
-    const tab = searchParams.get("tab") as TabId;
-    if (tab && ["loan", "dsr", "jeonse"].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">

@@ -1,29 +1,24 @@
 import { NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
 import { aptTransactions } from "@/lib/db/schema";
 import { eq, isNull, lte, or, gt, lt, sql } from "drizzle-orm";
 import { sendSlackAlert } from "@/lib/alert";
+import { cronDatabaseGuard } from "@/lib/api/cron-db-guard";
 
 export const maxDuration = 300; // 5분
 
+import { calcDropLevel } from "@/lib/constants/drop-level";
+
 const MAX_NULL_RECORDS = 500;
-
-type DropLevel = "normal" | "decline" | "crash" | "severe";
-
-function calcDropLevel(changeRate: number | null): DropLevel {
-  if (changeRate === null) return "normal";
-  if (changeRate <= -25) return "severe";
-  if (changeRate <= -15) return "crash";
-  if (changeRate <= -10) return "decline";
-  return "normal";
-}
 
 export async function GET(request: Request) {
   // Cron 인증
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
+
+  const databaseUnavailable = await cronDatabaseGuard("validate-data");
+  if (databaseUnavailable) return databaseUnavailable;
 
   const log: string[] = [];
   const results: Record<string, unknown> = {};

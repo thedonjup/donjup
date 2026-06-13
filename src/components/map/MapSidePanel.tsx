@@ -1,6 +1,7 @@
 "use client";
 
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatRegion } from "@/lib/format";
+import { mapEmptyStateCopy } from "@/lib/map-state";
 import FilterChip from "./FilterChip";
 import { MapTransaction, getMarkerColor, getMarkerLabel } from "./map-utils";
 
@@ -12,6 +13,7 @@ interface MapSidePanelProps {
   panelOpen: boolean;
   setPanelOpen: (open: boolean) => void;
   onItemClick: (item: MapTransaction) => void;
+  dataUnavailable?: boolean;
 }
 
 export default function MapSidePanel({
@@ -22,7 +24,11 @@ export default function MapSidePanel({
   panelOpen,
   setPanelOpen,
   onItemClick,
+  dataUnavailable = false,
 }: MapSidePanelProps) {
+  const emptyState =
+    transactions.length === 0 ? mapEmptyStateCopy(dataUnavailable, filter) : null;
+
   return (
     <div
       className={`relative flex-shrink-0 overflow-hidden border-r transition-all duration-300 ${
@@ -75,13 +81,15 @@ export default function MapSidePanel({
 
         {/* List */}
         <div className="flex-1 overflow-y-auto">
-          {transactions.length === 0 ? (
+          {emptyState ? (
             <div
               className="flex h-40 flex-col items-center justify-center gap-2 px-4 text-center text-sm"
               style={{ color: "var(--color-text-tertiary)" }}
             >
-              <p>지도 데이터를 불러오는 중입니다</p>
-              <p className="text-xs">전국 아파트 실거래가를 지도에서 확인할 수 있습니다. 폭락, 하락, 신고가 단지를 색상별로 구분하여 표시합니다.</p>
+              <p className="font-semibold" style={{ color: "var(--color-text-secondary)" }}>
+                {emptyState.title}
+              </p>
+              <p className="text-xs">{emptyState.description}</p>
             </div>
           ) : (
             transactions.map((item) => (
@@ -113,7 +121,7 @@ export default function MapSidePanel({
                       className="text-xs"
                       style={{ color: "var(--color-text-tertiary)" }}
                     >
-                      {item.region_name} {item.dong_name || ""}
+                      {formatRegion(item.region_code)} {item.dong_name || ""}
                     </div>
                     <div className="mt-1 flex items-baseline gap-2">
                       <span

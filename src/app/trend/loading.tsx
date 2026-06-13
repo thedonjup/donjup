@@ -1,3 +1,5 @@
+const SKELETON_BAR_HEIGHTS = [42, 68, 55, 84, 49, 73];
+
 export default function TrendLoading() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -47,13 +49,13 @@ export default function TrendLoading() {
         }}
       >
         <div className="flex h-full items-end gap-2">
-          {[...Array(6)].map((_, i) => (
+          {SKELETON_BAR_HEIGHTS.map((height, i) => (
             <div
               key={i}
               className="flex-1 rounded-t-md"
               style={{
                 background: "var(--color-border)",
-                height: `${30 + Math.random() * 60}%`,
+                height: `${height}%`,
               }}
             />
           ))}

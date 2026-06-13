@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 interface Product {
   productId: number;
@@ -54,13 +55,14 @@ export default function CoupangBanner({
               rel="noopener noreferrer sponsored"
               className="flex items-center gap-3 group"
             >
-              <img
+              <Image
                 src={p.productImage}
                 alt={p.productName}
                 width={56}
                 height={56}
                 className="rounded-lg object-cover flex-shrink-0"
                 style={{ width: 56, height: 56 }}
+                unoptimized
               />
               <div className="flex-1 min-w-0">
                 <p

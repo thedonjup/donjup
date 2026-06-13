@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
 import { analyticsDaily } from "@/lib/db/schema";
 import { sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
+import { safeErrorMessage } from "@/lib/api/safe-error-response";
+import { cronDatabaseGuard } from "@/lib/api/cron-db-guard";
 
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
+
+  const databaseUnavailable = await cronDatabaseGuard("analytics");
+  if (databaseUnavailable) return databaseUnavailable;
 
   const errors: string[] = [];
 
@@ -115,7 +119,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = safeErrorMessage(e);
     errors.push(msg);
     logger.error("Analytics cron failed", { error: e, cron: "analytics" });
     await sendSlackAlert(`[analytics] 실패: ${msg}`);

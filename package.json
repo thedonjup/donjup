@@ -11,15 +11,34 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "db:status": "python3 scripts/show-db-status.py",
+    "db:status:json": "python3 scripts/show-db-status.py --json",
+    "db:status:files": "python3 scripts/show-db-status.py --no-automation",
+    "db:status:check": "python3 scripts/show-db-status.py --fail-on-warning",
+    "db:status:ops": "python3 scripts/show-db-status.py --fail-on-warning --fail-on-automation --max-health-age-hours=30 --max-maintenance-age-hours=30 --max-timer-audit-age-hours=30",
+    "db:health": "python3 scripts/check-db-health.py",
+    "db:maintenance": "python3 scripts/run-db-maintenance.py",
+    "db:maintenance:check": "python3 scripts/run-db-maintenance.py --no-backup --prune-dry-run",
+    "db:backup": "python3 scripts/run-local-backup.py --batches=0,1,2,3,4 --months=1 --kind=both --upload",
+    "db:recalculate-signals": "node scripts/local-data-pipeline.mjs recalculate-signals",
+    "db:reconcile-rents": "node scripts/local-data-pipeline.mjs reconcile-rents",
+    "db:geocode-complexes": "node scripts/local-data-pipeline.mjs geocode-complexes",
+    "db:refresh-cache": "node scripts/local-data-pipeline.mjs refresh-cache",
+    "db:timer:dry-run": "python3 scripts/install-db-maintenance-timer.py --dry-run",
+    "db:timer:install": "python3 scripts/install-db-maintenance-timer.py",
+    "db:timer:enable": "python3 scripts/install-db-maintenance-timer.py --enable",
+    "db:timer:audit": "python3 scripts/audit-db-maintenance-timer.py",
+    "db:timer:audit:required": "python3 scripts/audit-db-maintenance-timer.py --require-trigger",
+    "db:timer:uninstall": "python3 scripts/install-db-maintenance-timer.py --uninstall"
   },
   "dependencies": {
+    "@vercel/blob": "^2.3.3",
     "@vercel/og": "^0.11.1",
     "drizzle-orm": "^0.45.2",
-    "firebase": "^12.11.0",
-    "firebase-admin": "^13.7.0",
-    "next": "16.2.1",
-    "pg": "^8.20.0",
+    "firebase": "^12.12.1",
+    "firebase-admin": "^13.8.0",
+    "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.0",
@@ -38,10 +57,21 @@
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.2.1",
+    "eslint-config-next": "16.2.4",
+    "next-test-api-route-handler": "^5.0.4",
+    "pg": "^8.20.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.2"
+  },
+  "pnpm": {
+    "ignoredOptionalDependencies": [
+      "@google-cloud/storage"
+    ],
+    "overrides": {
+      "postcss": "8.5.10",
+      "uuid": "14.0.0"
+    }
   }
 }

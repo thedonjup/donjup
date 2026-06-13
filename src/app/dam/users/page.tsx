@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { formatDateKo } from "@/lib/format";
 
@@ -17,7 +18,9 @@ export default function UsersManagement() {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [total, setTotal] = useState(0);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +31,7 @@ export default function UsersManagement() {
     async function fetchUsers() {
       try {
         const idToken = await user!.getIdToken();
-        const res = await fetch("/api/admin/users", {
+        const res = await fetch("/api/admin/users?limit=100", {
           headers: { Authorization: `Bearer ${idToken}` },
         });
 
@@ -41,6 +44,7 @@ export default function UsersManagement() {
         if (!cancelled) {
           setUsers(data.users ?? []);
           setTotal(data.total ?? 0);
+          setNextPageToken(data.pageToken ?? null);
         }
       } catch (err) {
         if (!cancelled) {
@@ -54,6 +58,36 @@ export default function UsersManagement() {
     fetchUsers();
     return () => { cancelled = true; };
   }, [user]);
+
+  const loadMore = async () => {
+    if (!user || !nextPageToken) return;
+
+    setLoadingMore(true);
+    try {
+      const idToken = await user.getIdToken();
+      const params = new URLSearchParams({
+        limit: "100",
+        pageToken: nextPageToken,
+      });
+      const res = await fetch(`/api/admin/users?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setUsers((prev) => [...prev, ...((data.users ?? []) as UserRecord[])]);
+      setTotal((prev) => prev + Number(data.total ?? 0));
+      setNextPageToken(data.pageToken ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "회원 추가 로딩 실패");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -116,7 +150,7 @@ export default function UsersManagement() {
           className="rounded-full px-3 py-1 text-sm font-semibold"
           style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }}
         >
-          총 {total.toLocaleString()}명
+          {total.toLocaleString()}명 로드됨
         </span>
       </div>
 
@@ -163,7 +197,7 @@ export default function UsersManagement() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {u.photoURL ? (
-                        <img
+                        <Image
                           src={u.photoURL}
                           alt=""
                           width={32}
@@ -175,6 +209,7 @@ export default function UsersManagement() {
                             objectFit: "cover",
                             flexShrink: 0,
                           }}
+                          unoptimized
                         />
                       ) : (
                         <div
@@ -229,6 +264,20 @@ export default function UsersManagement() {
           </table>
         </div>
       </div>
+
+      {nextPageToken && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+            style={{ background: "var(--color-brand-600)" }}
+          >
+            {loadingMore ? "불러오는 중..." : "더 보기"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

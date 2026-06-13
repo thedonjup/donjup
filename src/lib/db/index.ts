@@ -1,6 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { logger } from "@/lib/logger";
 import * as schema from "./schema";
+import { parseDbPoolMax } from "./pool-config";
 
 // ---------------------------------------------------------------------------
 // Connection pool (singleton) — mirrors client.ts config exactly
@@ -17,12 +19,14 @@ function getPool(): Pool {
     pool = new Pool({
       connectionString: dbUrl,
       ssl: { rejectUnauthorized: false },
-      max: 10,
+      max: parseDbPoolMax(process.env.DB_POOL_MAX),
       idleTimeoutMillis: 20_000,
       connectionTimeoutMillis: 10_000,
     });
     pool.on("error", (err) => {
-      console.error("[db] Pool error:", err.message);
+      logger.error("Database pool error", {
+        error: err,
+      });
       // Recreate pool on connection error
       pool = null;
     });

@@ -6,9 +6,11 @@ import {
   type ServiceAccount,
 } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 let adminApp: App | null = null;
 let adminAuth: Auth | null = null;
+let adminFirestore: Firestore | null = null;
 
 function getServiceAccount(): ServiceAccount | null {
   const raw =
@@ -29,6 +31,7 @@ function initAdmin() {
   if (existing.length > 0) {
     adminApp = existing[0];
     adminAuth = getAuth(adminApp);
+    adminFirestore = getFirestore(adminApp);
     return;
   }
 
@@ -41,14 +44,21 @@ function initAdmin() {
   try {
     adminApp = initializeApp({ credential: cert(sa) });
     adminAuth = getAuth(adminApp);
+    adminFirestore = getFirestore(adminApp);
   } catch {
     // Initialization failed — graceful degradation
     adminApp = null;
     adminAuth = null;
+    adminFirestore = null;
   }
 }
 
 export function getAdminAuth(): Auth | null {
   initAdmin();
   return adminAuth;
+}
+
+export function getAdminFirestore(): Firestore | null {
+  initAdmin();
+  return adminFirestore;
 }

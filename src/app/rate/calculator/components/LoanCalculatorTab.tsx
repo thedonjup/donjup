@@ -6,6 +6,10 @@ import { formatKrw } from "@/lib/format";
 import CoupangBanner from "@/components/CoupangBanner";
 import { trackCalculate } from "@/lib/analytics/events";
 import {
+  fetchJson,
+  messageFromUnknownError,
+} from "@/lib/public-api-error";
+import {
   CalcResult,
   numericInput,
   parseManwon,
@@ -16,37 +20,46 @@ import { ResultCard } from "./ResultCard";
 import { RateScenarioSlider } from "./RateScenarioSlider";
 import { CpaBanner } from "./CpaBanner";
 
+interface BankRatesResponse {
+  minRate?: number | null;
+}
+
 export function LoanCalculatorTab() {
   const searchParams = useSearchParams();
-  const [principal, setPrincipal] = useState("");
+  const principalPreset = searchParams.get("principal");
+  const [principal, setPrincipal] = useState(() =>
+    principalPreset && /^\d[\d,]*$/.test(principalPreset) ? principalPreset : ""
+  );
   const [rate, setRate] = useState("3.5");
   const [years, setYears] = useState("30");
   const [result, setResult] = useState<CalcResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [rateOffset, setRateOffset] = useState(0);
   const [bankMinRate, setBankMinRate] = useState<number | null>(null);
+  const [bankRateMessage, setBankRateMessage] = useState<string | null>(null);
+  const [calculationError, setCalculationError] = useState<string | null>(null);
 
   useEffect(() => {
-    const preset = searchParams.get("principal");
-    if (preset && /^\d[\d,]*$/.test(preset)) {
-      setPrincipal(preset);
-    }
-
-    fetch("/api/bank-rates")
-      .then((res) => res.json())
+    fetchJson<BankRatesResponse>("/api/bank-rates")
       .then((data) => {
+        setBankRateMessage(null);
         if (data.minRate) setBankMinRate(data.minRate);
       })
-      .catch(() => {});
-  }, [searchParams]);
+      .catch((e: unknown) => {
+        setBankRateMessage(
+          messageFromUnknownError(e, "은행 금리 정보를 불러오지 못했습니다")
+        );
+      });
+  }, []);
 
   const handleCalculate = async () => {
     const principalNum = parseManwon(principal);
     if (!principalNum || !rate || !years) return;
 
     setLoading(true);
+    setCalculationError(null);
     try {
-      const res = await fetch("/api/rate/calculate", {
+      const data = await fetchJson<CalcResult>("/api/rate/calculate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -55,11 +68,12 @@ export function LoanCalculatorTab() {
           years: parseInt(years),
         }),
       });
-      const data = await res.json();
       setResult(data);
       trackCalculate("loan", { principal: principalNum, rate: parseFloat(rate), years: parseInt(years) });
     } catch (e) {
-      console.error(e);
+      setCalculationError(
+        messageFromUnknownError(e, "계산 결과를 불러오지 못했습니다")
+      );
     } finally {
       setLoading(false);
     }
@@ -129,6 +143,11 @@ export function LoanCalculatorTab() {
                 현재 은행 최저금리: {bankMinRate.toFixed(2)}%
               </p>
             )}
+            {bankMinRate === null && bankRateMessage && (
+              <p className="mt-1 text-xs text-amber-600">
+                {bankRateMessage}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium t-text">
@@ -154,6 +173,11 @@ export function LoanCalculatorTab() {
         >
           {loading ? "계산 중..." : "계산하기"}
         </button>
+        {calculationError && (
+          <p className="mt-3 text-center text-sm font-semibold text-red-600">
+            {calculationError}
+          </p>
+        )}
       </div>
 
       {/* Results */}

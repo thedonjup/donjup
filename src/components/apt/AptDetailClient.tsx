@@ -5,7 +5,7 @@ import PriceHistoryChartWrapper from "@/components/charts/PriceHistoryChartWrapp
 import TransactionTabs from "@/components/apt/TransactionTabs";
 import {
   filterTransactions,
-  computeMovingMedian,
+  computeMonthlyAverage,
   groupByMonth,
   computeMedianPrice,
   LOW_FLOOR_MAX,
@@ -214,35 +214,13 @@ export default function AptDetailClient({
     });
   }, [filteredSaleTxns, selectedSize, includeLowFloor, recentMedian]);
 
-  // 3개월 이동중위가 추이선
+  // 월별 평균가 추이선
   const trendLine = useMemo(() => {
     const monthly = groupByMonth(normal);
-    return computeMovingMedian(monthly);
+    return computeMonthlyAverage(monthly);
   }, [normal]);
 
-  // prevPrice 조회: 각 직거래에 대해 직전 정상거래가 찾기
-  const directDealsWithPrev = useMemo(() => {
-    // Sort normal transactions by date descending for lookup
-    const normalByDate = [...normal].sort((a, b) =>
-      b.trade_date.localeCompare(a.trade_date)
-    );
-
-    return directDeals.map((dd) => {
-      // Find most recent non-direct transaction before this direct deal's date
-      const prev = normalByDate.find((n) => n.trade_date <= dd.trade_date);
-      return {
-        trade_date: dd.trade_date,
-        trade_price: dd.trade_price,
-        size_sqm: dd.size_sqm,
-        deal_type: dd.deal_type,
-        floor: dd.floor,
-        isDirectDeal: true as const,
-        prevPrice: prev?.trade_price,
-      };
-    });
-  }, [directDeals, normal]);
-
-  // 전세 추이선: 순수전세(monthly_rent === 0) 기반 3개월 이동중위가
+  // 전세 추이선: 순수전세(monthly_rent === 0) 기반 월별 평균가
   const rentTrendLine = useMemo(() => {
     if (!selectedSize) return [];
     const pureJeonse = filteredRentTxns.filter(
@@ -253,7 +231,7 @@ export default function AptDetailClient({
       trade_price: r.deposit,
     }));
     const monthly = groupByMonth(forGrouping);
-    return computeMovingMedian(monthly);
+    return computeMonthlyAverage(monthly);
   }, [filteredRentTxns, selectedSize]);
 
   // 전세가율 추이: 월별 전세중위가 / 매매중위가 x 100
@@ -408,25 +386,16 @@ export default function AptDetailClient({
           </div>
 
           <PriceHistoryChartWrapper
-            normalDots={normal.map((t) => ({
-              trade_date: t.trade_date,
-              trade_price: t.trade_price,
-              size_sqm: t.size_sqm,
-              deal_type: t.deal_type,
-              floor: t.floor,
-              isDirectDeal: false,
-            }))}
-            directDealDots={directDealsWithPrev}
             trendLine={trendLine}
             rentTrendLine={rentTrendLine}
             jeonseRatioLine={jeonseRatioLine}
+            directDeals={directDeals}
             showJeonseRatio={showJeonseRatio}
-            sizeUnit={sizeUnit}
           />
           {/* Annotation + 저층 포함 토글 + 전세가율 표시 토글 */}
           <div className="mt-2 flex items-center justify-between">
             <p className="text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
-              * 추이선: 3개월 이동중위가 · 저층 거래는 고층 환산가 적용 · 직거래(회색 점)는 추이선 미반영
+              * 추이선: 월별 평균 거래가 · 저층 거래는 고층 환산가 적용 · 거래 없는 달은 이전 값 유지
             </p>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1.5 cursor-pointer">

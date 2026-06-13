@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback } from "react";
 import { formatPrice, sqmToPyeong } from "@/lib/format";
 import type { AptTransaction, AptRentTransaction } from "@/components/apt/AptDetailClient";
-import { DROP_LEVEL_CONFIG } from "@/lib/constants/drop-level";
+import { LOW_FLOOR_MAX } from "@/lib/price-normalization";
+
 
 type Transaction = AptTransaction;
 
@@ -42,7 +43,7 @@ export default function TransactionTabs({
     return Array.from(sizes).sort((a, b) => a - b);
   }, [saleTxns, rentTxns]);
 
-  // 필터링된 거래 목록
+  // 필터링된 거래 목록 (날짜 내림차순)
   const filteredSale = useMemo(
     () => (selectedSize ? saleTxns.filter((t) => t.size_sqm === selectedSize) : saleTxns),
     [saleTxns, selectedSize]
@@ -51,6 +52,28 @@ export default function TransactionTabs({
     () => (selectedSize ? rentTxns.filter((t) => t.size_sqm === selectedSize) : rentTxns),
     [rentTxns, selectedSize]
   );
+
+  // 직전 동일면적+동일층그룹 거래 대비 변동률 계산
+  // 층 그룹: 저층(1~3층) / 고층(4층+)
+  const prevChangeRates = useMemo(() => {
+    const map = new Map<string, number | null>();
+    const sorted = [...filteredSale].sort((a, b) => a.trade_date.localeCompare(b.trade_date));
+    // 면적+층그룹별 직전 가격 추적 (key: "면적|층그룹")
+    const lastPrice = new Map<string, number>();
+    for (const t of sorted) {
+      const floorGroup = t.floor <= LOW_FLOOR_MAX ? "low" : "high";
+      const key = `${t.size_sqm}|${floorGroup}`;
+      const prev = lastPrice.get(key);
+      if (prev !== undefined && prev > 0) {
+        const rate = parseFloat((((t.trade_price - prev) / prev) * 100).toFixed(2));
+        map.set(t.id, rate);
+      } else {
+        map.set(t.id, null);
+      }
+      lastPrice.set(key, t.trade_price);
+    }
+    return map;
+  }, [filteredSale]);
 
   const handleTabKeyDown = useCallback(
     (e: React.KeyboardEvent, current: "sale" | "rent") => {
@@ -174,7 +197,9 @@ export default function TransactionTabs({
           <>
             {/* Mobile cards */}
             <div className="space-y-2 sm:hidden">
-              {filteredSale.map((t) => (
+              {filteredSale.map((t) => {
+                const rate = prevChangeRates.get(t.id) ?? null;
+                return (
                 <div
                   key={t.id}
                   className="rounded-xl border t-border t-card px-4 py-3"
@@ -189,18 +214,18 @@ export default function TransactionTabs({
                     </div>
                     <div className="flex-shrink-0 text-right">
                       <p className="text-sm font-bold tabular-nums t-text">{formatPrice(t.trade_price)}</p>
-                      {t.change_rate !== null ? (
+                      {rate !== null ? (
                         <span
                           className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
                           style={
-                            t.change_rate < 0
+                            rate < 0
                               ? { background: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" }
-                              : t.change_rate > 0
+                              : rate > 0
                                 ? { background: "var(--color-semantic-rise-bg)", color: "var(--color-semantic-rise)" }
                                 : { color: "var(--color-text-tertiary)" }
                           }
                         >
-                          {t.change_rate < 0 ? "▼" : t.change_rate > 0 ? "▲" : ""} {Math.abs(t.change_rate)}%
+                          {rate < 0 ? "▼" : rate > 0 ? "▲" : ""} {Math.abs(rate)}%
                         </span>
                       ) : (
                         <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>-</span>
@@ -216,17 +241,10 @@ export default function TransactionTabs({
                     {t.is_new_high && (
                       <span className="text-xs font-bold" style={{ color: "var(--color-semantic-rise)" }}>신고가</span>
                     )}
-                    {t.drop_level && DROP_LEVEL_CONFIG[t.drop_level] && (
-                      <span
-                        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-                        style={{ backgroundColor: DROP_LEVEL_CONFIG[t.drop_level].bg, color: DROP_LEVEL_CONFIG[t.drop_level].color }}
-                      >
-                        {DROP_LEVEL_CONFIG[t.drop_level].label}
-                      </span>
-                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Desktop table */}
@@ -249,7 +267,9 @@ export default function TransactionTabs({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSale.map((t) => (
+                  {filteredSale.map((t) => {
+                    const rate = prevChangeRates.get(t.id) ?? null;
+                    return (
                     <tr key={t.id} className="border-b last:border-0" style={{ borderColor: "var(--color-border-subtle)" }}>
                       <td className="px-4 py-3 t-text">{t.trade_date}</td>
                       <td className="px-4 py-3 t-text">{formatSize(t.size_sqm, sizeUnit)}</td>
@@ -263,18 +283,18 @@ export default function TransactionTabs({
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {t.change_rate !== null ? (
+                        {rate !== null ? (
                           <span
                             className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold"
                             style={
-                              t.change_rate < 0
+                              rate < 0
                                 ? { background: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" }
-                                : t.change_rate > 0
+                                : rate > 0
                                   ? { background: "var(--color-semantic-rise-bg)", color: "var(--color-semantic-rise)" }
                                   : { color: "var(--color-text-tertiary)" }
                             }
                           >
-                            {t.change_rate < 0 ? "▼" : t.change_rate > 0 ? "▲" : ""} {Math.abs(t.change_rate)}%
+                            {rate < 0 ? "▼" : rate > 0 ? "▲" : ""} {Math.abs(rate)}%
                           </span>
                         ) : (
                           <span style={{ color: "var(--color-text-tertiary)" }}>-</span>
@@ -282,17 +302,10 @@ export default function TransactionTabs({
                         {t.is_new_high && (
                           <span className="ml-1 text-xs font-bold" style={{ color: "var(--color-semantic-rise)" }}>신고가</span>
                         )}
-                        {t.drop_level && DROP_LEVEL_CONFIG[t.drop_level] && (
-                          <span
-                            className="ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-                            style={{ backgroundColor: DROP_LEVEL_CONFIG[t.drop_level].bg, color: DROP_LEVEL_CONFIG[t.drop_level].color }}
-                          >
-                            {DROP_LEVEL_CONFIG[t.drop_level].label}
-                          </span>
-                        )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

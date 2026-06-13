@@ -1,25 +1,30 @@
 import { NextResponse } from "next/server";
-import { searchProducts } from "@/lib/api/coupang";
-
-const KEYWORDS: Record<string, string> = {
-  interior: "인테리어 소품",
-  moving: "이사 준비물",
-  book: "부동산 투자 책",
-  appliance: "가전제품 인기",
-};
+import { publicApiCacheHeaders } from "@/lib/api/cache-headers";
+import { getCachedCoupangProducts } from "@/lib/coupang-products-query";
+import { parseCoupangProductCategory } from "@/lib/coupang-products-params";
+import { logger } from "@/lib/logger";
+import { parseBoundedPositiveInt } from "@/lib/pagination";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get("category") ?? "book";
-    const keyword = KEYWORDS[category] ?? KEYWORDS.book;
-    const limit = Math.min(parseInt(searchParams.get("limit") ?? "4"), 10);
+    const category = parseCoupangProductCategory(searchParams.get("category"));
+    const limit = parseBoundedPositiveInt(searchParams.get("limit"), {
+      defaultValue: 4,
+      max: 10,
+    });
 
-    const products = await searchProducts(keyword, limit);
+    const products = await getCachedCoupangProducts(category, limit);
 
-    return NextResponse.json({ products });
+    return NextResponse.json(
+      { products },
+      { headers: publicApiCacheHeaders({ sharedMaxAge: 3600 }) }
+    );
   } catch (error) {
-    console.error("Coupang products API error:", error);
+    logger.error("Coupang products API failed", {
+      error,
+      route: "/api/coupang/products",
+    });
     return NextResponse.json(
       { error: "Failed to fetch products" },
       { status: 500 }

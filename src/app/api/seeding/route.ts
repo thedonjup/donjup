@@ -1,47 +1,34 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { seedingQueue } from "@/lib/db/schema";
-import { eq, and, asc } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { verifyCronAuth } from "@/lib/api/auth";
+import { publicDatabaseError } from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import { parseSeedingQueueQuery } from "@/lib/seeding-query";
+import { getPendingSeedingQueue } from "@/lib/seeding-queue-query";
 
 export async function GET(request: Request) {
-  // Cron 인증
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
-  const date = searchParams.get("date") ?? new Date().toISOString().split("T")[0];
-  const platform = searchParams.get("platform");
+  const query = parseSeedingQueueQuery(searchParams);
+  if (!query.ok) {
+    return NextResponse.json({ error: query.error }, { status: 400 });
+  }
 
   try {
-    const whereClause = platform
-      ? and(
-          eq(seedingQueue.reportDate, date),
-          eq(seedingQueue.status, "pending"),
-          eq(seedingQueue.platform, platform)
-        )
-      : and(
-          eq(seedingQueue.reportDate, date),
-          eq(seedingQueue.status, "pending")
-        );
-
-    const data = await db
-      .select({
-        id: seedingQueue.id,
-        platform: seedingQueue.platform,
-        title: seedingQueue.title,
-        status: seedingQueue.status,
-        report_date: seedingQueue.reportDate,
-      })
-      .from(seedingQueue)
-      .where(whereClause)
-      .orderBy(asc(seedingQueue.createdAt));
-
-    return NextResponse.json({ data, count: data.length });
+    return NextResponse.json(await getPendingSeedingQueue(query));
   } catch (e) {
-    logger.error("Failed to fetch seeding queue", { error: e, route: "/api/seeding" });
-    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+    const publicError = publicDatabaseError(e);
+
+    logDatabaseFailure("Failed to fetch seeding queue", e, {
+      route: "/api/seeding",
+      date: query.date,
+      platform: query.platform,
+    });
+
+    return NextResponse.json(
+      { error: publicError.message, code: publicError.code },
+      { status: publicError.status }
+    );
   }
 }

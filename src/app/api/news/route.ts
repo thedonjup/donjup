@@ -1,25 +1,33 @@
-import { searchNews } from "@/lib/api/naver-news";
+import { NextResponse } from "next/server";
+import { publicApiCacheHeaders } from "@/lib/api/cache-headers";
+import { getCachedNewsSearchResults } from "@/lib/news-query";
+import { parseBoundedTextQuery } from "@/lib/public-query";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q")?.trim();
+  const query = parseBoundedTextQuery(searchParams.get("q"), {
+    minLength: 2,
+    maxLength: 80,
+  });
 
   if (!query) {
-    return Response.json(
-      { error: "q 파라미터가 필요합니다" },
+    return NextResponse.json(
+      { error: "Invalid query" },
       { status: 400 }
     );
   }
 
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), 5000);
-
   try {
-    const items = await searchNews(query, ac.signal);
-    clearTimeout(timer);
-    return Response.json(items);
+    const items = await getCachedNewsSearchResults(query);
+
+    return NextResponse.json(
+      items,
+      { headers: publicApiCacheHeaders() }
+    );
   } catch {
-    clearTimeout(timer);
-    return Response.json([], { status: 200 });
+    return NextResponse.json(
+      [],
+      { status: 200, headers: publicApiCacheHeaders() }
+    );
   }
 }

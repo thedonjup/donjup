@@ -113,19 +113,8 @@ export default function RootLayout({
         </a>
         <ThemeProvider>
           <AuthProvider>
-          {process.env.NEXT_PUBLIC_KAKAO_JS_KEY && (
-            <Script
-              src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JS_KEY}&autoload=false&libraries=services,clusterer`}
-              strategy="afterInteractive"
-            />
-          )}
-          {process.env.NEXT_PUBLIC_KAKAO_JS_KEY && (
-            <Script
-              src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"
-              crossOrigin=""
-              strategy="afterInteractive"
-            />
-          )}
+          {/* Kakao Maps SDK: /map 페이지에서 자체 로드 */}
+          {/* Kakao Share SDK: 공유 버튼 클릭 시 동적 로드 */}
           {process.env.NEXT_PUBLIC_GA_ID && (
             <>
               <Script

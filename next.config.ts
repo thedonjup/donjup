@@ -17,7 +17,7 @@ const cspDirectives = [
     "https://va.vercel-scripts.com",
   ].join(" "),
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
-  "img-src 'self' data: blob: https: http:",
+  "img-src 'self' data: blob: https: http: https://*.public.blob.vercel-storage.com",
   "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
   [
     "connect-src 'self'",
@@ -58,6 +58,20 @@ const cspDirectives = [
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pg", "postgres"],
+  async redirects() {
+    return [
+      {
+        source: "/apt/sitemap.xml",
+        destination: "/apt-sitemap.xml",
+        permanent: true,
+      },
+      {
+        source: "/daily/sitemap.xml",
+        destination: "/daily-sitemap.xml",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

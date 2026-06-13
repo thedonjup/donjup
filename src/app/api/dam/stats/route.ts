@@ -1,55 +1,25 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { aptTransactions, aptComplexes, pushSubscriptions, pageViews } from "@/lib/db/schema";
-import { isNull, sql, desc } from "drizzle-orm";
+import { verifyAdminAuth } from "@/lib/api/admin-auth";
+import { publicDatabaseError } from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import { getDamStats } from "@/lib/dam-dashboard-query";
 
 export async function GET(request: Request) {
-  // 관리자 API 인증
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  try {
-    const [txnCount, complexCount, pushCount, viewCount, nullHighest, recentTx] =
-      await Promise.allSettled([
-        db.select({ count: sql<number>`count(*)` }).from(aptTransactions),
-        db.select({ count: sql<number>`count(*)` }).from(aptComplexes),
-        db.select({ count: sql<number>`count(*)` }).from(pushSubscriptions),
-        db.select({ count: sql<number>`count(*)` }).from(pageViews),
-        // apt_complexes doesn't have highest_price — count complexes missing latitude as proxy
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(aptComplexes)
-          .where(isNull(aptComplexes.latitude)),
-        db
-          .select({
-            id: aptTransactions.id,
-            apt_name: aptTransactions.aptName,
-            trade_price: aptTransactions.tradePrice,
-            trade_date: aptTransactions.tradeDate,
-            region_name: aptTransactions.regionName,
-          })
-          .from(aptTransactions)
-          .orderBy(desc(aptTransactions.createdAt))
-          .limit(10),
-      ]);
+  const authError = await verifyAdminAuth(request);
+  if (authError) return authError;
 
-    return NextResponse.json({
-      transactions: txnCount.status === "fulfilled" ? Number(txnCount.value[0]?.count ?? 0) : 0,
-      complexes: complexCount.status === "fulfilled" ? Number(complexCount.value[0]?.count ?? 0) : 0,
-      pushSubscribers: pushCount.status === "fulfilled" ? Number(pushCount.value[0]?.count ?? 0) : 0,
-      pageViews: viewCount.status === "fulfilled" ? Number(viewCount.value[0]?.count ?? 0) : 0,
-      nullHighestCount: nullHighest.status === "fulfilled" ? Number(nullHighest.value[0]?.count ?? 0) : 0,
-      recentTransactions: recentTx.status === "fulfilled" ? recentTx.value : [],
+  try {
+    return NextResponse.json(await getDamStats());
+  } catch (e) {
+    const publicError = publicDatabaseError(e);
+
+    logDatabaseFailure("Failed to fetch DAM stats", e, {
+      route: "/api/dam/stats",
     });
-  } catch {
-    return NextResponse.json({
-      transactions: 0,
-      complexes: 0,
-      pushSubscribers: 0,
-      pageViews: 0,
-      nullHighestCount: 0,
-      recentTransactions: [],
-    });
+
+    return NextResponse.json(
+      { error: publicError.message, code: publicError.code },
+      { status: publicError.status }
+    );
   }
 }

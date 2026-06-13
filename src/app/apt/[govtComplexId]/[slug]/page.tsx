@@ -1,17 +1,28 @@
-import { db } from "@/lib/db";
-import { aptTransactions, aptComplexes, aptRentTransactions } from "@/lib/db/schema";
-import { eq, desc, and, ne } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
 import CoupangBanner from "@/components/CoupangBanner";
-import ShareButtons from "@/components/ShareButtons";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  aptDetailUnavailableMetadata,
+  detailUnavailableStates,
+} from "@/lib/detail-data-state";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
-import AptDetailClient, { type AptTransaction, type AptRentTransaction } from "@/components/apt/AptDetailClient";
-import { toDbSlug } from "@/lib/apt-url";
-import NotifyButton from "@/components/apt/NotifyButton";
-import FavoriteButton from "@/components/apt/FavoriteButton";
+import AptDetailClient from "@/components/apt/AptDetailClient";
+import { aptUrl, shouldRedirectToAptCanonical } from "@/lib/apt-url";
+import {
+  getCachedAptDetailComplexBySlug,
+  getCachedAptDetailNearbyComplexes,
+  getCachedAptDetailRentTransactions,
+  getCachedAptDetailSaleTransactions,
+  type AptDetailComplex,
+  type AptDetailNearbyComplex,
+  type AptDetailRentTransaction,
+  type AptDetailSaleTransaction,
+} from "@/lib/apt-detail-query";
+import AptDetailActions from "@/components/apt/AptDetailActions";
+import AptDetailUnavailable from "@/components/apt/AptDetailUnavailable";
 import MiniLoanCalculator from "@/components/apt/MiniLoanCalculator";
 import AptNews from "@/components/apt/AptNews";
 import Comments from "@/components/apt/Comments";
@@ -19,81 +30,37 @@ import ViewDetailTracker from "@/components/analytics/ViewDetailTracker";
 
 export const revalidate = 3600;
 
-type Transaction = AptTransaction;
-type RentTransaction = AptRentTransaction;
+type Transaction = AptDetailSaleTransaction;
+type RentTransaction = AptDetailRentTransaction;
+type AptComplex = AptDetailComplex;
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ region: string; slug: string }>;
+  params: Promise<{ govtComplexId: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug, region } = await params;
+  const { slug, govtComplexId: region } = await params;
   const decodedSlug = decodeURIComponent(slug);
+  try {
+    const complex = await getCachedAptDetailComplexBySlug(region, decodedSlug);
 
-  type MetaComplex = { apt_name: string; region_name: string; dong_name: string | null; region_code: string; slug: string };
-  let complex: MetaComplex | null = null;
-
-  const metaDbSlug = toDbSlug(region, decodedSlug);
-
-  const exactMatch = await db.select({
-    apt_name: aptComplexes.aptName,
-    region_name: aptComplexes.regionName,
-    dong_name: aptComplexes.dongName,
-    region_code: aptComplexes.regionCode,
-    slug: aptComplexes.slug,
-  }).from(aptComplexes).where(eq(aptComplexes.slug, metaDbSlug)).limit(1);
-
-  if (exactMatch[0]) {
-    complex = exactMatch[0];
-  }
-
-  // Fallback: try with decoded slug directly or region search
-  if (!complex) {
-    const fallbackList = await db.select({
-      apt_name: aptComplexes.aptName,
-      region_name: aptComplexes.regionName,
-      dong_name: aptComplexes.dongName,
-      slug: aptComplexes.slug,
-      region_code: aptComplexes.regionCode,
-    }).from(aptComplexes).where(eq(aptComplexes.regionCode, region)).limit(200);
-
-    if (fallbackList.length > 0) {
-      const dashIdx = decodedSlug.indexOf("-");
-      const nameCandidate = dashIdx > 0 ? decodedSlug.substring(dashIdx + 1) : decodedSlug;
-      const found = fallbackList.find((c) => {
-        return c.slug === decodedSlug ||
-          c.slug === metaDbSlug ||
-          c.apt_name.replace(/[\s\-]/g, "").toLowerCase() === nameCandidate.replace(/-/g, "").toLowerCase();
-      });
-      if (found) complex = found;
+    if (!complex) {
+      return { title: "단지 정보" };
     }
-  }
 
-  if (!complex) {
-    return { title: "단지 정보" };
-  }
+  const latestTxn = (await getCachedAptDetailSaleTransactions(
+    complex.id,
+    complex.aptName,
+    complex.regionCode,
+    complex.propertyType,
+  ))[0] ?? null;
+  const changeRate = latestTxn?.change_rate ?? null;
+  const tradePrice = latestTxn?.trade_price ?? null;
+  const highestPrice = latestTxn?.highest_price ?? null;
 
-  // 최근 거래가 및 최고가 조회 (OG 태그에 가격 변동 정보 포함)
-  const latestTxnRows = await db.select({
-    trade_price: aptTransactions.tradePrice,
-    highest_price: aptTransactions.highestPrice,
-    change_rate: aptTransactions.changeRate,
-  }).from(aptTransactions)
-    .where(and(
-      eq(aptTransactions.aptName, complex.apt_name),
-      eq(aptTransactions.regionCode, complex.region_code),
-    ))
-    .orderBy(desc(aptTransactions.tradeDate))
-    .limit(1);
-
-  const latestTxn = latestTxnRows[0] ?? null;
-  const changeRate = latestTxn ? Number(latestTxn.change_rate) : null;
-  const tradePrice = latestTxn ? Number(latestTxn.trade_price) : null;
-  const highestPrice = latestTxn ? latestTxn.highest_price : null;
-
-  const complexAptName = complex.apt_name;
-  const complexRegionName = complex.region_name;
-  const complexDongName = complex.dong_name;
+  const complexAptName = complex.aptName;
+  const complexRegionName = complex.regionName;
+  const complexDongName = complex.dongName;
 
   // 감정 자극형 타이틀
   const priceLabel = tradePrice ? formatPrice(tradePrice) : "";
@@ -115,14 +82,19 @@ export async function generateMetadata({
     ogDescription = `${complexRegionName} ${complexDongName ?? ""} 아파트 실거래가 시세를 확인하세요`;
   }
 
-  const pageUrl = `https://donjup.com/apt/${region}/${slug}`;
-  const ogImageUrl = `https://donjup.com/apt/${region}/${slug}/opengraph-image`;
+  const canonicalPath = aptUrl({
+    govtComplexId: complex.govtComplexId,
+    regionCode: complex.regionCode,
+    slug: complex.slug,
+  });
+  const pageUrl = `https://donjup.com${canonicalPath}`;
+  const ogImageUrl = `https://donjup.com${canonicalPath}/opengraph-image`;
 
   const seoTitle = `${complexAptName} 실거래가 - ${complexRegionName} ${complexDongName ?? ""}`;
   return {
     title: seoTitle,
     description: `${complexAptName} 아파트 실거래가 시세, 최고가 대비 변동률, 거래 이력을 확인하세요. ${complexRegionName} ${complexDongName ?? ""} 매매·전월세 시세 비교.`,
-    alternates: { canonical: `/apt/${region}/${slug}` },
+    alternates: { canonical: canonicalPath },
     keywords: [
       `${complexAptName} 실거래가`,
       `${complexAptName} 시세`,
@@ -154,124 +126,111 @@ export async function generateMetadata({
       images: [ogImageUrl],
     },
   };
+  } catch (err) {
+    logDatabaseFailure("apt detail metadata query failed", err, {
+      route: "/apt/[govtComplexId]/[slug]",
+      govtComplexId: region,
+      slug: decodedSlug,
+    });
+    return aptDetailUnavailableMetadata(`/apt/${region}/${slug}`);
+  }
 }
 
 export default async function AptDetailPage({
   params,
 }: {
-  params: Promise<{ region: string; slug: string }>;
+  params: Promise<{ govtComplexId: string; slug: string }>;
 }) {
-  const { slug, region } = await params;
+  const { slug, govtComplexId: region } = await params;
   const decodedSlug = decodeURIComponent(slug);
 
-  // DB slug 복원: URL의 "164" → DB의 "11230-164"
-  const dbSlug = toDbSlug(region, decodedSlug);
+  let complex: AptComplex | null = null;
+  let complexLookupUnavailable = false;
 
-  // Try exact slug match
-  const complexRows = await db.select().from(aptComplexes)
-    .where(eq(aptComplexes.slug, dbSlug))
-    .limit(1);
-
-  let complex = complexRows[0] ?? null;
-
-  // Fallback 1: URL slug 그대로 매칭 (한글 slug 등)
-  if (!complex && dbSlug !== decodedSlug) {
-    const fallback1 = await db.select().from(aptComplexes)
-      .where(eq(aptComplexes.slug, decodedSlug))
-      .limit(1);
-    if (fallback1[0]) complex = fallback1[0];
+  try {
+    complex = await getCachedAptDetailComplexBySlug(region, decodedSlug);
+  } catch (err) {
+    complexLookupUnavailable = true;
+    logDatabaseFailure("apt detail complex lookup failed", err, {
+      route: "/apt/[govtComplexId]/[slug]",
+      govtComplexId: region,
+      slug: decodedSlug,
+    });
   }
 
-  // Fallback 2: 옛날 형식 "{regionCode}-{aptName}" 링크 → aptName으로 매칭
-  if (!complex) {
-    // decodedSlug가 "11230-서해그랑블5단지" 형태일 수 있음
-    const dashIdx = decodedSlug.indexOf("-");
-    const nameCandidate = dashIdx > 0 ? decodedSlug.substring(dashIdx + 1) : decodedSlug;
-    const cleanName = decodeURIComponent(nameCandidate).replace(/-/g, "");
-    const candidates = await db.select().from(aptComplexes)
-      .where(eq(aptComplexes.regionCode, region))
-      .limit(200);
-    const found = candidates.find((c) =>
-      c.aptName?.replace(/[\s\-]/g, "").toLowerCase() === cleanName.toLowerCase() ||
-      c.aptName === nameCandidate
-    );
-    if (found) complex = found;
+  if (complexLookupUnavailable) {
+    return <AptDetailUnavailable retryPath={`/apt/${region}/${slug}`} />;
   }
 
   if (!complex) {
     notFound();
   }
 
+  const detailContentId = complex.govtComplexId ?? complex.slug;
+  const detailPath = aptUrl({
+    govtComplexId: complex.govtComplexId,
+    regionCode: complex.regionCode,
+    slug: complex.slug,
+  });
+
+  if (shouldRedirectToAptCanonical(`/apt/${region}/${decodedSlug}`, detailPath)) {
+    permanentRedirect(detailPath);
+  }
+
   let txns: Transaction[] = [];
   let rentTxns: RentTransaction[] = [];
-  let nearbyComplexes: { slug: string; apt_name: string; region_code: string; region_name: string; dong_name: string | null; built_year: number | null; total_units: number | null }[] = [];
+  let nearbyComplexes: AptDetailNearbyComplex[] = [];
+  let saleDataUnavailable = false;
+  let rentDataUnavailable = false;
+  let nearbyDataUnavailable = false;
 
   try {
-    const transactions = await db.select({
-      id: aptTransactions.id,
-      size_sqm: aptTransactions.sizeSqm,
-      floor: aptTransactions.floor,
-      trade_price: aptTransactions.tradePrice,
-      trade_date: aptTransactions.tradeDate,
-      highest_price: aptTransactions.highestPrice,
-      change_rate: aptTransactions.changeRate,
-      is_new_high: aptTransactions.isNewHigh,
-      is_significant_drop: aptTransactions.isSignificantDrop,
-      deal_type: aptTransactions.dealType,
-      drop_level: aptTransactions.dropLevel,
-    }).from(aptTransactions)
-      .where(and(
-        eq(aptTransactions.aptName, complex.aptName),
-        eq(aptTransactions.regionCode, complex.regionCode),
-      ))
-      .orderBy(desc(aptTransactions.tradeDate))
-      .limit(50);
-
-    txns = transactions as unknown as Transaction[];
-
-    // 전월세 이력 조회 — same db instance handles all tables
-    try {
-      const rentData = await db.select({
-        id: aptRentTransactions.id,
-        size_sqm: aptRentTransactions.sizeSqm,
-        floor: aptRentTransactions.floor,
-        deposit: aptRentTransactions.deposit,
-        monthly_rent: aptRentTransactions.monthlyRent,
-        rent_type: aptRentTransactions.rentType,
-        contract_type: aptRentTransactions.contractType,
-        trade_date: aptRentTransactions.tradeDate,
-      }).from(aptRentTransactions)
-        .where(and(
-          eq(aptRentTransactions.aptName, complex.aptName),
-          eq(aptRentTransactions.regionCode, complex.regionCode),
-        ))
-        .orderBy(desc(aptRentTransactions.tradeDate))
-        .limit(200);
-      rentTxns = rentData as unknown as RentTransaction[];
-    } catch {
-      // rent data unavailable — ignore
-    }
-
-    // 같은 동네 다른 단지 조회
-    if (complex.dongName) {
-      const nearby = await db.select({
-        slug: aptComplexes.slug,
-        apt_name: aptComplexes.aptName,
-        region_code: aptComplexes.regionCode,
-        region_name: aptComplexes.regionName,
-        dong_name: aptComplexes.dongName,
-        built_year: aptComplexes.builtYear,
-        total_units: aptComplexes.totalUnits,
-      }).from(aptComplexes)
-        .where(and(
-          eq(aptComplexes.dongName, complex.dongName),
-          ne(aptComplexes.slug, decodedSlug),
-        ))
-        .limit(5);
-      nearbyComplexes = nearby as unknown as typeof nearbyComplexes;
-    }
+    txns = await getCachedAptDetailSaleTransactions(
+      complex.id,
+      complex.aptName,
+      complex.regionCode,
+      complex.propertyType,
+    );
   } catch (err) {
-    console.error("[apt-detail] DB query failed:", err, "slug:", decodedSlug);
+    saleDataUnavailable = true;
+    logDatabaseFailure("apt detail sale transaction query failed", err, {
+      route: "/apt/[govtComplexId]/[slug]",
+      govtComplexId: region,
+      slug: decodedSlug,
+      complexId: complex.id,
+    });
+  }
+
+  try {
+    rentTxns = await getCachedAptDetailRentTransactions(
+      complex.aptName,
+      complex.regionCode,
+    );
+  } catch (err) {
+    rentDataUnavailable = true;
+    logDatabaseFailure("apt detail rent transaction query failed", err, {
+      route: "/apt/[govtComplexId]/[slug]",
+      govtComplexId: region,
+      slug: decodedSlug,
+      complexId: complex.id,
+    });
+  }
+
+  if (complex.dongName) {
+    try {
+      nearbyComplexes = await getCachedAptDetailNearbyComplexes(
+        complex.id,
+        complex.dongName,
+      );
+    } catch (err) {
+      nearbyDataUnavailable = true;
+      logDatabaseFailure("apt detail nearby complex query failed", err, {
+        route: "/apt/[govtComplexId]/[slug]",
+        govtComplexId: region,
+        slug: decodedSlug,
+        complexId: complex.id,
+      });
+    }
   }
 
   const prices = txns.map((t) => t.trade_price);
@@ -297,13 +256,18 @@ export default async function AptDetailPage({
     ...sizeEntries.map(([, g]) => Math.max(...g.map((t) => t.trade_price))),
     1
   );
+  const detailUnavailableCopies = detailUnavailableStates({
+    sale: saleDataUnavailable,
+    rent: rentDataUnavailable,
+    nearby: nearbyDataUnavailable,
+  });
 
   const aptJsonLd = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
     name: `${complex.aptName} 아파트`,
     description: `${complex.aptName} - ${complex.regionName} ${complex.dongName ?? ""} 아파트 실거래가 및 시세 정보`,
-    url: `https://donjup.com/apt/${region}/${slug}`,
+    url: `https://donjup.com${detailPath}`,
     ...(latestPrice > 0 && {
       offers: {
         "@type": "Offer",
@@ -322,7 +286,7 @@ export default async function AptDetailPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <ViewDetailTracker contentType="apt" contentId={slug} />
+      <ViewDetailTracker contentType="apt" contentId={detailContentId} aptName={complex.aptName} regionName={complex.regionName} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(aptJsonLd) }}
@@ -344,20 +308,20 @@ export default async function AptDetailPage({
 
       {/* 단지 헤더 */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
+        <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
             <h1 className="text-2xl font-extrabold t-text">{complex.aptName}</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <FavoriteButton govtComplexId={complex.govtComplexId ?? slug} aptName={complex.aptName} regionName={complex.regionName} />
-            <NotifyButton aptName={complex.aptName} />
-            <ShareButtons
-              url={`https://donjup.com/apt/${region}/${slug}`}
-              title={`${complex.aptName} 실거래가`}
-              description={`${complex.aptName} 최근 거래가 ${formatPrice(latestPrice)} | 돈줍`}
-            />
-          </div>
+          <AptDetailActions
+            aptName={complex.aptName}
+            regionName={complex.regionName}
+            contentId={detailContentId}
+            complexId={complex.id}
+            detailUrl={detailPath}
+            latestPrice={latestPrice}
+            hasLocation={complex.latitude !== null && complex.longitude !== null}
+          />
         </div>
         <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
           {complex.regionName} {complex.dongName ?? ""}
@@ -415,6 +379,28 @@ export default async function AptDetailPage({
       </div>
 
       {/* 면적 선택 + 가격 추이 차트 + 거래 이력 (통합 상태 관리) */}
+      {detailUnavailableCopies.length > 0 && (
+        <div className="mb-4 grid gap-3">
+          {detailUnavailableCopies.map((copy) => (
+            <div
+              key={copy.kind}
+              role="status"
+              className="rounded-2xl border p-4 text-sm"
+              style={{
+                borderColor: "var(--color-border)",
+                background: "var(--color-surface-card)",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              <p className="font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                {copy.title}
+              </p>
+              <p className="mt-1 text-xs">{copy.description}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <AptDetailClient saleTxns={txns} rentTxns={rentTxns} />
 
       <AdSlot slotId="apt-detail-infeed" format="infeed" className="mt-6" />
@@ -426,7 +412,14 @@ export default async function AptDetailPage({
           <div className="rounded-2xl border p-5" style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}>
             <h2 className="mb-4 font-bold t-text">면적별 시세</h2>
             <div className="space-y-4">
-              {sizeEntries.map(([size, group]) => {
+              {sizeEntries.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+                  {saleDataUnavailable
+                    ? "면적별 시세를 불러오지 못했습니다."
+                    : "아직 표시할 매매 거래가 없습니다."}
+                </p>
+              ) : (
+                sizeEntries.map(([size, group]) => {
                 const latest = group[0];
                 const highest = Math.max(...group.map((g) => g.trade_price));
                 const barWidth = Math.max((highest / maxSizePrice) * 100, 8);
@@ -449,7 +442,8 @@ export default async function AptDetailPage({
                     </div>
                   </div>
                 );
-              })}
+                })
+              )}
             </div>
           </div>
 
@@ -469,7 +463,7 @@ export default async function AptDetailPage({
 
       {/* 댓글 */}
       <div className="mt-8">
-        <Comments aptSlug={slug} />
+        <Comments aptSlug={detailContentId} />
       </div>
 
       {/* 같은 동네 다른 단지 */}
@@ -480,7 +474,7 @@ export default async function AptDetailPage({
             {nearbyComplexes.map((nc) => (
               <Link
                 key={nc.slug}
-                href={`/apt/${nc.region_code}/${nc.slug}`}
+                href={aptUrl({ govtComplexId: nc.govt_complex_id, regionCode: nc.region_code, slug: nc.slug })}
                 className="card-hover rounded-2xl border p-4 transition-colors"
                 style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
               >

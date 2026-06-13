@@ -1,38 +1,48 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { dailyReports } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { publicApiCacheHeaders } from "@/lib/api/cache-headers";
+import {
+  getCachedDailyReportByDate,
+  getCachedLatestDailyReport,
+} from "@/lib/daily-report-query";
+import { parseDailyReportApiDate } from "@/lib/daily-report-nav";
+import { publicDatabaseError } from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ date: string }> }
 ) {
-  const { date } = await params;
+  const { date: rawDate } = await params;
+  const date = parseDailyReportApiDate(rawDate);
 
-  // "latest"이면 가장 최근 리포트
-  if (date === "latest") {
-    const rows = await db
-      .select()
-      .from(dailyReports)
-      .orderBy(desc(dailyReports.reportDate))
-      .limit(1);
+  if (!date) {
+    return NextResponse.json({ error: "Invalid report date" }, { status: 400 });
+  }
 
-    if (!rows[0]) {
-      return NextResponse.json({ error: "리포트가 없습니다." }, { status: 404 });
+  try {
+    const report = date === "latest"
+      ? await getCachedLatestDailyReport()
+      : await getCachedDailyReportByDate(date);
+
+    if (!report) {
+      return NextResponse.json({ error: "해당 날짜 리포트가 없습니다." }, { status: 404 });
     }
-    return NextResponse.json({ data: rows[0] });
+
+    return NextResponse.json(
+      { data: report },
+      { headers: publicApiCacheHeaders() }
+    );
+  } catch (e) {
+    const publicError = publicDatabaseError(e);
+
+    logDatabaseFailure("Failed to fetch daily report", e, {
+      route: "/api/daily/[date]",
+      date,
+    });
+
+    return NextResponse.json(
+      { error: publicError.message, code: publicError.code },
+      { status: publicError.status }
+    );
   }
-
-  // 날짜로 조회
-  const rows = await db
-    .select()
-    .from(dailyReports)
-    .where(eq(dailyReports.reportDate, date))
-    .limit(1);
-
-  if (!rows[0]) {
-    return NextResponse.json({ error: "해당 날짜 리포트가 없습니다." }, { status: 404 });
-  }
-
-  return NextResponse.json({ data: rows[0] });
 }

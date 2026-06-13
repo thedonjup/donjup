@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
 import { rebPriceIndices } from "@/lib/db/schema";
 import { eq, and, lt, desc } from "drizzle-orm";
 import { fetchAllIndices } from "@/lib/api/reb";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
+import { safeErrorListItem, safeErrorMessage } from "@/lib/api/safe-error-response";
+import { cronDatabaseGuard } from "@/lib/api/cron-db-guard";
 
 export const maxDuration = 120;
 
@@ -14,10 +17,11 @@ export const maxDuration = 120;
  */
 export async function GET(request: Request) {
   // Cron 인증
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
+
+  const databaseUnavailable = await cronDatabaseGuard("fetch-reb-index");
+  if (databaseUnavailable) return databaseUnavailable;
 
   const errors: string[] = [];
   let inserted = 0;
@@ -78,13 +82,11 @@ export async function GET(request: Request) {
         });
         inserted++;
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        errors.push(`${item.regionName}/${item.indexType}: ${msg}`);
+        errors.push(safeErrorListItem(`${item.regionName}/${item.indexType}`, e));
       }
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    errors.push(msg);
+    errors.push(safeErrorMessage(e));
   }
 
   if (errors.length > 0) {

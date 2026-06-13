@@ -1,119 +1,36 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { dailyReports, contentQueue } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { generateCardNews } from "@/lib/cardnews/render";
-import type { CardType, RankItem } from "@/lib/cardnews/types";
+import { verifyCronAuth } from "@/lib/api/auth";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
+import { safeErrorMessage } from "@/lib/api/safe-error-response";
+import { cronDatabaseGuard } from "@/lib/api/cron-db-guard";
+import { generateDailyCardnews } from "@/lib/cron-generate-cardnews";
 
 export const maxDuration = 60;
 
-export async function GET(request: Request) {
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+async function handleGenerateCardNews(request: Request) {
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
 
-  const today = new Date().toISOString().split("T")[0];
-  const dayOfWeek = new Date().getDay(); // 0=Sun, 1=Mon...
-
-  // 월(1) 수(3) 금(5) → 폭락, 화(2) 목(4) → 신고가, 주말 → 스킵
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    return NextResponse.json({ success: true, skipped: true, reason: "weekend" });
-  }
-
-  const cardType: CardType = [1, 3, 5].includes(dayOfWeek) ? "drop" : "high";
+  const databaseUnavailable = await cronDatabaseGuard("generate-cardnews");
+  if (databaseUnavailable) return databaseUnavailable;
 
   try {
-    // daily_reports에서 오늘 데이터 조회
-    const reportRows = await db
-      .select({ top_drops: dailyReports.topDrops, top_highs: dailyReports.topHighs })
-      .from(dailyReports)
-      .where(eq(dailyReports.reportDate, today))
-      .limit(1);
+    const result = await generateDailyCardnews();
 
-    const report = reportRows[0];
-
-    if (!report) {
-      return NextResponse.json(
-        { success: false, error: "No report found for today" },
-        { status: 404 }
-      );
-    }
-
-    const rawItems = cardType === "drop" ? report.top_drops : report.top_highs;
-
-    if (!rawItems || (rawItems as unknown[]).length === 0) {
-      return NextResponse.json(
-        { success: true, skipped: true, reason: "no data" }
-      );
-    }
-
-    const items: RankItem[] = (rawItems as Record<string, unknown>[]).slice(0, 3).map(
-      (item, i) => ({
-        rank: i + 1,
-        apt_name: item.apt_name as string,
-        region_name: item.region_name as string,
-        highest_price: item.highest_price as number,
-        trade_price: item.trade_price as number,
-        change_rate: item.change_rate as number,
-        size_sqm: item.size_sqm as number | undefined,
-      })
-    );
-
-    // 카드뉴스 생성 (표지 + 3장 + CTA = 5장)
-    const dateStr = today.replace(/-/g, ".");
-    await generateCardNews(dateStr, cardType, items);
-
-    // Storage upload not available — cards are generated but not persisted
-    // TODO: wire up an actual storage provider when available
-    const storageUrls: string[] = [];
-
-    // caption & hashtags 생성
-    const typeLabel = cardType === "drop" ? "폭락" : "신고가";
-    const caption = [
-      `📉 ${today} ${typeLabel} 아파트 TOP 3`,
-      "",
-      ...items.map(
-        (item, i) =>
-          `${i + 1}위 ${item.apt_name} (${item.region_name}) ${item.change_rate.toFixed(1)}%`
-      ),
-      "",
-      "👉 더 많은 데이터: donjup.com",
-    ].join("\n");
-
-    const hashtags = [
-      "돈줍",
-      "부동산",
-      "아파트",
-      typeLabel,
-      "부동산투자",
-      "실거래가",
-      ...items.map((item) => item.apt_name.replace(/\s/g, "")),
-    ];
-
-    // content_queue에 기록
-    await db.insert(contentQueue).values({
-      reportDate: today,
-      contentType: `cardnews_${cardType}`,
-      storageUrls,
-      caption,
-      hashtags,
-      status: "ready",
-    });
-
-    return NextResponse.json({
-      success: true,
-      reportDate: today,
-      cardType,
-      images: storageUrls.length,
-      storageUrls,
-    });
+    return NextResponse.json(result.body, { status: result.status });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = safeErrorMessage(e);
     logger.error("Generate-cardnews failed", { error: e, cron: "generate-cardnews" });
-    await sendSlackAlert(`[generate-cardnews] 실패: ${msg}`);
+    await sendSlackAlert(`[cron] generate-cardnews fail: ${msg}`);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
+}
+
+export async function GET(request: Request) {
+  return handleGenerateCardNews(request);
+}
+
+export async function POST(request: Request) {
+  return handleGenerateCardNews(request);
 }

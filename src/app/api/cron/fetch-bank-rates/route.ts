@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
 import { financeRates } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -9,6 +10,10 @@ import {
 } from "@/lib/api/finlife";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
+import { safeErrorListItem, safeErrorMessage } from "@/lib/api/safe-error-response";
+import { cronDatabaseGuard } from "@/lib/api/cron-db-guard";
+import { revalidatePublicDataCaches } from "@/lib/cache-revalidation";
+import { PUBLIC_DATA_CACHE_TAGS } from "@/lib/cache-tags";
 
 export const maxDuration = 60;
 
@@ -18,10 +23,11 @@ export const maxDuration = 60;
  */
 export async function GET(request: Request) {
   // Cron 인증
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
+
+  const databaseUnavailable = await cronDatabaseGuard("fetch-bank-rates");
+  if (databaseUnavailable) return databaseUnavailable;
 
   const errors: string[] = [];
   let inserted = 0;
@@ -92,8 +98,7 @@ export async function GET(request: Request) {
         });
         inserted++;
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        errors.push(`${bank.rateType}: ${msg}`);
+        errors.push(safeErrorListItem(bank.rateType, e));
       }
     }
 
@@ -123,12 +128,10 @@ export async function GET(request: Request) {
         },
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      errors.push(`BANK_PRODUCTS_ALL: ${msg}`);
+      errors.push(safeErrorListItem("BANK_PRODUCTS_ALL", e));
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    errors.push(msg);
+    errors.push(safeErrorMessage(e));
   }
 
   if (errors.length > 0) {
@@ -136,9 +139,20 @@ export async function GET(request: Request) {
     await sendSlackAlert(`[fetch-bank-rates] ${errors.length}건 에러: ${errors.slice(0, 3).join(", ")}`);
   }
 
+  const cacheRevalidation = inserted > 0
+    ? revalidatePublicDataCaches(
+        [PUBLIC_DATA_CACHE_TAGS.FINANCE_RATES],
+        {
+          route: "/api/cron/fetch-bank-rates",
+          inserted,
+        }
+      )
+    : undefined;
+
   return NextResponse.json({
     success: errors.length === 0,
     inserted,
     errors: errors.length > 0 ? errors : undefined,
+    cacheRevalidation,
   });
 }

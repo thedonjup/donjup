@@ -1,0 +1,11 @@
+[Unit]
+Description=Run DonJup DB maintenance daily
+
+[Timer]
+OnCalendar=*-*-* 03:10:00
+Persistent=true
+RandomizedDelaySec=10m
+Unit=donjup-db-maintenance.service
+
+[Install]
+WantedBy=timers.target

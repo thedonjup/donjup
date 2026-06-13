@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CLUSTER_DEFINITIONS } from "@/lib/constants/region-codes";
-import { computeClusterIndex } from "@/lib/cluster-index";
+import { getCachedClusterIndex } from "@/lib/cluster-index";
 import MiniAreaChartWrapper from "@/components/charts/MiniAreaChartWrapper";
 import { formatPrice } from "@/lib/format";
 
@@ -19,9 +19,9 @@ const CLUSTER_COLORS = ["#2B579A", "#059669", "#DC2626", "#D97706"];
 export default async function RegionalIndexPage() {
   const clusterData = await Promise.all(
     CLUSTER_DEFINITIONS.map(async (cluster, i) => {
-      let indexPoints: Awaited<ReturnType<typeof computeClusterIndex>> = [];
+      let indexPoints: Awaited<ReturnType<typeof getCachedClusterIndex>> = [];
       try {
-        indexPoints = await computeClusterIndex(cluster.regionCodes);
+        indexPoints = await getCachedClusterIndex(cluster.regionCodes);
       } catch {
         // Return empty on error — graceful degradation
       }

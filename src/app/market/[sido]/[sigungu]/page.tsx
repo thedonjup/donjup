@@ -1,6 +1,3 @@
-import { db } from "@/lib/db";
-import { aptTransactions } from "@/lib/db/schema";
-import { eq, desc, asc, lt, isNotNull, and, sql } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -8,6 +5,9 @@ import { REGION_HIERARCHY, getSidoBySlug } from "@/lib/constants/region-codes";
 import AdSlot from "@/components/ads/AdSlot";
 import { formatPrice, formatSizeWithPyeong } from "@/lib/format";
 import PropertyTypeFilter from "@/components/PropertyTypeFilter";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import { getCachedMarketSigunguTransactions } from "@/lib/market-dashboard-query";
+import type { MarketSigunguTransaction } from "@/lib/market-dashboard-data";
 
 export const revalidate = 3600;
 
@@ -55,21 +55,6 @@ export async function generateMetadata({
   };
 }
 
-interface Transaction {
-  id: string;
-  apt_name: string;
-  size_sqm: number;
-  floor: number;
-  trade_price: number;
-  trade_date: string;
-  highest_price: number | null;
-  change_rate: number | null;
-  is_new_high: boolean;
-  is_significant_drop: boolean;
-  region_code: string;
-  region_name: string;
-}
-
 export default async function MarketSigunguPage({
   params,
   searchParams,
@@ -87,62 +72,23 @@ export default async function MarketSigunguPage({
   const sigunguName = sido.sigungu[sigungu];
   if (!sigunguName) notFound();
 
-  let drops: Transaction[] = [];
-  let highs: Transaction[] = [];
-  let recent: Transaction[] = [];
+  let drops: MarketSigunguTransaction[] = [];
+  let highs: MarketSigunguTransaction[] = [];
+  let recent: MarketSigunguTransaction[] = [];
   let totalCount = 0;
 
   try {
-    const typeFilter = validType !== 0 ? eq(aptTransactions.propertyType, validType) : undefined;
-    const txFields = {
-      id: aptTransactions.id,
-      region_code: aptTransactions.regionCode,
-      region_name: aptTransactions.regionName,
-      apt_name: aptTransactions.aptName,
-      size_sqm: aptTransactions.sizeSqm,
-      floor: aptTransactions.floor,
-      trade_price: aptTransactions.tradePrice,
-      trade_date: aptTransactions.tradeDate,
-      highest_price: aptTransactions.highestPrice,
-      change_rate: aptTransactions.changeRate,
-      is_new_high: aptTransactions.isNewHigh,
-      is_significant_drop: aptTransactions.isSignificantDrop,
-      deal_type: aptTransactions.dealType,
-      drop_level: aptTransactions.dropLevel,
-    };
-
-    const [dropsResult, highsResult, recentResult, countResult] = await Promise.all([
-      db.select(txFields).from(aptTransactions)
-        .where(and(
-          eq(aptTransactions.regionCode, sigungu),
-          isNotNull(aptTransactions.changeRate),
-          lt(aptTransactions.changeRate, "0"),
-          typeFilter,
-        ))
-        .orderBy(asc(aptTransactions.changeRate))
-        .limit(10),
-      db.select(txFields).from(aptTransactions)
-        .where(and(
-          eq(aptTransactions.regionCode, sigungu),
-          eq(aptTransactions.isNewHigh, true),
-          typeFilter,
-        ))
-        .orderBy(desc(aptTransactions.tradeDate))
-        .limit(10),
-      db.select(txFields).from(aptTransactions)
-        .where(and(eq(aptTransactions.regionCode, sigungu), typeFilter))
-        .orderBy(desc(aptTransactions.tradeDate))
-        .limit(20),
-      db.select({ count: sql<number>`count(*)` }).from(aptTransactions)
-        .where(and(eq(aptTransactions.regionCode, sigungu), typeFilter)),
-    ]);
-
-    drops = dropsResult as unknown as Transaction[];
-    highs = highsResult as unknown as Transaction[];
-    recent = recentResult as unknown as Transaction[];
-    totalCount = Number(countResult[0]?.count ?? 0);
-  } catch {
-    // DB 연결 실패 또는 타임아웃 시 빈 데이터로 페이지 렌더링
+    const transactions = await getCachedMarketSigunguTransactions(sigungu, validType);
+    drops = transactions.drops;
+    highs = transactions.highs;
+    recent = transactions.recent;
+    totalCount = transactions.totalCount;
+  } catch (error) {
+    logDatabaseFailure("Market sigungu query failed", error, {
+      route: "/market/[sido]/[sigungu]",
+      sido: sidoSlug,
+      sigungu,
+    });
   }
 
   // Sibling sigungu for quick nav

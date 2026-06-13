@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { isAdmin } from "@/lib/admin/auth";
@@ -99,11 +100,14 @@ export default function UserMenu() {
         }}
       >
         {user.photoURL ? (
-          <img
+          <Image
             src={user.photoURL}
             alt=""
+            width={28}
+            height={28}
             style={{ width: "28px", height: "28px", borderRadius: "50%" }}
             referrerPolicy="no-referrer"
+            unoptimized
           />
         ) : (
           <div

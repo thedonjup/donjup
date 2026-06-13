@@ -34,6 +34,12 @@ yarn-error.log*
 .env*
 !.env.local.example
 
+# local data staging
+.donjup-local-data/
+
+# python
+__pycache__/
+
 # vercel
 .vercel
 

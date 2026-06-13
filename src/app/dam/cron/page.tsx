@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 interface CronJob {
   name: string;
@@ -15,7 +16,7 @@ const CRON_JOBS: CronJob[] = [
   { name: "실거래가 수집 (배치 2)", route: "fetch-transactions?batch=2", schedule: "매일 08:00", description: "경기도 실거래가" },
   { name: "실거래가 수집 (배치 3)", route: "fetch-transactions?batch=3", schedule: "매일 09:00", description: "강원, 충북, 충남, 전북" },
   { name: "실거래가 수집 (배치 4)", route: "fetch-transactions?batch=4", schedule: "매일 10:00", description: "전남, 경북, 경남, 제주" },
-  { name: "다가구 실거래가", route: "fetch-transactions?type=multi", schedule: "매일 10:30", description: "연립다세대 실거래가" },
+  { name: "다가구 실거래가", route: "fetch-transactions?type=2", schedule: "매일 10:30", description: "연립다세대 실거래가" },
   { name: "전월세 수집 (배치 0)", route: "fetch-rents?batch=0", schedule: "매일 11:00", description: "수도권 전월세" },
   { name: "전월세 수집 (배치 1)", route: "fetch-rents?batch=1", schedule: "매일 11:10", description: "비수도권 전월세" },
   { name: "전월세 수집 (배치 2)", route: "fetch-rents?batch=2", schedule: "매일 11:20", description: "기타 지역 전월세" },
@@ -42,6 +43,7 @@ interface RunResult {
 }
 
 export default function CronManagement() {
+  const { user } = useAuth();
   const [results, setResults] = useState<Record<string, RunResult>>({});
 
   const triggerCron = async (job: CronJob) => {
@@ -51,14 +53,20 @@ export default function CronManagement() {
     }));
 
     try {
-      const res = await fetch(`/api/cron/${job.route}`, {
-        method: "GET",
+      if (!user) throw new Error("Admin login required");
+
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/admin/cron/run", {
+        method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ""}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
         },
+        body: JSON.stringify({ route: job.route }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const raw = await res.json().catch(() => ({}));
+      const data = raw.result && typeof raw.result === "object" ? raw.result : raw;
 
       setResults((prev) => ({
         ...prev,

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 // design-system-exception: global-error renders outside ThemeProvider and layout.tsx
 // Hardcoded colors are intentional — CSS variables may not be available in error state
 
@@ -76,7 +78,7 @@ export default function GlobalError({
             >
               다시 시도
             </button>
-            <a
+            <Link
               href="/"
               style={{
                 borderRadius: 12,
@@ -89,7 +91,7 @@ export default function GlobalError({
               }}
             >
               홈으로 돌아가기
-            </a>
+            </Link>
           </div>
         </div>
       </body>

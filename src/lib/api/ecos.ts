@@ -180,7 +180,10 @@ export async function fetchAllRates(): Promise<EcosRateItem[]> {
     ]);
 
   // 이번달 데이터 우선, 없으면 이전달
-  const addResult = (current: PromiseSettledResult<EcosRateItem | null>, fallback?: PromiseSettledResult<EcosRateItem | null>) => {
+  const addResult = (
+    current: PromiseSettledResult<EcosRateItem | null>,
+    fallback?: PromiseSettledResult<EcosRateItem | null>
+  ) => {
     if (current.status === "fulfilled" && current.value) {
       results.push(current.value);
     } else if (fallback?.status === "fulfilled" && fallback.value) {

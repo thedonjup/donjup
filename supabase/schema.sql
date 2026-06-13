@@ -91,7 +91,7 @@ CREATE TABLE apt_rent_transactions (
 );
 
 CREATE INDEX idx_rent_region_date ON apt_rent_transactions(region_code, trade_date DESC);
-CREATE UNIQUE INDEX idx_rent_unique ON apt_rent_transactions(
+CREATE INDEX idx_rent_lookup ON apt_rent_transactions(
     apt_name, size_sqm, floor, trade_date, deposit, monthly_rent
 );
 
@@ -145,6 +145,8 @@ CREATE TABLE page_views (
 );
 
 CREATE UNIQUE INDEX idx_views_path_date ON page_views(page_path, view_date);
+CREATE INDEX idx_views_type_date ON page_views(page_type, view_date DESC)
+    WHERE page_type IS NOT NULL;
 CREATE INDEX idx_views_region_date ON page_views(region_code, view_date DESC)
     WHERE region_code IS NOT NULL;
 CREATE INDEX idx_views_complex ON page_views(complex_id, view_date DESC)

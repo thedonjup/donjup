@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
+import { safeErrorListItem, safeErrorMessage } from "@/lib/api/safe-error-response";
+import { cronDatabaseGuard } from "@/lib/api/cron-db-guard";
 
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
+
+  const databaseUnavailable = await cronDatabaseGuard("coupang");
+  if (databaseUnavailable) return databaseUnavailable;
 
   let updated = 0;
   const errors: string[] = [];
@@ -92,11 +96,11 @@ export async function GET(request: Request) {
           updated++;
         }
       } catch (e) {
-        errors.push(`${keyword}: ${e instanceof Error ? e.message : String(e)}`);
+        errors.push(safeErrorListItem(keyword, e));
       }
     }
   } catch (e) {
-    errors.push(e instanceof Error ? e.message : String(e));
+    errors.push(safeErrorMessage(e));
   }
 
   if (errors.length > 0) {

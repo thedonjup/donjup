@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { formatPrice, formatSizeWithPyeong, formatRegion } from "@/lib/format";
+import { formatPrice, formatRegion, sqmToPyeong } from "@/lib/format";
 import { aptUrl } from "@/lib/apt-url";
 import { PROPERTY_TYPES } from "@/lib/constants/property-types";
 import { shareViaKakao } from "@/lib/kakao-share";
@@ -37,6 +37,35 @@ interface RankingTabsProps {
 }
 
 type TabType = "drops" | "highs" | "volume" | "recent";
+
+function formatTradeMeta(t: Transaction): string {
+  const area = `${Math.round(sqmToPyeong(t.size_sqm))}평`;
+  const floor = t.floor ? `${t.floor}층` : "층수 미상";
+  return `${area} · ${floor} · ${t.trade_date}`;
+}
+
+function reasonChips(t: Transaction, activeTab: TabType): string[] {
+  const chips: string[] = [];
+  if (activeTab === "drops" || (t.change_rate !== null && t.change_rate < 0)) {
+    chips.push("최고가 대비");
+  }
+  if (activeTab === "highs" || t.is_new_high) {
+    chips.push("신고가");
+  }
+  if (activeTab === "recent") {
+    chips.push("최신 거래");
+  }
+  if (activeTab === "volume") {
+    chips.push("관심 집중");
+  }
+  if (t.floor > 0 && t.floor <= 3) {
+    chips.push("저층 확인");
+  }
+  if (t.deal_type?.includes("직거래")) {
+    chips.push("직거래");
+  }
+  return chips.slice(0, 3);
+}
 
 export default function RankingTabs({
   drops,
@@ -91,7 +120,7 @@ export default function RankingTabs({
             return (
               <div
                 key={`${t.id}-${activeTab}-${i}`}
-                className="group relative flex items-center gap-4 rounded-2xl border t-border bg-white p-4 transition hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/50"
+                className="group relative flex items-center gap-4 rounded-xl border t-border bg-white p-4 transition hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/50"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -118,8 +147,21 @@ export default function RankingTabs({
                     )}
                   </div>
                   <p className="mt-0.5 text-xs t-text-tertiary">
-                    {formatRegion(t.region_code)} · {t.trade_date}
+                    {formatRegion(t.region_code)}
                   </p>
+                  <p className="mt-1 text-xs t-text-secondary">
+                    {formatTradeMeta(t)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {reasonChips(t, activeTab).map((chip) => (
+                      <span
+                        key={chip}
+                        className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="text-right flex flex-col items-end">
@@ -149,7 +191,7 @@ export default function RankingTabs({
                       url: aptUrl({ govtComplexId: t.govt_complex_id, regionCode: t.region_code, slug: t.complex_slug ?? '' }),
                     });
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition p-2 hover:bg-brand-50 rounded-lg text-brand-600"
+                  className="opacity-100 transition p-2 hover:bg-brand-50 rounded-lg text-brand-600 sm:opacity-0 sm:group-hover:opacity-100"
                   aria-label="공유하기"
                 >
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

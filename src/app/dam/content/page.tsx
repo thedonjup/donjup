@@ -6,7 +6,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 type Tab = "cardnews" | "seeding" | "insta";
 
 interface ContentItem {
-  id: number;
+  id: string;
   title: string;
   status: string;
   platform: string;
@@ -19,7 +19,7 @@ export default function ContentManagement() {
   const [tab, setTab] = useState<Tab>("cardnews");
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchItems = async () => {
     if (!user) return;
@@ -40,10 +40,14 @@ export default function ContentManagement() {
   };
 
   useEffect(() => {
-    fetchItems();
+    const timeoutId = window.setTimeout(() => {
+      void fetchItems();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [tab, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleAction = async (id: number, action: "posted" | "hold" | "deleted") => {
+  const handleAction = async (id: string, action: "posted" | "hold" | "deleted") => {
     if (!user) return;
     setActionLoading(id);
     try {
@@ -89,7 +93,10 @@ export default function ContentManagement() {
         ]).map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => {
+              setLoading(true);
+              setTab(t.key);
+            }}
             className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
               tab === t.key ? "shadow-sm" : ""
             }`}

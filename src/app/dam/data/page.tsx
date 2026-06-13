@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { fetchDamApi } from "@/lib/dam-api-client";
 
 interface DataQualityCheck {
   label: string;
@@ -9,25 +11,45 @@ interface DataQualityCheck {
   severity: "error" | "warn" | "ok";
 }
 
+interface DataQualityResponse {
+  checks?: DataQualityCheck[];
+}
+
 export default function DataQualityPage() {
+  const { user } = useAuth();
   const [checks, setChecks] = useState<DataQualityCheck[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
+
+    const currentUser = user;
+    let cancelled = false;
+
     async function runChecks() {
       try {
-        const res = await fetch("/api/dam/data");
-        if (!res.ok) throw new Error("API 요청 실패");
-        const data = await res.json();
-        setChecks(data.checks ?? []);
+        setLoading(true);
+        const idToken = await currentUser.getIdToken();
+        const data = await fetchDamApi<DataQualityResponse>("/api/dam/data", idToken);
+        if (!cancelled) {
+          setChecks(data.checks ?? []);
+        }
       } catch {
-        // ignore
+        if (!cancelled) {
+          setChecks([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
-    runChecks();
-  }, []);
+    void runChecks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const severityStyle = (s: string) => {
     if (s === "error") return { bg: "var(--color-semantic-drop-bg)", color: "var(--color-semantic-drop)" };

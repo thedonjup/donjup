@@ -1,12 +1,19 @@
-import { db } from "@/lib/db";
-import { dailyReports } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
 import ShareButtons from "@/components/ShareButtons";
+import TrackedLink from "@/components/analytics/TrackedLink";
+import { BreadcrumbJsonLd, ItemListJsonLd } from "@/components/seo/JsonLd";
 import { aptUrl } from "@/lib/apt-url";
+import {
+  getCachedDailyReportByDate,
+  getCachedDailyReportNavDates,
+} from "@/lib/daily-report-query";
+import {
+  createDailyReportNavLinks,
+  isDailyReportDate,
+} from "@/lib/daily-report-nav";
+import { countDailyReportSignals, formatDailyDateLabel } from "@/lib/daily-landing";
 import { formatPrice, RATE_LABELS } from "@/lib/format";
 import type { DailyReport } from "@/types/db";
 
@@ -49,6 +56,17 @@ export async function generateMetadata({
     title: `${date} 데일리 리포트`,
     description: `${date} 아파트 폭락/신고가 랭킹 및 금리 변동 리포트`,
     alternates: { canonical: `/daily/${date}` },
+    openGraph: {
+      title: `${date} 데일리 리포트`,
+      description: `${date} 아파트 하락, 신고가, 금리, 거래량 신호를 확인하세요.`,
+      url: `/daily/${date}`,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${date} 데일리 리포트`,
+      description: "돈줍 데일리 리포트에서 오늘의 부동산 신호를 확인하세요.",
+    },
   };
 }
 
@@ -59,23 +77,13 @@ export default async function DailyReportPage({
 }) {
   const { date } = await params;
 
+  if (!isDailyReportDate(date)) {
+    notFound();
+  }
+
   let report: DailyReport | null = null;
   try {
-    const rows = await db.select({
-      id: dailyReports.id,
-      report_date: dailyReports.reportDate,
-      title: dailyReports.title,
-      summary: dailyReports.summary,
-      top_drops: dailyReports.topDrops,
-      top_highs: dailyReports.topHighs,
-      rate_summary: dailyReports.rateSummary,
-      volume_summary: dailyReports.volumeSummary,
-      og_image_url: dailyReports.ogImageUrl,
-      created_at: dailyReports.createdAt,
-    }).from(dailyReports)
-      .where(eq(dailyReports.reportDate, date))
-      .limit(1);
-    report = rows[0] as unknown as DailyReport ?? null;
+    report = await getCachedDailyReportByDate(date);
   } catch {
     // ignore
   }
@@ -84,40 +92,82 @@ export default async function DailyReportPage({
     notFound();
   }
 
+  let reportNav = createDailyReportNavLinks({});
+  try {
+    reportNav = createDailyReportNavLinks(await getCachedDailyReportNavDates(date));
+  } catch {
+    reportNav = createDailyReportNavLinks({});
+  }
+
   const topDrops = (report.top_drops ?? []) as ReportTransaction[];
   const topHighs = (report.top_highs ?? []) as ReportTransaction[];
   const rateSummary = (report.rate_summary ?? []) as ReportRate[];
   const volumeSummary = (report.volume_summary ?? []) as VolumeItem[];
+  const signalCounts = countDailyReportSignals({
+    top_drops: topDrops,
+    top_highs: topHighs,
+    rate_summary: rateSummary,
+    volume_summary: volumeSummary,
+  });
+  const itemListEntries = [...topDrops, ...topHighs].slice(0, 10).map((txn, index) => ({
+    name: txn.apt_name,
+    position: index + 1,
+    url: `https://donjup.com${aptUrl({
+      govtComplexId: txn.govt_complex_id ?? null,
+      regionCode: txn.region_code ?? null,
+      slug: txn.complex_slug ?? null,
+    })}`,
+  }));
 
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* Header */}
+      <BreadcrumbJsonLd
+        items={[
+          { name: "홈", href: "/" },
+          { name: "데일리 리포트", href: "/daily/archive" },
+          { name: report.report_date, href: `/daily/${report.report_date}` },
+        ]}
+      />
+      {itemListEntries.length > 0 && (
+        <ItemListJsonLd name={`${report.report_date} 데일리 리포트 주요 단지`} items={itemListEntries} />
+      )}
+
       <div className="mb-6 flex items-center justify-between">
-        <Link
+        <TrackedLink
           href="/daily/archive"
+          ctaName="daily_report_archive_click"
+          params={{ report_date: date }}
           className="text-sm font-medium text-brand-600 hover:underline"
         >
           &larr; 리포트 목록
-        </Link>
+        </TrackedLink>
         <div className="flex items-center gap-3 text-sm">
-          <Link
-            href={`/daily/${getPrevDate(date)}`}
-            className="rounded-lg border border-surface-200 px-3 py-1.5 t-text-secondary transition hover:bg-surface-50 hover:t-text"
-          >
-            &larr; 이전
-          </Link>
-          <Link
-            href={`/daily/${getNextDate(date)}`}
-            className="rounded-lg border border-surface-200 px-3 py-1.5 t-text-secondary transition hover:bg-surface-50 hover:t-text"
-          >
-            다음 &rarr;
-          </Link>
+          {reportNav.previousHref && (
+            <TrackedLink
+              href={reportNav.previousHref}
+              ctaName="daily_report_nav_click"
+              params={{ report_date: date, direction: "previous" }}
+              className="rounded-lg border border-surface-200 px-3 py-1.5 t-text-secondary transition hover:bg-surface-50 hover:t-text"
+            >
+              &larr; 이전
+            </TrackedLink>
+          )}
+          {reportNav.nextHref && (
+            <TrackedLink
+              href={reportNav.nextHref}
+              ctaName="daily_report_nav_click"
+              params={{ report_date: date, direction: "next" }}
+              className="rounded-lg border border-surface-200 px-3 py-1.5 t-text-secondary transition hover:bg-surface-50 hover:t-text"
+            >
+              다음 &rarr;
+            </TrackedLink>
+          )}
         </div>
       </div>
 
       <div className="mb-8">
-        <p className="text-xs font-medium text-brand-600">{report.report_date}</p>
+        <p className="text-xs font-medium text-brand-600">{formatDailyDateLabel(report.report_date)}</p>
         <div className="mt-1 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-extrabold t-text">{report.title}</h1>
           <ShareButtons
@@ -127,6 +177,30 @@ export default async function DailyReportPage({
           />
         </div>
         <p className="mt-2 text-sm t-text-secondary">{report.summary}</p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <DailyStatCard
+            label="하락 신호"
+            value={`${signalCounts.dropCount.toLocaleString()}건`}
+            hint="최고가 대비 하락 거래"
+            tone="drop"
+          />
+          <DailyStatCard
+            label="신고가 신호"
+            value={`${signalCounts.highCount.toLocaleString()}건`}
+            hint="신고가 갱신 거래"
+            tone="rise"
+          />
+          <DailyStatCard
+            label="금리 지표"
+            value={`${signalCounts.rateCount.toLocaleString()}개`}
+            hint="리포트 기준 금리 현황"
+          />
+          <DailyStatCard
+            label="거래 핫스팟"
+            value={`${signalCounts.volumeCount.toLocaleString()}곳`}
+            hint="거래량 상위 지역"
+          />
+        </div>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -158,12 +232,22 @@ export default async function DailyReportPage({
                 <p className="mt-1 text-xs text-brand-700">상세 페이지에서 거래 추이, 전세가율, 대출 계산까지 이어서 볼 수 있습니다.</p>
               </div>
               <div className="flex gap-2">
-                <Link href="/search" className="rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50">
+                <TrackedLink
+                  href="/search"
+                  ctaName="daily_report_mid_search_click"
+                  params={{ report_date: date }}
+                  className="rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
+                >
                   단지 검색하기
-                </Link>
-                <Link href="/rate/calculator" className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700">
+                </TrackedLink>
+                <TrackedLink
+                  href="/rate/calculator"
+                  ctaName="daily_report_mid_calculator_click"
+                  params={{ report_date: date }}
+                  className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+                >
                   대출 계산기 보기
-                </Link>
+                </TrackedLink>
               </div>
             </div>
           </div>
@@ -251,13 +335,15 @@ export default async function DailyReportPage({
             </div>
           )}
 
-          <Link
+          <TrackedLink
             href="/rate/calculator"
+            ctaName="daily_report_sidebar_calculator_click"
+            params={{ report_date: date }}
             className="card-hover block rounded-2xl border-2 border-brand-100 bg-gradient-to-br from-brand-50/30 to-transparent p-5 text-center"
           >
             <p className="font-bold text-brand-900">대출 이자 계산기</p>
             <p className="mt-1 text-sm text-brand-600">내 이자 얼마?</p>
-          </Link>
+          </TrackedLink>
         </aside>
       </div>
     </div>
@@ -275,9 +361,9 @@ function TxnCard({
 }) {
   const isDrop = type === "drop";
   const detailHref = aptUrl({
-    govtComplexId: txn.govt_complex_id ?? undefined,
-    regionCode: txn.region_code ?? undefined,
-    slug: txn.complex_slug ?? undefined,
+    govtComplexId: txn.govt_complex_id ?? null,
+    regionCode: txn.region_code ?? null,
+    slug: txn.complex_slug ?? null,
   });
 
   return (
@@ -287,9 +373,20 @@ function TxnCard({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <Link href={detailHref} className="truncate font-semibold t-text hover:text-brand-600">
+          <TrackedLink
+            href={detailHref}
+            ctaName="daily_report_transaction_to_detail"
+            params={{
+              rank,
+              type,
+              region_code: txn.region_code ?? undefined,
+              trade_date: txn.trade_date,
+              trade_price: txn.trade_price,
+            }}
+            className="truncate font-semibold t-text hover:text-brand-600"
+          >
             {txn.apt_name}
-          </Link>
+          </TrackedLink>
           <span className="flex-shrink-0 text-xs t-text-tertiary">{txn.size_sqm}㎡</span>
         </div>
         <p className="mt-0.5 text-xs t-text-tertiary">
@@ -317,23 +414,44 @@ function TxnCard({
           </span>
         )}
         <div>
-          <Link href={detailHref} className="mt-1 inline-block text-[11px] font-semibold text-brand-600 hover:text-brand-700">
+          <TrackedLink
+            href={detailHref}
+            ctaName="daily_report_transaction_detail_cta_click"
+            params={{
+              rank,
+              type,
+              region_code: txn.region_code ?? undefined,
+              trade_date: txn.trade_date,
+              trade_price: txn.trade_price,
+            }}
+            className="mt-1 inline-block text-[11px] font-semibold text-brand-600 hover:text-brand-700"
+          >
             상세 보기 →
-          </Link>
+          </TrackedLink>
         </div>
       </div>
     </div>
   );
 }
 
-function getPrevDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
+function DailyStatCard({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone?: "drop" | "rise";
+}) {
+  const valueClass = tone === "drop" ? "t-drop" : tone === "rise" ? "t-rise" : "t-text";
 
-function getNextDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
+  return (
+    <div className="rounded-lg border t-border bg-[var(--color-surface-card)] p-4">
+      <p className="text-[11px] font-semibold t-text-tertiary">{label}</p>
+      <p className={`mt-1 text-xl font-black tabular-nums ${valueClass}`}>{value}</p>
+      <p className="mt-1 text-xs t-text-tertiary">{hint}</p>
+    </div>
+  );
 }

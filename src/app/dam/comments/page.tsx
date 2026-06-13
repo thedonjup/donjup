@@ -1,20 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase/config";
-import {
-  query,
-  orderBy,
-  limit,
-  getDocs,
-  deleteDoc,
-  doc,
-  collectionGroup,
-} from "firebase/firestore";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { createDamAuthHeaders } from "@/lib/dam-api-client";
 
 interface Comment {
   id: string;
-  aptId: string;
+  aptSlug: string;
   aptName: string;
   userId: string;
   userName: string;
@@ -22,38 +14,35 @@ interface Comment {
   createdAt: string;
 }
 
+interface CommentsResponse {
+  comments?: Comment[];
+  error?: string;
+}
+
 export default function CommentsManagement() {
+  const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchComments = async () => {
+    if (!user) return;
+
     setLoading(true);
+    setError(null);
     try {
-      const q = query(
-        collectionGroup(db, "comments"),
-        orderBy("createdAt", "desc"),
-        limit(50)
-      );
-      const snapshot = await getDocs(q);
-      const data: Comment[] = snapshot.docs.map((d) => {
-        const raw = d.data();
-        // Parent path: apartments/{aptId}/comments/{commentId}
-        const parentPath = d.ref.parent.parent?.id || "";
-        return {
-          id: d.id,
-          aptId: parentPath,
-          aptName: (raw.aptName as string) || parentPath || "-",
-          userId: (raw.userId as string) || "-",
-          userName: (raw.userName as string) || (raw.displayName as string) || "익명",
-          text: (raw.text as string) || (raw.content as string) || "",
-          createdAt: raw.createdAt?.toDate?.()
-            ? raw.createdAt.toDate().toISOString()
-            : (raw.createdAt as string) || "",
-        };
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/dam/comments?limit=50", {
+        headers: createDamAuthHeaders(idToken),
       });
-      setComments(data);
-    } catch {
+
+      const data = (await res.json().catch(() => ({}))) as CommentsResponse;
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      setComments(data.comments ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "댓글 목록 로딩 실패");
       setComments([]);
     } finally {
       setLoading(false);
@@ -61,17 +50,36 @@ export default function CommentsManagement() {
   };
 
   useEffect(() => {
-    fetchComments();
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      void fetchComments();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async (comment: Comment) => {
     if (!confirm(`"${comment.text.slice(0, 30)}..." 댓글을 삭제하시겠습니까?`)) return;
     setDeleting(comment.id);
+    setError(null);
     try {
-      const docRef = doc(db, "apartments", comment.aptId, "comments", comment.id);
-      await deleteDoc(docRef);
+      if (!user) throw new Error("Admin login required");
+
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/dam/comments", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...createDamAuthHeaders(idToken),
+        },
+        body: JSON.stringify({ aptSlug: comment.aptSlug, commentId: comment.id }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
       setComments((prev) => prev.filter((c) => c.id !== comment.id));
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "댓글 삭제 실패");
       alert("삭제에 실패했습니다.");
     } finally {
       setDeleting(null);
@@ -84,12 +92,22 @@ export default function CommentsManagement() {
         <h1 className="text-2xl font-bold" style={{ color: "var(--color-text-primary)" }}>댓글 관리</h1>
         <button
           onClick={fetchComments}
+          disabled={loading}
           className="rounded-lg px-3 py-1.5 text-xs font-medium transition"
           style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-secondary)" }}
         >
           새로고침
         </button>
       </div>
+
+      {error && (
+        <div
+          className="rounded-lg border p-4"
+          style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
+        >
+          <p className="text-sm" style={{ color: "var(--color-semantic-drop)" }}>{error}</p>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-12">

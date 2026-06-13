@@ -14,14 +14,47 @@ declare global {
   }
 }
 
-/** Kakao SDK init 보장 (한 번만 실행) */
+/** Kakao SDK 동적 로드 + init (한 번만 실행) */
+function loadKakaoSdk(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+    if (!key || typeof window === "undefined") { resolve(false); return; }
+
+    if (window.Kakao) {
+      if (!window.Kakao.isInitialized()) window.Kakao.init(key);
+      resolve(true);
+      return;
+    }
+
+    if (!document.querySelector('script[src*="kakao_js_sdk"]')) {
+      const script = document.createElement("script");
+      script.src = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js";
+      script.crossOrigin = "";
+      script.onload = () => {
+        if (window.Kakao && !window.Kakao.isInitialized()) window.Kakao.init(key);
+        resolve(!!window.Kakao);
+      };
+      script.onerror = () => resolve(false);
+      document.head.appendChild(script);
+    } else {
+      // 이미 로딩 중 — 폴링
+      const check = () => {
+        if (window.Kakao) {
+          if (!window.Kakao.isInitialized()) window.Kakao.init(key);
+          resolve(true);
+        } else {
+          setTimeout(check, 100);
+        }
+      };
+      check();
+    }
+  });
+}
+
 export function ensureKakaoInit(): boolean {
   const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
-  if (!key) return false;
-  if (typeof window === "undefined" || !window.Kakao) return false;
-  if (!window.Kakao.isInitialized()) {
-    window.Kakao.init(key);
-  }
+  if (!key || typeof window === "undefined" || !window.Kakao) return false;
+  if (!window.Kakao.isInitialized()) window.Kakao.init(key);
   return true;
 }
 
@@ -39,14 +72,15 @@ export function shareViaKakao({
 }) {
   const shareUrl = `${url}${url.includes("?") ? "&" : "?"}utm_source=kakao&utm_medium=share`;
 
-  if (!ensureKakaoInit()) {
-    // SDK 미로드 시 fallback
-    window.open(
-      `https://story.kakao.com/share?url=${encodeURIComponent(shareUrl)}`,
-      "_blank",
-    );
-    return;
-  }
+  // SDK 동적 로드 후 공유
+  loadKakaoSdk().then((ok) => {
+    if (!ok || !window.Kakao?.Share) {
+      window.open(
+        `https://story.kakao.com/share?url=${encodeURIComponent(shareUrl)}`,
+        "_blank",
+      );
+      return;
+    }
 
   window.Kakao!.Share!.sendDefault({
     objectType: "feed",
@@ -68,5 +102,6 @@ export function shareViaKakao({
         },
       },
     ],
+  });
   });
 }

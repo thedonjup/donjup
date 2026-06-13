@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
 import { aptComplexes } from "@/lib/db/schema";
 import { eq, or, isNull } from "drizzle-orm";
@@ -6,15 +7,20 @@ import { fetchBuildingLedger } from "@/lib/api/building-ledger";
 import { delay } from "@/lib/api/molit";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
+import { safeErrorListItem, safeErrorMessage } from "@/lib/api/safe-error-response";
+import { cronDatabaseGuard } from "@/lib/api/cron-db-guard";
+import { revalidatePublicDataCaches } from "@/lib/cache-revalidation";
+import { PUBLIC_DATA_CACHE_TAGS } from "@/lib/cache-tags";
 
 export const maxDuration = 300; // 5분 (Vercel Pro)
 
 export async function GET(request: Request) {
   // Cron 인증
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = verifyCronAuth(request);
+  if (authError) return authError;
+
+  const databaseUnavailable = await cronDatabaseGuard("enrich-complexes");
+  if (databaseUnavailable) return databaseUnavailable;
 
   // total_units 또는 parking_count가 없는 단지를 최대 100개 조회
   let complexes;
@@ -36,7 +42,7 @@ export async function GET(request: Request) {
       )
       .limit(100);
   } catch (fetchError) {
-    const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+    const msg = safeErrorMessage(fetchError);
     logger.error("Enrich-complexes DB fetch failed", { error: fetchError, cron: "enrich-complexes" });
     await sendSlackAlert(`[enrich-complexes] DB 조회 실패: ${msg}`);
     return NextResponse.json(
@@ -90,8 +96,7 @@ export async function GET(request: Request) {
 
       await delay(300); // API 부하 방지
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      errors.push(`${complex.apt_name}: ${msg}`);
+      errors.push(safeErrorListItem(complex.apt_name, e));
     }
   }
 
@@ -100,10 +105,21 @@ export async function GET(request: Request) {
     await sendSlackAlert(`[enrich-complexes] ${errors.length}건 에러: ${errors.slice(0, 3).join(", ")}`);
   }
 
+  const cacheRevalidation = updated > 0
+    ? revalidatePublicDataCaches(
+        [PUBLIC_DATA_CACHE_TAGS.APT_COMPLEXES],
+        {
+          route: "/api/cron/enrich-complexes",
+          updated,
+        }
+      )
+    : undefined;
+
   return NextResponse.json({
     success: true,
     total: complexes.length,
     updated,
     errors: errors.length > 0 ? errors : undefined,
+    cacheRevalidation,
   });
 }

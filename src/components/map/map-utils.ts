@@ -1,9 +1,11 @@
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatRegion } from "@/lib/format";
 
 export interface MapTransaction {
   id: string;
+  complex_id: string;
+  govt_complex_id: string | null;
   apt_name: string;
-  region_name: string;
+  region_code: string;
   dong_name: string | null;
   trade_price: number;
   change_rate: number | null;
@@ -13,6 +15,7 @@ export interface MapTransaction {
   longitude: number;
   size_sqm: number | null;
   trade_date: string | null;
+  detail_url: string;
 }
 
 export function getMarkerColor(item: MapTransaction): string {
@@ -29,9 +32,23 @@ export function getMarkerLabel(item: MapTransaction): string {
   return "";
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function buildInfoWindowContent(item: MapTransaction): string {
   const color = getMarkerColor(item);
   const label = getMarkerLabel(item);
+  const safeAptName = escapeHtml(item.apt_name);
+  const safeRegion = escapeHtml(formatRegion(item.region_code));
+  const safeDongName = escapeHtml(item.dong_name || "");
+  const safeTradeDate = item.trade_date ? escapeHtml(item.trade_date) : "";
+  const safeDetailUrl = escapeHtml(item.detail_url);
   const rateStr =
     item.change_rate !== null
       ? `${item.change_rate > 0 ? "+" : ""}${item.change_rate.toFixed(1)}%`
@@ -50,18 +67,18 @@ export function buildInfoWindowContent(item: MapTransaction): string {
       box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: inherit;
     ">
       <div style="font-weight: 700; font-size: 14px; color: var(--color-text-primary, #0f172a); margin-bottom: 4px;">
-        ${item.apt_name}
+        ${safeAptName}
         ${label ? `<span style="font-size: 11px; font-weight: 600; color: ${color}; margin-left: 4px;">${label}</span>` : ""}
       </div>
       <div style="font-size: 12px; color: var(--color-text-secondary, #475569); margin-bottom: 6px;">
-        ${item.region_name} ${item.dong_name || ""}
+        ${safeRegion} ${safeDongName}
       </div>
       <div style="font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 4px;">
         ${formatPrice(item.trade_price)}
         <span style="font-size: 12px; color: ${rateColor}; margin-left: 6px;">${rateStr}</span>
       </div>
-      ${item.size_sqm ? `<div style="font-size: 11px; color: var(--color-text-tertiary, #94a3b8);">${item.size_sqm}㎡ ${item.trade_date ? `· ${item.trade_date}` : ""}</div>` : ""}
-      <a href="/apt/${item.slug}" style="
+      ${item.size_sqm ? `<div style="font-size: 11px; color: var(--color-text-tertiary, #94a3b8);">${item.size_sqm}㎡ ${safeTradeDate ? `· ${safeTradeDate}` : ""}</div>` : ""}
+      <a href="${safeDetailUrl}" style="
         display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600;
         color: #059669; text-decoration: none;
       ">상세보기 &rarr;</a>

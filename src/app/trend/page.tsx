@@ -1,15 +1,32 @@
 import type { Metadata } from "next";
-import { db } from "@/lib/db";
-import { aptTransactions } from "@/lib/db/schema";
-import { desc, inArray, sql } from "drizzle-orm";
-import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
 import { formatPrice } from "@/lib/format";
 import AdSlot from "@/components/ads/AdSlot";
+import TrackedLink from "@/components/analytics/TrackedLink";
+import SignalLandingFooter from "@/components/landing/SignalLandingFooter";
+import SignalLandingHeader from "@/components/landing/SignalLandingHeader";
+import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import {
+  latestMonthlyVolume,
+  marketTrendEmptyStateCopy,
+  monthOverMonthChangeRate,
+  totalMonthlyVolume,
+  type MonthlyVolume,
+} from "@/lib/market-trend-landing";
+import {
+  isDatabaseResourceLimitError,
+} from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  getCachedTrendMonthlyVolume,
+  getCachedTrendSidoAvgPrices,
+  type TrendSidoAvgPrice,
+} from "@/lib/trend-dashboard-query";
 
 export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "부동산 시장 트렌드",
+  title: "부동산 시장 트렌드 - 아파트 거래량과 지역별 평균가",
   description:
     "전국 아파트 거래량 추이, 시도별 평균 거래가 비교, 월별 거래 동향 등 부동산 시장 트렌드를 한눈에 확인하세요.",
   keywords: [
@@ -23,98 +40,105 @@ export const metadata: Metadata = {
     "부동산 통계",
   ],
   alternates: { canonical: "/trend" },
+  openGraph: {
+    title: "부동산 시장 트렌드 - 아파트 거래량과 지역별 평균가",
+    description:
+      "전국 아파트 거래량 추이와 시도별 평균 거래가를 함께 확인하고 지역별 시세로 이어서 탐색하세요.",
+    url: "/trend",
+    type: "website",
+    images: [{ url: "/trend/opengraph-image", width: 1200, height: 630, alt: "부동산 트렌드 분석" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "부동산 시장 트렌드",
+    description: "전국 아파트 거래량과 지역별 평균 거래가 흐름을 확인하세요.",
+  },
 };
 
 export default async function TrendPage() {
-  // 최근 6개월 월별 거래량 추이
-  let volumeRaw: { trade_date: string }[] = [];
+  let monthlyVolume: MonthlyVolume[] = [];
+  let volumeUnavailable = false;
 
   try {
-    volumeRaw = await db.select({
-      trade_date: aptTransactions.tradeDate,
-    }).from(aptTransactions)
-      .orderBy(desc(aptTransactions.tradeDate))
-      .limit(50000);
+    monthlyVolume = await getCachedTrendMonthlyVolume();
   } catch (error) {
-    console.error("월별 거래량 데이터 조회 실패:", error);
+    volumeUnavailable = isDatabaseResourceLimitError(error);
+    logDatabaseFailure("Trend volume query failed", error, {
+      route: "/trend",
+    });
   }
 
-  // 월별 거래량 집계 (서버 사이드)
-  let monthlyVolume: { month: string; count: number }[] = [];
-
-  if (volumeRaw.length > 0) {
-    const countMap = new Map<string, number>();
-    for (const row of volumeRaw) {
-      const td = String(row.trade_date ?? "");
-      const month = td.substring(0, 7); // "YYYY-MM"
-      if (month) {
-        countMap.set(month, (countMap.get(month) ?? 0) + 1);
-      }
-    }
-    monthlyVolume = Array.from(countMap.entries())
-      .map(([month, count]) => ({ month, count }))
-      .sort((a, b) => b.month.localeCompare(a.month))
-      .slice(0, 6)
-      .reverse();
-  }
-
-  // 시도별 평균 거래가 비교
-  const sidoEntries = Object.entries(REGION_HIERARCHY);
-  let sidoAvgPrices: { name: string; slug: string; avgPrice: number; count: number }[] = [];
+  let sidoAvgPrices: TrendSidoAvgPrice[] = [];
+  let priceUnavailable = false;
 
   try {
-    sidoAvgPrices = await Promise.all(
-      sidoEntries.map(async ([, sido]) => {
-        const sigunguCodes = Object.keys(sido.sigungu);
-
-        const rows = await db.select({
-          trade_price: aptTransactions.tradePrice,
-          count: sql<number>`count(*) over ()`,
-        }).from(aptTransactions)
-          .where(inArray(aptTransactions.regionCode, sigunguCodes))
-          .orderBy(desc(aptTransactions.tradeDate))
-          .limit(1000);
-
-        const prices = rows.map((d) => Number(d.trade_price ?? 0));
-        const avgPrice =
-          prices.length > 0
-            ? Math.round(prices.reduce((a: number, b: number) => a + b, 0) / prices.length)
-            : 0;
-
-        return {
-          name: sido.shortName,
-          slug: sido.slug,
-          avgPrice,
-          count: prices.length,
-        };
-      })
-    );
+    sidoAvgPrices = await getCachedTrendSidoAvgPrices();
   } catch (error) {
-    console.error("시도별 평균 거래가 조회 실패:", error);
+    priceUnavailable = isDatabaseResourceLimitError(error);
+    logDatabaseFailure("Trend price query failed", error, {
+      route: "/trend",
+    });
   }
 
   const sortedSido = [...sidoAvgPrices]
     .filter((s) => s.count > 0)
     .sort((a, b) => b.avgPrice - a.avgPrice);
 
-  // 전체 통계
-  const totalVolume = monthlyVolume.reduce((a, b) => a + b.count, 0);
+  const totalVolume = totalMonthlyVolume(monthlyVolume);
+  const latestVolume = latestMonthlyVolume(monthlyVolume);
+  const momChange = monthOverMonthChangeRate(monthlyVolume);
   const maxMonthly = Math.max(...monthlyVolume.map((m) => m.count), 1);
+  const volumeEmptyState = marketTrendEmptyStateCopy("trend-volume", volumeUnavailable);
+  const priceEmptyState = marketTrendEmptyStateCopy("trend-price", priceUnavailable);
+  const basisLabel =
+    volumeUnavailable || priceUnavailable
+      ? "데이터 연결 확인 중"
+      : "최근 거래일 기준 · 돈줍 수집 실거래 데이터";
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* Header */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-5 w-1.5 rounded-full bg-brand-600" />
-          <h1 className="text-2xl font-extrabold t-text sm:text-3xl">
-            부동산 시장 트렌드
-          </h1>
-        </div>
-        <p className="mt-2 text-sm t-text-secondary">
-          전국 아파트 거래량 추이와 시도별 평균 거래가를 한눈에 비교하세요.
-        </p>
-      </section>
+    <div>
+      <BreadcrumbJsonLd
+        items={[
+          { name: "홈", href: "/" },
+          { name: "부동산 시장 트렌드", href: "/trend" },
+        ]}
+      />
+      <SignalLandingHeader
+        eyebrow="시장 흐름판"
+        title="부동산 시장 트렌드"
+        description="최근 6개월 전국 아파트 거래량과 시도별 평균 거래가를 함께 보며 다음 탐색 지역을 고르세요."
+        basisLabel={basisLabel}
+        stats={[
+          {
+            label: "6개월 거래량",
+            value: `${totalVolume.toLocaleString()}건`,
+            hint: "최근 6개 월별 거래량 합계입니다",
+          },
+          {
+            label: "최근 월",
+            value: latestVolume ? `${latestVolume.count.toLocaleString()}건` : "-",
+            hint: latestVolume ? `${latestVolume.month} 거래량` : "월별 거래량 준비 중",
+          },
+          {
+            label: "전월 대비",
+            value: momChange === null ? "-" : `${momChange > 0 ? "+" : ""}${momChange.toFixed(1)}%`,
+            hint: momChange === null ? "비교 가능한 전월 데이터가 필요합니다" : "최근 월 거래량 변화율입니다",
+          },
+          {
+            label: "가격 비교 지역",
+            value: `${sortedSido.length.toLocaleString()}곳`,
+            hint: "시도별 평균 거래가 표에서 바로 이동합니다",
+          },
+        ]}
+        primaryHref="/market"
+        primaryLabel="지역별 시세 보기"
+        secondaryHref="/today"
+        secondaryLabel="오늘 거래 보기"
+        eventScope="trend"
+        tone="neutral"
+      />
+
+      <div className="mx-auto max-w-6xl px-4 py-8">
 
       {/* 월별 거래량 추이 */}
       <section className="mb-10">
@@ -123,55 +147,20 @@ export default async function TrendPage() {
         </h2>
 
         {monthlyVolume.length === 0 ? (
-          <p className="rounded-xl border t-border t-card px-4 py-8 text-center text-sm t-text-tertiary">
-            거래량 데이터를 불러올 수 없습니다.
-          </p>
+          <div className="rounded-xl border t-border t-card px-4 py-8 text-center">
+            <p className="text-sm font-semibold t-text-secondary">{volumeEmptyState.title}</p>
+            <p className="mt-1 text-xs t-text-tertiary">{volumeEmptyState.description}</p>
+            {volumeUnavailable && (
+              <TrackedLink
+                href="/trend"
+                ctaName="trend_volume_unavailable_retry_click"
+                className="mt-4 inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+              >
+                다시 시도
+              </TrackedLink>
+            )}
+          </div>
         ) : (
-          <>
-            {/* Summary stat cards */}
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border t-border t-card p-4">
-                <p className="text-[10px] font-medium t-text-secondary">
-                  6개월 총 거래량
-                </p>
-                <p className="mt-1 text-xl font-bold tabular-nums t-text">
-                  {totalVolume.toLocaleString()}건
-                </p>
-              </div>
-              {monthlyVolume.length > 0 && (
-                <div className="rounded-xl border t-border t-card p-4">
-                  <p className="text-[10px] font-medium t-text-secondary">
-                    최근 월 ({monthlyVolume[monthlyVolume.length - 1].month})
-                  </p>
-                  <p className="mt-1 text-xl font-bold tabular-nums t-text">
-                    {monthlyVolume[monthlyVolume.length - 1].count.toLocaleString()}건
-                  </p>
-                </div>
-              )}
-              {monthlyVolume.length >= 2 && (
-                <div className="rounded-xl border t-border t-card p-4">
-                  <p className="text-[10px] font-medium t-text-secondary">
-                    전월 대비
-                  </p>
-                  {(() => {
-                    const curr = monthlyVolume[monthlyVolume.length - 1].count;
-                    const prev = monthlyVolume[monthlyVolume.length - 2].count;
-                    const diff = prev > 0 ? ((curr - prev) / prev) * 100 : 0;
-                    const isUp = diff >= 0;
-                    return (
-                      <p
-                        className={`mt-1 text-xl font-bold tabular-nums ${isUp ? "t-rise" : "t-drop"}`}
-                      >
-                        {isUp ? "+" : ""}
-                        {diff.toFixed(1)}%
-                      </p>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-
-            {/* Simple bar chart (CSS-based) */}
             <div className="rounded-xl border t-border t-card p-5">
               <div className="flex items-end gap-2" style={{ height: 160 }}>
                 {monthlyVolume.map((m) => {
@@ -199,7 +188,6 @@ export default async function TrendPage() {
                 })}
               </div>
             </div>
-          </>
         )}
       </section>
 
@@ -212,9 +200,28 @@ export default async function TrendPage() {
         </h2>
 
         {sortedSido.length === 0 ? (
-          <p className="rounded-xl border t-border t-card px-4 py-8 text-center text-sm t-text-tertiary">
-            시도별 데이터를 불러올 수 없습니다.
-          </p>
+          <div className="rounded-xl border t-border t-card px-4 py-8 text-center">
+            <p className="text-sm font-semibold t-text-secondary">{priceEmptyState.title}</p>
+            <p className="mt-1 text-xs t-text-tertiary">{priceEmptyState.description}</p>
+            {priceUnavailable && (
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <TrackedLink
+                  href="/trend"
+                  ctaName="trend_price_unavailable_retry_click"
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+                >
+                  다시 시도
+                </TrackedLink>
+                <TrackedLink
+                  href="/market"
+                  ctaName="trend_price_unavailable_market_click"
+                  className="rounded-lg border t-border px-4 py-2 text-sm font-bold t-text-secondary transition hover:bg-[var(--color-surface-elevated)]"
+                >
+                  지역별 시세 보기
+                </TrackedLink>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border t-border t-card">
             <table className="w-full text-sm">
@@ -243,7 +250,19 @@ export default async function TrendPage() {
                         {i + 1}
                       </td>
                       <td className="px-4 py-3 font-semibold t-text">
-                        {sido.name}
+                        <TrackedLink
+                          href={`/market/${sido.slug}`}
+                          ctaName="trend_market_region_click"
+                          params={{
+                            rank: i + 1,
+                            sido: sido.slug,
+                            avg_price: sido.avgPrice,
+                            transaction_count: sido.count,
+                          }}
+                          className="font-semibold t-text underline-offset-4 transition hover:underline"
+                        >
+                          {sido.name}
+                        </TrackedLink>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -269,6 +288,40 @@ export default async function TrendPage() {
           </div>
         )}
       </section>
+
+        <SignalLandingFooter
+          eventScope="trend"
+          methodTitle="트렌드 산정 기준"
+          methodItems={[
+            "월별 거래량은 최근 거래일부터 역순으로 수집한 실거래 데이터를 월 단위로 묶어 계산합니다.",
+            "시도별 평균 거래가는 각 시도에서 최근 거래 1,000건까지를 기준으로 비교합니다.",
+            "전월 대비는 최근 월과 직전 월의 거래량 변화율입니다.",
+            "표의 시도명을 누르면 해당 지역의 시군구별 시세 페이지로 이동합니다.",
+          ]}
+          relatedLinks={[
+            {
+              href: "/market",
+              title: "지역별 시세",
+              description: "거래량 흐름에서 발견한 지역을 시군구별로 좁혀봅니다.",
+            },
+            {
+              href: "/today",
+              title: "오늘 하락 거래",
+              description: "시장의 약한 신호가 개별 단지에서 어떻게 보이는지 확인합니다.",
+            },
+            {
+              href: "/new-highs",
+              title: "오늘 신고가",
+              description: "강한 가격 신호가 나온 단지와 지역을 확인합니다.",
+            },
+            {
+              href: "/rate",
+              title: "대출 금리",
+              description: "거래량과 가격 흐름을 금리 부담과 함께 봅니다.",
+            },
+          ]}
+        />
+    </div>
     </div>
   );
 }

@@ -1,17 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { ChartTransaction, TrendPoint } from "@/components/charts/PriceHistoryChart";
+import type { MonthlyPoint, DirectDealPoint } from "@/components/charts/PriceHistoryChart";
 import type { RatioPoint } from "@/components/apt/AptDetailClient";
 
 type PriceHistoryChartProps = {
-  normalDots: ChartTransaction[];
-  directDealDots: ChartTransaction[];
-  trendLine: TrendPoint[];
-  rentTrendLine?: TrendPoint[];
+  trendLine: MonthlyPoint[];
+  rentTrendLine?: MonthlyPoint[];
   jeonseRatioLine?: RatioPoint[];
+  directDeals?: DirectDealPoint[];
   showJeonseRatio?: boolean;
-  sizeUnit?: "sqm" | "pyeong";
 };
 
 const PriceHistoryChart = dynamic<PriceHistoryChartProps>(

@@ -1,3 +1,14 @@
+import { getSigunguName, getSidoForCode } from "./constants/region-codes";
+
+/** 지역 코드를 "서울 강남구" 형태의 문자열로 변환 */
+export function formatRegion(code: string | null | undefined): string {
+  if (!code || code.length < 5) return "-";
+  const sido = getSidoForCode(code);
+  const sigungu = getSigunguName(code);
+  if (!sido) return sigungu || "-";
+  return sigungu ? `${sido.shortName} ${sigungu}` : sido.name;
+}
+
 /** 만원 단위 가격을 한글 표기로 변환 */
 export function formatPrice(priceInManWon: number): string {
   if (priceInManWon >= 10000) {
@@ -28,6 +39,7 @@ export const RATE_LABELS: Record<string, string> = {
   COFIX_BAL: "COFIX(잔액)",
   CD_91: "CD 91일",
   TREASURY_3Y: "국고채 3년",
+  BANK_AVERAGE: "시중은행 평균",
 };
 
 /** 금리 지표 설명 */

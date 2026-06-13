@@ -2,155 +2,86 @@
 
 import {
   ComposedChart,
-  Scatter,
   Line,
+  Scatter,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Customized,
+  ZAxis,
 } from "recharts";
 import type { RatioPoint } from "@/components/apt/AptDetailClient";
-import { formatPrice, formatPriceAxis, sqmToPyeong } from "@/lib/format";
+import { formatPrice, formatPriceAxis } from "@/lib/format";
 
 // ────────────────────────────────────────────────────────────────
 // Types
 // ────────────────────────────────────────────────────────────────
 
-export interface ChartTransaction {
-  trade_date: string;
-  trade_price: number;
-  size_sqm: number;
-  deal_type: string | null;
-  floor: number;
-  isDirectDeal: boolean;
-  prevPrice?: number; // for direct deals: previous same-size non-direct price
+export interface MonthlyPoint {
+  month: string;    // YYYY-MM
+  average: number;  // monthly average price
+  count: number;    // transaction count (0 = carried forward)
 }
 
-export interface TrendPoint {
-  month: string;       // YYYY-MM
-  median: number;      // 3-month moving median price
-  count: number;       // transaction count in window
-  isLowConfidence: boolean; // < 5 transactions → dashed line
+export interface DirectDealPoint {
+  trade_date: string;
+  trade_price: number;
+  floor: number;
 }
 
 interface PriceHistoryChartProps {
-  normalDots: ChartTransaction[];
-  directDealDots: ChartTransaction[];
-  trendLine: TrendPoint[];
-  rentTrendLine?: TrendPoint[];       // jeonse trend line
-  jeonseRatioLine?: RatioPoint[];     // ratio overlay
-  showJeonseRatio?: boolean;          // overlay toggle
-  sizeUnit?: "sqm" | "pyeong";
+  trendLine: MonthlyPoint[];
+  rentTrendLine?: MonthlyPoint[];
+  jeonseRatioLine?: RatioPoint[];
+  directDeals?: DirectDealPoint[];
+  showJeonseRatio?: boolean;
 }
 
 // ────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────
 
-// Convert YYYY-MM-DD → MM-DD display
-function formatDateLabel(dateStr: string): string {
-  return dateStr.slice(5); // "MM-DD"
+// Convert YYYY-MM → "YY년 M월"
+function formatMonthLabel(month: string): string {
+  if (!month) return "";
+  const parts = month.split("-");
+  if (parts.length < 2) return month;
+  const [y, m] = parts;
+  return `${y.slice(2)}년 ${Number(m)}월`;
 }
 
-// ────────────────────────────────────────────────────────────────
-// Direct Deal Connector — SVG overlay via <Customized>
-// ────────────────────────────────────────────────────────────────
-
-interface ConnectorProps {
-  directDealDots: ChartTransaction[];
-  xAxisMap?: Record<string, { scale: (v: string) => number }>;
-  yAxisMap?: Record<string, { scale: (v: number) => number }>;
-}
-
-function DirectDealConnectors({ directDealDots, xAxisMap, yAxisMap }: ConnectorProps) {
-  if (!xAxisMap || !yAxisMap) return null;
-
-  const xScale = xAxisMap[0]?.scale;
-  const yScale = yAxisMap[0]?.scale;
-  if (!xScale || !yScale) return null;
-
-  return (
-    <>
-      {directDealDots.map((dd, i) => {
-        if (dd.prevPrice === undefined || dd.prevPrice === null) return null;
-
-        const x = xScale(dd.trade_date);
-        const y1 = yScale(dd.trade_price);
-        const y2 = yScale(dd.prevPrice);
-
-        if (isNaN(x) || isNaN(y1) || isNaN(y2)) return null;
-
-        return (
-          <g key={`connector-${i}`}>
-            {/* Dashed vertical line from prevPrice to trade_price */}
-            <line
-              x1={x}
-              y1={y1}
-              x2={x}
-              y2={y2}
-              stroke="var(--color-chart-neutral)"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-            />
-            {/* Small gray dot at prevPrice position */}
-            <circle
-              cx={x}
-              cy={y2}
-              r={2}
-              fill="var(--color-chart-neutral)"
-              opacity={0.6}
-            />
-          </g>
-        );
-      })}
-    </>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────
-// Trend line rendering — split solid/dashed segments
-// ────────────────────────────────────────────────────────────────
-
-// Full continuous trend line (all points connected)
-function fullTrendData(trendLine: TrendPoint[]) {
-  return trendLine.map((p) => ({
-    x: `${p.month}-15`, // mid-month as date string for x positioning
-    y: p.median,
+// Build chart data from monthly points
+function toChartData(points: MonthlyPoint[]) {
+  return points.map((p) => ({
+    x: p.month,
+    y: p.average,
     month: p.month,
     count: p.count,
-    isLowConfidence: p.isLowConfidence,
-    median: p.median,
+    average: p.average,
   }));
-}
-
-// Low-confidence segments only (dashed overlay)
-function dashedTrendData(trendLine: TrendPoint[]) {
-  // Include neighboring high-confidence points so dashed segments connect properly
-  return trendLine.map((p, i, arr) => {
-    const isNeighborOfLow =
-      (i > 0 && arr[i - 1].isLowConfidence) ||
-      (i < arr.length - 1 && arr[i + 1].isLowConfidence);
-    const show = p.isLowConfidence || isNeighborOfLow;
-    return {
-      x: `${p.month}-15`,
-      y: show ? p.median : null,
-      month: p.month,
-      count: p.count,
-      isLowConfidence: p.isLowConfidence,
-      median: p.median,
-    };
-  });
 }
 
 // Map jeonse ratio points to chart-compatible format
 function ratioLineData(ratioPoints: RatioPoint[]) {
   return ratioPoints.map((p) => ({
-    x: `${p.month}-15`,
+    x: p.month,
     y: p.ratio,
     month: p.month,
     isLowConfidence: p.isLowConfidence,
     ratio: p.ratio,
+  }));
+}
+
+// Map direct deals to chart-compatible format
+function directDealsData(deals: DirectDealPoint[]) {
+  return deals.map((d) => ({
+    x: d.trade_date.slice(0, 7), // Group by month for X-axis alignment
+    y: d.trade_price,
+    month: d.trade_date.slice(0, 7),
+    fullDate: d.trade_date,
+    price: d.trade_price,
+    floor: d.floor,
+    isDirectDeal: true,
   }));
 }
 
@@ -162,19 +93,18 @@ interface TooltipPayloadEntry {
   name?: string;
   dataKey?: string;
   stroke?: string;
+  fill?: string;
   payload?: {
-    trade_date?: string;
-    trade_price?: number;
-    size_sqm?: number;
-    floor?: number;
-    deal_type?: string | null;
-    isDirectDeal?: boolean;
     x?: string;
-    median?: number;
+    average?: number;
     count?: number;
-    isLowConfidence?: boolean;
     month?: string;
     ratio?: number;
+    isLowConfidence?: boolean;
+    isDirectDeal?: boolean;
+    fullDate?: string;
+    price?: number;
+    floor?: number;
   };
   value?: number;
 }
@@ -182,27 +112,19 @@ interface TooltipPayloadEntry {
 function CustomTooltip({
   active,
   payload,
-  sizeUnit = "sqm",
 }: {
   active?: boolean;
   payload?: TooltipPayloadEntry[];
-  sizeUnit?: "sqm" | "pyeong";
 }) {
   if (!active || !payload?.length) return null;
 
-  // Find first payload that has actual data
-  const entry = payload.find((p) => p.payload && (p.payload.trade_date || p.payload.month));
+  const entry = payload[0];
   if (!entry?.payload) return null;
 
   const data = entry.payload;
 
-  // Transaction dot tooltip
-  if (data.trade_date) {
-    const sizeLabel =
-      sizeUnit === "pyeong"
-        ? `${sqmToPyeong(data.size_sqm ?? 0)}평`
-        : `${data.size_sqm}㎡`;
-    const dealLabel = data.isDirectDeal ? " · 직거래" : "";
+  // Direct deal tooltip (Scatter)
+  if (data.isDirectDeal) {
     return (
       <div
         className="rounded-xl px-3 py-2 text-xs shadow-lg"
@@ -212,17 +134,20 @@ function CustomTooltip({
         }}
       >
         <p style={{ color: "var(--color-text-tertiary)" }}>
-          {data.trade_date} · {data.floor}층 · {sizeLabel}{dealLabel}
+          {data.fullDate} (직거래)
         </p>
         <p className="mt-0.5 font-bold" style={{ color: "var(--color-text-primary)" }}>
-          {formatPrice(data.trade_price ?? 0)}
+          직거래가: {formatPrice(data.price!)}
+        </p>
+        <p className="mt-0.5 text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
+          {data.floor}층
         </p>
       </div>
     );
   }
 
-  // Ratio tooltip (orange line — entry stroke is var(--color-chart-ratio))
-  if (data.month && data.ratio !== undefined) {
+  // Ratio tooltip
+  if (data.ratio !== undefined) {
     const confidenceLabel = data.isLowConfidence ? " (낮은 신뢰도)" : "";
     return (
       <div
@@ -233,7 +158,7 @@ function CustomTooltip({
         }}
       >
         <p style={{ color: "var(--color-text-tertiary)" }}>
-          {data.month}{confidenceLabel}
+          {formatMonthLabel(data.month!)}{confidenceLabel}
         </p>
         <p className="mt-0.5 font-bold" style={{ color: "var(--color-chart-ratio)" }}>
           전세가율: {data.ratio.toFixed(1)}%
@@ -242,10 +167,10 @@ function CustomTooltip({
     );
   }
 
-  // Trend line tooltip
-  if (data.month) {
-    const confidenceLabel = data.isLowConfidence ? " (낮은 신뢰도)" : "";
+  // Monthly average tooltip
+  if (data.month && data.average !== undefined) {
     const isRentLine = entry.stroke === "var(--color-chart-jeonse)";
+    const countLabel = data.count! > 0 ? ` · ${data.count}건` : " · 거래 없음(이전값)";
     return (
       <div
         className="rounded-xl px-3 py-2 text-xs shadow-lg"
@@ -255,10 +180,10 @@ function CustomTooltip({
         }}
       >
         <p style={{ color: "var(--color-text-tertiary)" }}>
-          {data.month} · {data.count}건{confidenceLabel}
+          {formatMonthLabel(data.month)}{countLabel}
         </p>
         <p className="mt-0.5 font-bold" style={{ color: "var(--color-text-primary)" }}>
-          {isRentLine ? "전세 이동중위가" : "3개월 이동중위가"}: {formatPrice(data.median ?? 0)}
+          {isRentLine ? "전세 월평균" : "매매 월평균"}: {formatPrice(data.average)}
         </p>
       </div>
     );
@@ -272,51 +197,37 @@ function CustomTooltip({
 // ────────────────────────────────────────────────────────────────
 
 export default function PriceHistoryChart({
-  normalDots,
-  directDealDots,
   trendLine,
   rentTrendLine,
   jeonseRatioLine,
+  directDeals = [],
   showJeonseRatio = false,
-  sizeUnit = "sqm",
 }: PriceHistoryChartProps) {
-  const allDots = [...normalDots, ...directDealDots];
-  if (allDots.length < 2 && trendLine.length < 2) return null;
+  if (trendLine.length < 2) return null;
 
   const hasRentTrend = (rentTrendLine?.length ?? 0) >= 2;
   const hasRatioOverlay = showJeonseRatio && (jeonseRatioLine?.length ?? 0) >= 2;
+  const hasDirectDeals = directDeals.length > 0;
 
-  // Compute Y domain from all prices
+  // Compute Y domain
   const allPrices = [
-    ...normalDots.map((d) => d.trade_price),
-    ...directDealDots.map((d) => d.trade_price),
-    ...directDealDots.filter((d) => d.prevPrice).map((d) => d.prevPrice as number),
-    ...trendLine.map((d) => d.median),
-    ...(rentTrendLine ?? []).map((d) => d.median),
-  ].filter(Boolean);
+    ...trendLine.map((d) => d.average),
+    ...(rentTrendLine ?? []).map((d) => d.average),
+    ...directDeals.map((d) => d.trade_price),
+  ];
 
-  const minP = allPrices.length ? Math.min(...allPrices) : 0;
-  const maxP = allPrices.length ? Math.max(...allPrices) : 0;
+  const minP = Math.min(...allPrices);
+  const maxP = Math.max(...allPrices);
   const pad = (maxP - minP) * 0.05;
   const yDomain: [number, number] = [
     Math.max(0, Math.floor((minP - pad) / 1000) * 1000),
     Math.ceil((maxP + pad) / 1000) * 1000,
   ];
 
-  // Build unified X-axis tick pool (all dates + trend mid-month dates)
-  const fullData = fullTrendData(trendLine);
-  const dashedData = dashedTrendData(trendLine);
-  const fullRentData = hasRentTrend ? fullTrendData(rentTrendLine!) : [];
-  const dashedRentData = hasRentTrend ? dashedTrendData(rentTrendLine!) : [];
+  const saleData = toChartData(trendLine);
+  const rentData = hasRentTrend ? toChartData(rentTrendLine!) : [];
   const ratioChartData = hasRatioOverlay ? ratioLineData(jeonseRatioLine!) : [];
-
-  // Determine chart area accessibility summary
-  const firstDate = allDots.length
-    ? [...allDots].sort((a, b) => a.trade_date.localeCompare(b.trade_date))[0].trade_date
-    : "";
-  const lastDate = allDots.length
-    ? [...allDots].sort((a, b) => b.trade_date.localeCompare(a.trade_date))[0].trade_date
-    : "";
+  const scatterData = hasDirectDeals ? directDealsData(directDeals) : [];
 
   return (
     <div
@@ -328,41 +239,52 @@ export default function PriceHistoryChart({
         background: "var(--color-surface-card)",
       }}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-bold t-text">가격 추이</h2>
-        <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-0.5" style={{ background: "var(--color-chart-sale)" }} />매매 추이
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px]" style={{ color: "var(--color-text-tertiary)" }}>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-0.5 rounded-full" style={{ background: "var(--color-chart-sale)" }} />
+            <span className="t-text-secondary">매매 추이</span>
           </span>
+          {hasDirectDeals && (
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-text-tertiary)", opacity: 0.6 }} />
+              <span className="t-text-secondary">직거래</span>
+            </span>
+          )}
           {hasRentTrend && (
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-3 h-0.5" style={{ background: "var(--color-chart-jeonse)" }} />전세 추이
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-0.5 rounded-full" style={{ background: "var(--color-chart-jeonse)" }} />
+              <span className="t-text-secondary">전세 추이</span>
             </span>
           )}
           {hasRatioOverlay && (
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-3 h-0.5 border-t-2 border-dashed" style={{ borderColor: "var(--color-chart-ratio)" }} />전세가율
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-0.5 border-t border-dashed" style={{ borderColor: "var(--color-chart-ratio)" }} />
+                <span className="t-text-secondary">전세가율</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-0.5 border-t border-dotted opacity-50" style={{ borderColor: "var(--color-chart-ratio)" }} />
+                <span className="t-text-tertiary text-[9px]">저신뢰구간</span>
+              </span>
+            </div>
           )}
         </div>
       </div>
-
-      <p className="sr-only">
-        {firstDate} ~ {lastDate} 기간 가격 추이, 총 {allDots.length}건의 거래
-      </p>
 
       <div className="h-[280px] sm:h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart margin={{ top: 5, right: hasRatioOverlay ? 45 : 5, bottom: 5, left: 5 }}>
             <XAxis
-              dataKey="trade_date"
+              dataKey="x"
               type="category"
               allowDuplicatedCategory={false}
               tick={{ fontSize: 11, fill: "var(--color-text-tertiary)" }}
               axisLine={false}
               tickLine={false}
               interval="preserveStartEnd"
-              tickFormatter={formatDateLabel}
+              tickFormatter={formatMonthLabel}
             />
             <YAxis
               yAxisId={0}
@@ -385,30 +307,25 @@ export default function PriceHistoryChart({
                 width={40}
               />
             )}
-            <Tooltip content={<CustomTooltip sizeUnit={sizeUnit} />} />
+            <ZAxis type="number" range={[40, 40]} />
+            <Tooltip content={<CustomTooltip />} />
 
-            {/* Normal transaction dots — green */}
-            <Scatter
-              yAxisId={0}
-              data={normalDots}
-              fill="var(--color-chart-sale)"
-              opacity={0.7}
-              shape={<circle r={3} />}
-            />
+            {/* Direct Deals (Scatter dots) */}
+            {hasDirectDeals && (
+              <Scatter
+                yAxisId={0}
+                data={scatterData}
+                fill="var(--color-text-tertiary)"
+                fillOpacity={0.4}
+                stroke="none"
+                isAnimationActive={false}
+              />
+            )}
 
-            {/* Direct deal dots — gray transparent */}
-            <Scatter
-              yAxisId={0}
-              data={directDealDots}
-              fill="var(--color-chart-neutral)"
-              opacity={0.4}
-              shape={<circle r={3} />}
-            />
-
-            {/* Sale trend line — continuous solid line */}
+            {/* Sale monthly average line */}
             <Line
               yAxisId={0}
-              data={fullData}
+              data={saleData}
               type="monotone"
               dataKey="y"
               stroke="var(--color-chart-sale)"
@@ -419,26 +336,11 @@ export default function PriceHistoryChart({
               isAnimationActive={false}
             />
 
-            {/* Sale trend line dashed overlay for low-confidence months */}
-            <Line
-              yAxisId={0}
-              data={dashedData}
-              type="monotone"
-              dataKey="y"
-              stroke="var(--color-chart-sale)"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={false}
-              activeDot={false}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-
-            {/* Rent trend line — continuous solid line */}
+            {/* Rent monthly average line */}
             {hasRentTrend && (
               <Line
                 yAxisId={0}
-                data={fullRentData}
+                data={rentData}
                 type="monotone"
                 dataKey="y"
                 stroke="var(--color-chart-jeonse)"
@@ -446,23 +348,6 @@ export default function PriceHistoryChart({
                 dot={false}
                 activeDot={{ r: 5, fill: "var(--color-chart-jeonse)", stroke: "#fff", strokeWidth: 2 }}
                 connectNulls
-                isAnimationActive={false}
-              />
-            )}
-
-            {/* Rent trend line dashed overlay for low-confidence months */}
-            {hasRentTrend && (
-              <Line
-                yAxisId={0}
-                data={dashedRentData}
-                type="monotone"
-                dataKey="y"
-                stroke="var(--color-chart-jeonse)"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-                activeDot={false}
-                connectNulls={false}
                 isAnimationActive={false}
               />
             )}
@@ -482,17 +367,6 @@ export default function PriceHistoryChart({
                 isAnimationActive={false}
               />
             )}
-
-            {/* Direct deal connectors — dashed gray vertical lines */}
-            <Customized
-              component={(props: Record<string, unknown>) => (
-                <DirectDealConnectors
-                  directDealDots={directDealDots}
-                  xAxisMap={props.xAxisMap as ConnectorProps["xAxisMap"]}
-                  yAxisMap={props.yAxisMap as ConnectorProps["yAxisMap"]}
-                />
-              )}
-            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

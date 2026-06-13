@@ -2,14 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CLUSTER_DEFINITIONS } from "@/lib/constants/region-codes";
-import { REGION_HIERARCHY } from "@/lib/constants/region-codes";
-import { computeClusterIndex } from "@/lib/cluster-index";
-import { db } from "@/lib/db";
-import { aptTransactions } from "@/lib/db/schema";
-import { and, eq, inArray, gte, ne, desc } from "drizzle-orm";
-import { computeMedianPrice } from "@/lib/price-normalization";
+import {
+  getCachedClusterIndex,
+  getCachedClusterPerRegionMedian,
+} from "@/lib/cluster-index";
 import ClusterIndexChart from "@/components/charts/ClusterIndexChart";
-import { formatPrice } from "@/lib/format";
 
 export const revalidate = 3600;
 
@@ -32,61 +29,6 @@ export async function generateMetadata({
   };
 }
 
-function getSigunguName(code: string): string {
-  for (const sido of Object.values(REGION_HIERARCHY)) {
-    if (sido.sigungu[code]) return sido.sigungu[code];
-  }
-  return code;
-}
-
-async function getPerRegionMedian(
-  regionCodes: string[]
-): Promise<{ regionCode: string; name: string; medianPrice: number; count: number }[]> {
-  if (regionCodes.length === 0) return [];
-
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-  const dateStr = threeMonthsAgo.toISOString().slice(0, 10);
-
-  const rows = await db
-    .select({
-      region_code: aptTransactions.regionCode,
-      trade_price: aptTransactions.tradePrice,
-    })
-    .from(aptTransactions)
-    .where(
-      and(
-        gte(aptTransactions.tradeDate, dateStr),
-        inArray(aptTransactions.regionCode, regionCodes),
-        eq(aptTransactions.propertyType, 1),
-        ne(aptTransactions.dealType, "직거래")
-      )
-    )
-    .orderBy(desc(aptTransactions.tradeDate));
-
-  const byCode = new Map<string, number[]>();
-  for (const r of rows) {
-    const code = r.region_code;
-    const price = Number(r.trade_price);
-    const existing = byCode.get(code);
-    if (existing) {
-      existing.push(price);
-    } else {
-      byCode.set(code, [price]);
-    }
-  }
-
-  return regionCodes.map((code) => {
-    const prices = byCode.get(code) ?? [];
-    return {
-      regionCode: code,
-      name: getSigunguName(code),
-      medianPrice: computeMedianPrice(prices),
-      count: prices.length,
-    };
-  });
-}
-
 export default async function ClusterDetailPage({
   params,
 }: {
@@ -96,13 +38,13 @@ export default async function ClusterDetailPage({
   const cluster = CLUSTER_DEFINITIONS.find((c) => c.id === clusterId);
   if (!cluster) notFound();
 
-  let indexPoints: Awaited<ReturnType<typeof computeClusterIndex>> = [];
-  let perRegion: Awaited<ReturnType<typeof getPerRegionMedian>> = [];
+  let indexPoints: Awaited<ReturnType<typeof getCachedClusterIndex>> = [];
+  let perRegion: Awaited<ReturnType<typeof getCachedClusterPerRegionMedian>> = [];
 
   try {
     [indexPoints, perRegion] = await Promise.all([
-      computeClusterIndex(cluster.regionCodes),
-      getPerRegionMedian(cluster.regionCodes),
+      getCachedClusterIndex(cluster.regionCodes),
+      getCachedClusterPerRegionMedian(cluster.regionCodes),
     ]);
   } catch {
     // graceful degradation
@@ -114,6 +56,20 @@ export default async function ClusterDetailPage({
     medianPrice: p.medianPrice,
     count: p.count,
   }));
+
+  // 기준점 (지수 100)
+  const basePoint = chartData.find((d) => d.index === 100) ?? chartData[0];
+  const baseMonth = basePoint?.month ?? "";
+  const basePrice = basePoint?.medianPrice ?? 0;
+
+  function formatEok(price: number): string {
+    const eok = price / 10000;
+    return `${eok.toFixed(1)}억`;
+  }
+  function formatMonthLabel(month: string): string {
+    const [y, m] = month.split("-");
+    return `${y.slice(2)}년 ${Number(m)}월`;
+  }
 
   return (
     <main style={{ maxWidth: "1152px", margin: "0 auto", padding: "24px 16px" }}>
@@ -149,7 +105,7 @@ export default async function ClusterDetailPage({
           marginBottom: "24px",
         }}
       >
-        최초 데이터 월 = 100 기준 중위가 지수
+        월별 중위 거래가 추이
       </p>
 
       {/* Full time series chart */}
@@ -202,19 +158,27 @@ export default async function ClusterDetailPage({
             >
               {r.name}
             </p>
-            <p
-              style={{
-                fontSize: "18px",
-                fontWeight: 700,
-                color: "var(--color-text-primary)",
-              }}
-            >
-              {r.count > 0 ? formatPrice(Math.round(r.medianPrice / 10000) * 10000) : "데이터 없음"}
-            </p>
-            {r.count > 0 && (
-              <p style={{ fontSize: "11px", color: "var(--color-text-secondary)", marginTop: "2px" }}>
-                {r.count}건 기준
-              </p>
+            {r.count > 0 ? (
+              <>
+                <p style={{ fontSize: "18px", fontWeight: 700, color: "var(--color-text-primary)" }}>
+                  {formatEok(r.medianPrice)}
+                  {basePrice > 0 && (() => {
+                    const diff = r.medianPrice - basePrice;
+                    const sign = diff >= 0 ? "▲" : "▼";
+                    const color = diff >= 0 ? "var(--color-semantic-rise)" : "var(--color-semantic-drop)";
+                    return (
+                      <span style={{ fontSize: "12px", fontWeight: 600, marginLeft: "6px", color }}>
+                        {sign} {formatEok(Math.abs(diff))}
+                      </span>
+                    );
+                  })()}
+                </p>
+                <p style={{ fontSize: "11px", color: "var(--color-text-tertiary)", marginTop: "2px" }}>
+                  {formatMonthLabel(baseMonth)} {formatEok(basePrice)} 기준 · {r.count}건
+                </p>
+              </>
+            ) : (
+              <p style={{ fontSize: "18px", fontWeight: 700, color: "var(--color-text-primary)" }}>데이터 없음</p>
             )}
           </div>
         ))}

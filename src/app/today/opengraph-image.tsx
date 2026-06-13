@@ -41,7 +41,7 @@ export default function OgImage() {
             fontWeight: 900,
           }}
         >
-          ₩
+          DJ
         </div>
         <div
           style={{

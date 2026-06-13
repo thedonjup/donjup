@@ -18,7 +18,11 @@
     },
     {
       "path": "/api/cron/geocode-complexes",
-      "schedule": "0 17 * * *"
+      "schedule": "0 17 * * 0"
+    },
+    {
+      "path": "/api/cron/generate-report",
+      "schedule": "0 18 * * *"
     },
     {
       "path": "/api/cron/generate-cardnews",
@@ -70,7 +74,7 @@
     },
     {
       "path": "/api/cron/enrich-complexes",
-      "schedule": "50 21 * * *"
+      "schedule": "50 21 * * 0"
     },
     {
       "path": "/api/cron/fetch-rates",
@@ -78,11 +82,7 @@
     },
     {
       "path": "/api/cron/validate-data",
-      "schedule": "30 22 * * *"
-    },
-    {
-      "path": "/api/cron/generate-report",
-      "schedule": "0 23 * * *"
+      "schedule": "30 22 * * 0"
     },
     {
       "path": "/api/cron/send-push",
@@ -90,7 +90,7 @@
     },
     {
       "path": "/api/cron/generate-seeding",
-      "schedule": "30 23 * * *"
+      "schedule": "30 23 * * 0"
     }
   ]
 }

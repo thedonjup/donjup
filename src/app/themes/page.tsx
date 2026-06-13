@@ -1,11 +1,16 @@
-import { db } from "@/lib/db";
-import { aptComplexes, aptTransactions } from "@/lib/db/schema";
-import { desc, asc, lte, gte, eq } from "drizzle-orm";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatRegion } from "@/lib/format";
 import { aptUrl } from "@/lib/apt-url";
 import AdSlot from "@/components/ads/AdSlot";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import {
+  getCachedThemeResults,
+  getThemeDefinition,
+  getThemeList,
+  type ThemeDefinition,
+  type ThemeResult,
+} from "@/lib/theme-query";
 
 export const revalidate = 3600;
 
@@ -25,63 +30,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/themes" },
 };
 
-interface ThemeDef {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  color: string;
-  bgColor: string;
-}
-
-const THEMES: ThemeDef[] = [
-  {
-    id: "reconstruction",
-    title: "재건축 임박",
-    description: "준공 30년 이상, 재건축 가능성이 높은 단지",
-    icon: "🏗️",
-    color: "text-amber-600",
-    bgColor: "theme-bg-amber",
-  },
-  {
-    id: "large-complex",
-    title: "대단지 (1,000세대+)",
-    description: "1,000세대 이상 대규모 단지",
-    icon: "🏢",
-    color: "text-blue-600",
-    bgColor: "theme-bg-blue",
-  },
-  {
-    id: "new-build",
-    title: "신축 (2020년 이후)",
-    description: "2020년 이후 준공된 신축 단지",
-    icon: "✨",
-    color: "text-emerald-600",
-    bgColor: "theme-bg-emerald",
-  },
-  {
-    id: "crash-deals",
-    title: "폭락 매물",
-    description: "최고가 대비 20% 이상 하락한 거래",
-    icon: "📉",
-    color: "text-red-600",
-    bgColor: "theme-bg-red",
-  },
-];
-
-interface ThemeResult {
-  id: string;
-  apt_name: string;
-  region_code: string;
-  region_name: string;
-  slug?: string;
-  govt_complex_id?: string | null;
-  built_year?: number | null;
-  total_units?: number | null;
-  trade_price?: number;
-  change_rate?: number | null;
-  trade_date?: string;
-}
+const THEMES = getThemeList();
 
 export default async function ThemesPage({
   searchParams,
@@ -92,87 +41,19 @@ export default async function ThemesPage({
   const selectedTheme = typeof themeParam === "string" ? themeParam : null;
 
   let results: ThemeResult[] = [];
-  let activeTheme: ThemeDef | null = null;
+  let activeTheme: ThemeDefinition | null = null;
 
   if (selectedTheme) {
-    activeTheme = THEMES.find((t) => t.id === selectedTheme) ?? null;
+    activeTheme = getThemeDefinition(selectedTheme);
 
     if (activeTheme) {
       try {
-        const currentYear = new Date().getFullYear();
-
-        if (selectedTheme === "reconstruction") {
-          const cutoffYear = currentYear - 30;
-          const data = await db.select({
-            id: aptComplexes.id,
-            apt_name: aptComplexes.aptName,
-            region_code: aptComplexes.regionCode,
-            region_name: aptComplexes.regionName,
-            slug: aptComplexes.slug,
-            govt_complex_id: aptComplexes.govtComplexId,
-            built_year: aptComplexes.builtYear,
-            total_units: aptComplexes.totalUnits,
-          }).from(aptComplexes)
-            .where(lte(aptComplexes.builtYear, cutoffYear))
-            .orderBy(asc(aptComplexes.builtYear))
-            .limit(30);
-          results = data as unknown as ThemeResult[];
-        } else if (selectedTheme === "large-complex") {
-          const data = await db.select({
-            id: aptComplexes.id,
-            apt_name: aptComplexes.aptName,
-            region_code: aptComplexes.regionCode,
-            region_name: aptComplexes.regionName,
-            slug: aptComplexes.slug,
-            govt_complex_id: aptComplexes.govtComplexId,
-            built_year: aptComplexes.builtYear,
-            total_units: aptComplexes.totalUnits,
-          }).from(aptComplexes)
-            .where(gte(aptComplexes.totalUnits, 1000))
-            .orderBy(desc(aptComplexes.totalUnits))
-            .limit(30);
-          results = data as unknown as ThemeResult[];
-        } else if (selectedTheme === "new-build") {
-          const data = await db.select({
-            id: aptComplexes.id,
-            apt_name: aptComplexes.aptName,
-            region_code: aptComplexes.regionCode,
-            region_name: aptComplexes.regionName,
-            slug: aptComplexes.slug,
-            govt_complex_id: aptComplexes.govtComplexId,
-            built_year: aptComplexes.builtYear,
-            total_units: aptComplexes.totalUnits,
-          }).from(aptComplexes)
-            .where(gte(aptComplexes.builtYear, 2020))
-            .orderBy(desc(aptComplexes.builtYear))
-            .limit(30);
-          results = data as unknown as ThemeResult[];
-        } else if (selectedTheme === "crash-deals") {
-          const data = await db.select({
-            id: aptTransactions.id,
-            apt_name: aptTransactions.aptName,
-            region_code: aptTransactions.regionCode,
-            region_name: aptTransactions.regionName,
-            trade_price: aptTransactions.tradePrice,
-            change_rate: aptTransactions.changeRate,
-            trade_date: aptTransactions.tradeDate,
-            slug: aptComplexes.slug,
-            govt_complex_id: aptComplexes.govtComplexId,
-          }).from(aptTransactions)
-            .leftJoin(aptComplexes, eq(aptTransactions.complexId, aptComplexes.id))
-            .where(lte(aptTransactions.changeRate, "-20"))
-            .orderBy(asc(aptTransactions.changeRate))
-            .limit(30);
-          results = data.map((r) => ({
-            ...r,
-            trade_price: Number(r.trade_price),
-            change_rate: r.change_rate !== null ? Number(r.change_rate) : null,
-            slug: r.slug ?? undefined,
-            govt_complex_id: r.govt_complex_id ?? null,
-          }));
-        }
+        results = await getCachedThemeResults(activeTheme.id, 30);
       } catch (e) {
-        console.error("[Themes] query failed:", e);
+        logDatabaseFailure("Themes query failed", e, {
+          route: "/themes",
+          theme: selectedTheme,
+        });
       }
     }
   }
@@ -273,7 +154,7 @@ export default async function ThemesPage({
                           {item.apt_name}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 t-text-secondary">{item.region_name}</td>
+                      <td className="px-4 py-3 t-text-secondary">{formatRegion(item.region_code)}</td>
                       <td className="px-4 py-3 text-right font-bold tabular-nums t-text">
                         {item.trade_price ? formatPrice(item.trade_price) : "-"}
                       </td>
@@ -304,7 +185,7 @@ export default async function ThemesPage({
                       #{i + 1}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs t-text-tertiary">{item.region_name}</p>
+                  <p className="mt-1 text-xs t-text-tertiary">{formatRegion(item.region_code)}</p>
                   <div className="mt-3 flex items-center gap-3 text-xs t-text-secondary">
                     {item.built_year && (
                       <span>{item.built_year}년 준공</span>

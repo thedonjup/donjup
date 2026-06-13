@@ -21,20 +21,21 @@ export function toDbSlug(regionCode: string, urlSlug: string): string {
   return urlSlug;
 }
 
-/** Fallback slug 생성: aptName으로 (govtComplexId 없는 단지용) */
+/** Fallback slug 생성: regionCode-aptName (govtComplexId 없는 단지용) */
 export function makeSlug(regionCode: string, aptName: string): string {
-  return aptName
+  const nameSlug = aptName
     .replace(/[^가-힣a-zA-Z0-9]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .toLowerCase();
+  return `${regionCode}-${nameSlug}`;
 }
 
 /** Central URL builder for apartment detail pages (per D-08) */
 export function aptUrl(complex: {
-  govtComplexId: string | null;
-  regionCode?: string;
-  slug?: string;
+  govtComplexId?: string | null;
+  regionCode?: string | null;
+  slug?: string | null;
 }): string {
   if (complex.govtComplexId) {
     return `/apt/${complex.govtComplexId}`;
@@ -44,4 +45,24 @@ export function aptUrl(complex: {
     return `/apt/${complex.regionCode}/${toUrlSlug(complex.regionCode, complex.slug)}`;
   }
   return '/';
+}
+
+function normalizePathForComparison(path: string): string {
+  let decodedPath = path;
+
+  try {
+    decodedPath = decodeURI(path);
+  } catch {
+    decodedPath = path;
+  }
+
+  return decodedPath.replace(/\/+$/, "") || "/";
+}
+
+export function shouldRedirectToAptCanonical(
+  currentPath: string,
+  canonicalPath: string
+): boolean {
+  return normalizePathForComparison(currentPath) !==
+    normalizePathForComparison(canonicalPath);
 }

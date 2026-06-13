@@ -191,3 +191,50 @@ export function groupByMonth(
     .map(([month, prices]) => ({ month, prices }))
     .sort((a, b) => a.month.localeCompare(b.month));
 }
+
+/**
+ * 월별 평균가 계산 (빈 달은 이전 값 유지)
+ *
+ * - 해당 월의 거래가 평균을 계산
+ * - 거래 없는 달은 직전 월 평균가로 채움
+ * - 첫 달부터 마지막 달까지 연속 데이터 보장
+ */
+export function computeMonthlyAverage(
+  data: { month: string; prices: number[] }[]
+): { month: string; average: number; count: number }[] {
+  if (data.length === 0) return [];
+
+  const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month));
+  const first = sorted[0].month;
+  const last = sorted[sorted.length - 1].month;
+
+  // Build lookup map
+  const map = new Map(sorted.map((d) => [d.month, d.prices]));
+
+  // Generate all months from first to last
+  const result: { month: string; average: number; count: number }[] = [];
+  let [year, mon] = first.split("-").map(Number);
+  const [lastYear, lastMon] = last.split("-").map(Number);
+  let prevAvg = 0;
+
+  while (year < lastYear || (year === lastYear && mon <= lastMon)) {
+    const key = `${year}-${String(mon).padStart(2, "0")}`;
+    const prices = map.get(key);
+
+    if (prices && prices.length > 0) {
+      const avg = Math.round(prices.reduce((s, p) => s + p, 0) / prices.length);
+      result.push({ month: key, average: avg, count: prices.length });
+      prevAvg = avg;
+    } else if (prevAvg > 0) {
+      result.push({ month: key, average: prevAvg, count: 0 });
+    }
+
+    mon++;
+    if (mon > 12) {
+      mon = 1;
+      year++;
+    }
+  }
+
+  return result;
+}

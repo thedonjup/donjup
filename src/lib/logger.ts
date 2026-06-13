@@ -1,3 +1,5 @@
+import { formatLogError } from "@/lib/logging/safe-error";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface LogEntry {
@@ -7,25 +9,14 @@ interface LogEntry {
   [key: string]: unknown;
 }
 
-function formatError(err: unknown): Record<string, unknown> {
-  if (err instanceof Error) {
-    return {
-      name: err.name,
-      message: err.message,
-      stack: err.stack,
-    };
-  }
-  return { raw: String(err) };
-}
-
 function log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
   const timestamp = new Date().toISOString();
+  const safeContext =
+    context?.error === undefined
+      ? context
+      : { ...context, error: formatLogError(context.error) };
 
-  const entry: LogEntry = { level, message, timestamp, ...context };
-
-  if (context?.error !== undefined) {
-    entry.error = formatError(context.error);
-  }
+  const entry: LogEntry = { level, message, timestamp, ...safeContext };
 
   if (process.env.NODE_ENV === "development") {
     const consoleFn =
@@ -36,7 +27,7 @@ function log(level: LogLevel, message: string, context?: Record<string, unknown>
           : level === "debug"
             ? console.debug
             : console.log;
-    consoleFn(`[${level.toUpperCase()}] ${message}`, context ?? "");
+    consoleFn(`[${level.toUpperCase()}] ${message}`, safeContext ?? "");
   } else {
     process.stdout.write(JSON.stringify(entry) + "\n");
   }

@@ -6,6 +6,7 @@ import {
   getMarkerColor,
   buildInfoWindowContent,
 } from "./map-utils";
+import { mapEmptyStateCopy } from "@/lib/map-state";
 import MapSidePanel from "./MapSidePanel";
 import MobileBottomSheet from "./MobileBottomSheet";
 
@@ -19,29 +20,49 @@ declare global {
 
 interface KakaoMapProps {
   transactions: MapTransaction[];
+  initialComplexId?: string;
+  dataUnavailable?: boolean;
 }
 
-export default function KakaoMap({ transactions }: KakaoMapProps) {
+export default function KakaoMap({
+  transactions,
+  initialComplexId,
+  dataUnavailable = false,
+}: KakaoMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<kakao.maps.Map | null>(null);
   const markersRef = useRef<kakao.maps.CustomOverlay[]>([]);
   const clustererRef = useRef<kakao.maps.services.MarkerClusterer | null>(null);
   const infoWindowRef = useRef<kakao.maps.CustomOverlay | null>(null);
+  const initialFocusedRef = useRef(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "drop" | "high">("all");
 
-  // Wait for Kakao SDK
+  // Load & wait for Kakao Maps SDK (이 페이지에서만 로드)
   useEffect(() => {
-    const check = () => {
-      if (window.kakao && window.kakao.maps) {
+    const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+    if (!key) return;
+
+    const loadSdk = () => {
+      if (window.kakao?.maps) {
         window.kakao.maps.load(() => setSdkReady(true));
+        return;
+      }
+      // SDK 스크립트 동적 삽입
+      if (!document.querySelector('script[src*="dapi.kakao.com"]')) {
+        const script = document.createElement("script");
+        script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false&libraries=services,clusterer`;
+        script.onload = () => {
+          window.kakao.maps.load(() => setSdkReady(true));
+        };
+        document.head.appendChild(script);
       } else {
-        setTimeout(check, 200);
+        setTimeout(loadSdk, 200);
       }
     };
-    check();
+    loadSdk();
   }, []);
 
   const filteredTransactions = transactions.filter((t) => {
@@ -50,6 +71,35 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
     if (filter === "high") return t.is_new_high;
     return true;
   });
+  const mapDataNotice = dataUnavailable
+    ? mapEmptyStateCopy(true, filter)
+    : null;
+
+  const focusItem = useCallback(
+    (item: MapTransaction) => {
+      if (!mapInstanceRef.current || !sdkReady) return;
+      const kakao = window.kakao;
+      const position = new kakao.maps.LatLng(item.latitude, item.longitude);
+      mapInstanceRef.current.setCenter(position);
+      mapInstanceRef.current.setLevel(5);
+      setActiveId(item.id);
+
+      if (infoWindowRef.current) {
+        infoWindowRef.current.setMap(null);
+      }
+
+      const infoContent = buildInfoWindowContent(item);
+      const infoWindow = new kakao.maps.CustomOverlay({
+        position,
+        content: infoContent,
+        yAnchor: 1.3,
+        xAnchor: 0.5,
+      });
+      infoWindow.setMap(mapInstanceRef.current);
+      infoWindowRef.current = infoWindow;
+    },
+    [sdkReady],
+  );
 
   // Initialize map
   useEffect(() => {
@@ -143,29 +193,29 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
 
   const handleItemClick = useCallback(
     (item: MapTransaction) => {
-      if (!mapInstanceRef.current || !sdkReady) return;
-      const kakao = window.kakao;
-      const position = new kakao.maps.LatLng(item.latitude, item.longitude);
-      mapInstanceRef.current.setCenter(position);
-      mapInstanceRef.current.setLevel(5);
-      setActiveId(item.id);
-
-      if (infoWindowRef.current) {
-        infoWindowRef.current.setMap(null);
-      }
-
-      const infoContent = buildInfoWindowContent(item);
-      const infoWindow = new kakao.maps.CustomOverlay({
-        position,
-        content: infoContent,
-        yAnchor: 1.3,
-        xAnchor: 0.5,
-      });
-      infoWindow.setMap(mapInstanceRef.current);
-      infoWindowRef.current = infoWindow;
+      focusItem(item);
     },
-    [sdkReady],
+    [focusItem],
   );
+
+  useEffect(() => {
+    if (!initialComplexId || initialFocusedRef.current || !sdkReady) return;
+
+    const item = transactions.find((transaction) =>
+      transaction.complex_id === initialComplexId ||
+      transaction.govt_complex_id === initialComplexId ||
+      transaction.slug === initialComplexId
+    );
+
+    if (!item) return;
+
+    const timer = window.setTimeout(() => {
+      initialFocusedRef.current = true;
+      focusItem(item);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [focusItem, initialComplexId, sdkReady, transactions]);
 
   return (
     <div className="flex h-[calc(100dvh-64px)] w-full">
@@ -177,6 +227,7 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
         panelOpen={panelOpen}
         setPanelOpen={setPanelOpen}
         onItemClick={handleItemClick}
+        dataUnavailable={dataUnavailable}
       />
 
       {/* Expand handle (when panel is closed) */}
@@ -230,6 +281,22 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
           aria-roledescription="인터랙티브 지도"
           className="h-full w-full"
         />
+        {mapDataNotice && (
+          <div
+            role="status"
+            className="absolute left-4 right-4 top-4 z-10 rounded-xl border p-4 text-sm shadow-sm md:left-6 md:right-auto md:max-w-sm"
+            style={{
+              borderColor: "var(--color-border)",
+              background: "var(--color-surface-card)",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            <p className="font-semibold" style={{ color: "var(--color-text-primary)" }}>
+              {mapDataNotice.title}
+            </p>
+            <p className="mt-1 text-xs">{mapDataNotice.description}</p>
+          </div>
+        )}
       </div>
 
       <MobileBottomSheet
@@ -238,6 +305,7 @@ export default function KakaoMap({ transactions }: KakaoMapProps) {
         filter={filter}
         setFilter={setFilter}
         onItemClick={handleItemClick}
+        dataUnavailable={dataUnavailable}
       />
     </div>
   );

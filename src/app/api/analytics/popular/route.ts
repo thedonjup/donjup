@@ -1,32 +1,38 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { pageViews } from "@/lib/db/schema";
-import { gte, desc } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { publicApiCacheHeaders } from "@/lib/api/cache-headers";
+import { getCachedPopularPages } from "@/lib/analytics-popular-query";
+import { publicDatabaseError } from "@/lib/db/errors";
+import { logDatabaseFailure } from "@/lib/db/logging";
+import { parseBoundedPositiveInt } from "@/lib/pagination";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const days = parseInt(searchParams.get("days") ?? "7", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "10", 10), 50);
-
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
+  const days = parseBoundedPositiveInt(searchParams.get("days"), {
+    defaultValue: 7,
+    max: 90,
+  });
+  const limit = parseBoundedPositiveInt(searchParams.get("limit"), {
+    defaultValue: 10,
+    max: 50,
+  });
 
   try {
-    const data = await db
-      .select({
-        page_path: pageViews.pagePath,
-        page_type: pageViews.pageType,
-        view_count: pageViews.viewCount,
-      })
-      .from(pageViews)
-      .where(gte(pageViews.viewDate, startDate.toISOString().split("T")[0]))
-      .orderBy(desc(pageViews.viewCount))
-      .limit(limit);
+    const data = await getCachedPopularPages(days, limit);
 
-    return NextResponse.json({ data });
+    return NextResponse.json(
+      { data },
+      { headers: publicApiCacheHeaders() }
+    );
   } catch (e) {
-    logger.error("Failed to fetch popular pages", { error: e, route: "/api/analytics/popular" });
-    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+    const publicError = publicDatabaseError(e);
+
+    logDatabaseFailure("Failed to fetch popular pages", e, {
+      route: "/api/analytics/popular",
+    });
+
+    return NextResponse.json(
+      { error: publicError.message, code: publicError.code },
+      { status: publicError.status }
+    );
   }
 }
