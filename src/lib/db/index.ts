@@ -4,6 +4,8 @@ import { logger } from "@/lib/logger";
 import * as schema from "./schema";
 import { parseDbPoolMax } from "./pool-config";
 
+type Database = ReturnType<typeof createDatabase>;
+
 // ---------------------------------------------------------------------------
 // Connection pool (singleton) — mirrors client.ts config exactly
 // ssl: { rejectUnauthorized: false } is REQUIRED for Neon/CockroachDB
@@ -34,9 +36,25 @@ function getPool(): Pool {
   return pool;
 }
 
+function createDatabase() {
+  return drizzle({ client: getPool(), schema, casing: "snake_case" });
+}
+
+let database: Database | null = null;
+
+function getDatabase(): Database {
+  database ??= createDatabase();
+  return database;
+}
+
 // ---------------------------------------------------------------------------
 // Drizzle instance — single entry point for all DB access
 // casing: 'snake_case' ensures returned row keys match existing snake_case
 // destructuring patterns in application code (trade_price, not tradePrice)
 // ---------------------------------------------------------------------------
-export const db = drizzle({ client: getPool(), schema, casing: "snake_case" });
+export const db = new Proxy({} as Database, {
+  get(_target, property, receiver) {
+    const value = Reflect.get(getDatabase(), property, receiver);
+    return typeof value === "function" ? value.bind(getDatabase()) : value;
+  },
+});
