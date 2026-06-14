@@ -26,7 +26,9 @@ function mockDbSelect(
   const orderByMock = vi.fn().mockResolvedValue(rows);
   const whereMock = vi.fn().mockReturnValue({ orderBy: orderByMock });
   const fromMock = vi.fn().mockReturnValue({ where: whereMock });
-  vi.mocked(db.select).mockReturnValue({ from: fromMock } as any);
+  vi.mocked(db.select).mockReturnValue(
+    { from: fromMock } as unknown as ReturnType<typeof db.select>
+  );
   return { orderByMock, whereMock, fromMock };
 }
 

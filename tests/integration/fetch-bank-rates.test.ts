@@ -1,5 +1,5 @@
 import { testApiHandler } from 'next-test-api-route-handler'; // 반드시 첫 번째 import
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('@/lib/db', () => {
   const mockChain = {
@@ -30,11 +30,15 @@ vi.mock('@/lib/logger', () => ({
 
 import * as appHandler from '@/app/api/cron/fetch-bank-rates/route';
 import { fetchAllMortgageProducts } from '@/lib/api/finlife';
+import { db } from '@/lib/db';
+
+const dbMock = db as unknown as Record<string, Mock>;
 
 describe('GET /api/cron/fetch-bank-rates', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.CRON_SECRET = 'test-secret';
+    dbMock.execute.mockResolvedValue([]);
   });
 
   it('Authorization 헤더 없으면 401 반환', async () => {
@@ -105,6 +109,35 @@ describe('GET /api/cron/fetch-bank-rates', () => {
         const json = await res.json();
         expect(json.success).toBe(true);
         expect(json.inserted).toBeGreaterThanOrEqual(1);
+      },
+    });
+  });
+
+  it('skips FinLife fetches when the database is unavailable', async () => {
+    const error = new Error('query failed');
+    Object.defineProperty(error, 'cause', {
+      value: {
+        code: '53300',
+        message: 'This cluster has reached its Request Unit limit for the month and is now disabled.',
+      },
+    });
+    dbMock.execute.mockRejectedValueOnce(error);
+
+    await testApiHandler({
+      appHandler,
+      test: async ({ fetch }) => {
+        const res = await fetch({
+          method: 'GET',
+          headers: { Authorization: 'Bearer test-secret' },
+        });
+        expect(res.status).toBe(503);
+        const json = await res.json();
+        expect(json).toMatchObject({
+          success: false,
+          skipped: true,
+          code: 'DB_UNAVAILABLE',
+        });
+        expect(fetchAllMortgageProducts).not.toHaveBeenCalled();
       },
     });
   });
