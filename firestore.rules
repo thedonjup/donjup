@@ -1,15 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Comments: anyone can read, authenticated users can create
+    // Comments are publicly readable. Writes go through /api/comments so the
+    // server can verify Firebase ID tokens and validate payloads consistently.
     match /comments/{aptSlug}/messages/{messageId} {
       allow read: if true;
-      allow create: if request.auth != null
-        && request.resource.data.text is string
-        && request.resource.data.text.size() <= 200;
-      allow update, delete: if request.auth != null
-        && request.auth.uid == resource.data.uid;
+      allow write: if false;
     }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
