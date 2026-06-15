@@ -20,6 +20,10 @@ describe("search query helpers", () => {
       latest_trade_price: "180000",
       latest_trade_date: "2026-04-29",
       latest_change_rate: "-4.2",
+      latest_rent_deposit: "90000",
+      latest_rent_monthly_rent: "0",
+      latest_rent_date: "2026-04-30",
+      latest_rent_type: "전세",
     })).toEqual({
       id: "apt-1",
       apt_name: "Sample Apt",
@@ -35,6 +39,10 @@ describe("search query helpers", () => {
       latest_trade_price: 180000,
       latest_trade_date: "2026-04-29",
       latest_change_rate: -4.2,
+      latest_rent_deposit: 90000,
+      latest_rent_monthly_rent: 0,
+      latest_rent_date: "2026-04-30",
+      latest_rent_type: "전세",
     });
   });
 

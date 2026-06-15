@@ -139,8 +139,12 @@ export async function getAptDetailComplexBySlug(
   decodedSlug: string
 ): Promise<AptDetailComplex | null> {
   const dbSlug = toDbSlug(regionCode, decodedSlug);
+  const prefixedSlug = `${regionCode}-${decodedSlug}`;
   const complexRows = await db.select().from(aptComplexes)
-    .where(eq(aptComplexes.slug, dbSlug))
+    .where(or(
+      eq(aptComplexes.slug, dbSlug),
+      eq(aptComplexes.slug, prefixedSlug),
+    ))
     .limit(1);
 
   if (complexRows[0]) return complexRows[0];

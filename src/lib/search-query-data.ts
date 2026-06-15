@@ -15,6 +15,10 @@ export interface SearchResult {
   latest_trade_price: number | null;
   latest_trade_date: string | null;
   latest_change_rate: number | null;
+  latest_rent_deposit: number | null;
+  latest_rent_monthly_rent: number | null;
+  latest_rent_date: string | null;
+  latest_rent_type: string | null;
 }
 
 export interface SearchResultRow {
@@ -30,6 +34,10 @@ export interface SearchResultRow {
   latest_trade_price: number | string | null;
   latest_trade_date: string | null;
   latest_change_rate: number | string | null;
+  latest_rent_deposit: number | string | null;
+  latest_rent_monthly_rent: number | string | null;
+  latest_rent_date: string | null;
+  latest_rent_type: string | null;
 }
 
 function nullableNumber(value: number | string | null): number | null {
@@ -46,5 +54,9 @@ export function normalizeSearchResultRow(row: SearchResultRow): SearchResult {
     latest_trade_price: nullableNumber(row.latest_trade_price),
     latest_trade_date: row.latest_trade_date,
     latest_change_rate: nullableNumber(row.latest_change_rate),
+    latest_rent_deposit: nullableNumber(row.latest_rent_deposit),
+    latest_rent_monthly_rent: nullableNumber(row.latest_rent_monthly_rent),
+    latest_rent_date: row.latest_rent_date,
+    latest_rent_type: row.latest_rent_type,
   };
 }

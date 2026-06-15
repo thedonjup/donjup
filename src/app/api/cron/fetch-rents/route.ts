@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
-import { aptRentTransactions, type NewAptRentTransaction } from "@/lib/db/schema";
+import {
+  aptComplexes,
+  aptRentTransactions,
+  type NewAptComplex,
+  type NewAptRentTransaction,
+} from "@/lib/db/schema";
 import {
   fetchRentTransactions,
   type ParsedRentTransaction,
 } from "@/lib/api/molit-rent";
 import { delay } from "@/lib/api/molit";
+import { makeSlug } from "@/lib/apt-url";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 import { safeErrorListItem } from "@/lib/api/safe-error-response";
@@ -25,6 +31,7 @@ export { rentTransactionId };
 export const maxDuration = 300;
 
 const EXISTING_RENT_ID_QUERY_BATCH_SIZE = 500;
+const APT_PROPERTY_TYPE = 1;
 export { getRecentRentYearMonths };
 
 function rentTransactionIdFromParsed(transaction: ParsedRentTransaction): string {
@@ -65,6 +72,93 @@ async function existingRentTransactionIds(ids: string[]): Promise<Set<string>> {
   return existingIds;
 }
 
+function rentComplexSlug(transaction: ParsedRentTransaction): string {
+  return makeSlug(
+    transaction.regionCode,
+    [transaction.dongName, transaction.aptName].filter(Boolean).join("-")
+  );
+}
+
+function rentComplexKey(input: {
+  regionCode: string;
+  dongName: string | null;
+  aptName: string;
+}): string {
+  return JSON.stringify([
+    input.regionCode,
+    input.dongName || "",
+    input.aptName,
+    APT_PROPERTY_TYPE,
+  ]);
+}
+
+async function upsertRentOnlyComplexes(
+  transactions: ParsedRentTransaction[],
+  regionName: string
+): Promise<number> {
+  const candidates = new Map<string, NewAptComplex>();
+
+  for (const transaction of transactions) {
+    if (!transaction.aptName) continue;
+
+    const key = rentComplexKey({
+      regionCode: transaction.regionCode,
+      dongName: transaction.dongName || null,
+      aptName: transaction.aptName,
+    });
+    if (candidates.has(key)) continue;
+
+    candidates.set(key, {
+      regionCode: transaction.regionCode,
+      regionName,
+      dongName: transaction.dongName || null,
+      aptName: transaction.aptName,
+      builtYear: transaction.builtYear || null,
+      slug: rentComplexSlug(transaction),
+      govtComplexId: null,
+      propertyType: APT_PROPERTY_TYPE,
+    });
+  }
+
+  if (candidates.size === 0) return 0;
+
+  const rows = [...candidates.values()];
+  const aptNames = [...new Set(rows.map((row) => row.aptName))];
+  const existingRows = await db
+    .select({
+      regionCode: aptComplexes.regionCode,
+      dongName: aptComplexes.dongName,
+      aptName: aptComplexes.aptName,
+    })
+    .from(aptComplexes)
+    .where(
+      and(
+        eq(aptComplexes.regionCode, rows[0].regionCode),
+        inArray(aptComplexes.aptName, aptNames)
+      )
+    )
+    .limit(Math.max(aptNames.length * 3, 1));
+
+  const existingKeys = new Set(existingRows.map(rentComplexKey));
+  const missingRows = rows.filter((row) =>
+    !existingKeys.has(rentComplexKey({
+      regionCode: row.regionCode,
+      dongName: row.dongName ?? null,
+      aptName: row.aptName,
+    }))
+  );
+
+  if (missingRows.length === 0) return 0;
+
+  const inserted = await db
+    .insert(aptComplexes)
+    .values(missingRows)
+    .onConflictDoNothing()
+    .returning({ id: aptComplexes.id });
+
+  return inserted.length;
+}
+
 export async function GET(request: Request) {
   const authError = verifyCronAuth(request);
   if (authError) return authError;
@@ -91,6 +185,7 @@ export async function GET(request: Request) {
   } = parsedQuery.query;
 
   let totalInserted = 0;
+  let totalInsertedComplexes = 0;
   const errors: string[] = [];
 
   for (const dealYearMonth of dealYearMonths) {
@@ -102,6 +197,8 @@ export async function GET(request: Request) {
           await delay(300);
           continue;
         }
+
+        totalInsertedComplexes += await upsertRentOnlyComplexes(transactions, name);
 
         const transactionIds = transactions.map(rentTransactionIdFromParsed);
         const existingIds = await existingRentTransactionIds(transactionIds);
@@ -159,12 +256,17 @@ export async function GET(request: Request) {
     await sendSlackAlert(`[fetch-rents] ${errors.length} errors: ${errors.slice(0, 3).join(", ")}`);
   }
 
-  const cacheRevalidation = totalInserted > 0
+  const cacheTags = [
+    ...(totalInserted > 0 ? [PUBLIC_DATA_CACHE_TAGS.APT_RENT_TRANSACTIONS] : []),
+    ...(totalInsertedComplexes > 0 ? [PUBLIC_DATA_CACHE_TAGS.APT_COMPLEXES] : []),
+  ];
+  const cacheRevalidation = cacheTags.length > 0
     ? revalidatePublicDataCaches(
-        [PUBLIC_DATA_CACHE_TAGS.APT_RENT_TRANSACTIONS],
+        cacheTags,
         {
           route: "/api/cron/fetch-rents",
           totalInserted,
+          totalInsertedComplexes,
         }
       )
     : undefined;
@@ -176,6 +278,7 @@ export async function GET(request: Request) {
     monthCount,
     dealYearMonths,
     totalInserted,
+    totalInsertedComplexes,
     regionsProcessed: regionEntries.length,
     monthsProcessed: dealYearMonths.length,
     errors: errors.length > 0 ? errors : undefined,

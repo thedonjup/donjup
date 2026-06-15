@@ -15,6 +15,7 @@ describe("search query cache coverage", () => {
     expect(source).toContain("revalidate: 300");
     expect(source).toContain("PUBLIC_DATA_CACHE_TAGS.APT_COMPLEXES");
     expect(source).toContain("PUBLIC_DATA_CACHE_TAGS.APT_TRANSACTIONS");
+    expect(source).toContain("PUBLIC_DATA_CACHE_TAGS.APT_RENT_TRANSACTIONS");
   });
 
   it("uses the cached query on the search page", () => {

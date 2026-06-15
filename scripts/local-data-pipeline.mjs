@@ -576,6 +576,19 @@ function makeSlug(regionCode, aptName) {
   return `${regionCode}-${nameSlug}`;
 }
 
+function makeRentComplexSlug(regionCode, dongName, aptName) {
+  return makeSlug(regionCode, [dongName, aptName].filter(Boolean).join("-"));
+}
+
+function complexNaturalKey(row) {
+  return JSON.stringify([
+    row.regionCode,
+    row.dongName || "",
+    row.aptName,
+    APT_PROPERTY_TYPE,
+  ]);
+}
+
 function normalizeGovtComplexId(regionCode, aptSeq) {
   const trimmed = aptSeq?.trim();
   if (!trimmed) return null;
@@ -1236,12 +1249,14 @@ async function geocodeComplexesCommand(options) {
   }
 }
 
-function saleComplexRows(saleRows) {
+export function complexRows(saleRows, rentRows = []) {
   const complexes = new Map();
+  const naturalKeys = new Set();
 
   for (const row of saleRows) {
     const govtComplexId = normalizeGovtComplexId(row.regionCode, row.aptSeq);
     const slug = govtComplexId ?? makeSlug(row.regionCode, row.aptName);
+    naturalKeys.add(complexNaturalKey(row));
     complexes.set(slug, {
       id: slug,
       region_code: row.regionCode,
@@ -1251,6 +1266,25 @@ function saleComplexRows(saleRows) {
       built_year: row.builtYear || null,
       slug,
       govt_complex_id: govtComplexId,
+      property_type: APT_PROPERTY_TYPE,
+    });
+  }
+
+  for (const row of rentRows) {
+    const naturalKey = complexNaturalKey(row);
+    if (naturalKeys.has(naturalKey)) continue;
+
+    const slug = makeRentComplexSlug(row.regionCode, row.dongName, row.aptName);
+    naturalKeys.add(naturalKey);
+    complexes.set(slug, {
+      id: slug,
+      region_code: row.regionCode,
+      region_name: row.regionName,
+      dong_name: row.dongName || null,
+      apt_name: row.aptName,
+      built_year: row.builtYear || null,
+      slug,
+      govt_complex_id: null,
       property_type: APT_PROPERTY_TYPE,
     });
   }
@@ -1451,7 +1485,7 @@ async function upload(options) {
         "govt_complex_id",
         "property_type",
       ],
-      saleComplexRows(saleRows)
+      complexRows(saleRows, rentRows)
     );
 
     summary.insertedSaleRows = await insertChunk(

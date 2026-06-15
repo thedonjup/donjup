@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRentReconcilePlan,
+  complexRows,
   rentTransactionId,
 } from "../../scripts/local-data-pipeline.mjs";
 
@@ -66,5 +67,45 @@ describe("local data pipeline rent reconcile", () => {
 
     expect(plan.missing).toHaveLength(1);
     expect(plan.missingBlockedByCurrentUnique).toBe(1);
+  });
+
+  it("promotes rent-only apartments to searchable complex rows without duplicating sale complexes", () => {
+    const sale = {
+      regionCode: "11230",
+      regionName: "서울 동대문구",
+      dongName: "답십리동",
+      aptName: "두산위브",
+      aptSeq: "11230-2036",
+      builtYear: 2007,
+    };
+    const rentOnly = rentRow({
+      regionCode: "11230",
+      regionName: "서울 동대문구",
+      dongName: "답십리동",
+      aptName: "두산",
+      builtYear: 2000,
+    });
+    const rentDuplicate = rentRow({
+      regionCode: "11230",
+      regionName: "서울 동대문구",
+      dongName: "답십리동",
+      aptName: "두산위브",
+      builtYear: 2007,
+    });
+
+    expect(complexRows([sale], [rentOnly, rentDuplicate])).toEqual([
+      expect.objectContaining({
+        slug: "11230-2036",
+        apt_name: "두산위브",
+        govt_complex_id: "11230-2036",
+      }),
+      expect.objectContaining({
+        slug: "11230-답십리동-두산",
+        apt_name: "두산",
+        dong_name: "답십리동",
+        built_year: 2000,
+        govt_complex_id: null,
+      }),
+    ]);
   });
 });

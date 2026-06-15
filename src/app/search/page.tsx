@@ -37,6 +37,26 @@ import {
   type SearchSortKey,
 } from "@/lib/search-sort";
 
+function searchResultActivityLabel(apt: SearchResult): string {
+  if (apt.latest_trade_price) return "최근 매매";
+  if (apt.latest_rent_deposit !== null) return `최근 ${apt.latest_rent_type ?? "전월세"}`;
+  return "최근 실거래";
+}
+
+function searchResultActivityDate(apt: SearchResult): string | null {
+  return apt.latest_trade_price ? apt.latest_trade_date : apt.latest_rent_date;
+}
+
+function searchResultRentPrice(apt: SearchResult): string | null {
+  if (apt.latest_rent_deposit === null) return null;
+
+  if ((apt.latest_rent_monthly_rent ?? 0) > 0) {
+    return `보증금 ${formatPrice(apt.latest_rent_deposit)} / 월 ${formatPrice(apt.latest_rent_monthly_rent ?? 0)}`;
+  }
+
+  return `전세 ${formatPrice(apt.latest_rent_deposit)}`;
+}
+
 type SearchPageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
@@ -542,6 +562,8 @@ export default async function SearchPage({
                 slug: apt.slug,
               });
               const compareHref = buildCompareHref([apt.id]);
+              const activityDate = searchResultActivityDate(apt);
+              const rentPrice = searchResultRentPrice(apt);
               const trackingParams = {
                 rank: index + 1,
                 query: query || undefined,
@@ -595,11 +617,11 @@ export default async function SearchPage({
                   <div className="mt-2 flex items-end justify-between gap-3 border-t t-border pt-2">
                     <div className="min-w-0">
                       <span className="block text-[11px] font-medium" style={{ color: "var(--color-text-tertiary)" }}>
-                        최근 실거래
+                        {searchResultActivityLabel(apt)}
                       </span>
-                      {apt.latest_trade_date && (
+                      {activityDate && (
                         <span className="block truncate text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
-                          {apt.latest_trade_date}
+                          {activityDate}
                         </span>
                       )}
                     </div>
@@ -622,6 +644,12 @@ export default async function SearchPage({
                             {apt.latest_change_rate.toFixed(1)}%
                           </span>
                         )}
+                      </div>
+                    ) : rentPrice ? (
+                      <div className="max-w-[13rem] shrink-0 text-right">
+                        <span className="block whitespace-normal text-xs font-bold leading-5 tabular-nums t-text sm:text-sm">
+                          {rentPrice}
+                        </span>
                       </div>
                     ) : (
                       <span className="shrink-0 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
