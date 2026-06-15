@@ -198,17 +198,17 @@ export async function GET(request: Request) {
           continue;
         }
 
-        totalInsertedComplexes += await upsertRentOnlyComplexes(transactions, name);
-
         const transactionIds = transactions.map(rentTransactionIdFromParsed);
         const existingIds = await existingRentTransactionIds(transactionIds);
         const newTransactions: NewAptRentTransaction[] = [];
+        const newComplexSourceTransactions: ParsedRentTransaction[] = [];
 
         for (const t of transactions) {
           const id = rentTransactionIdFromParsed(t);
 
           if (existingIds.has(id)) continue;
 
+          newComplexSourceTransactions.push(t);
           newTransactions.push({
             id,
             regionCode: t.regionCode,
@@ -232,6 +232,8 @@ export async function GET(request: Request) {
           await delay(300);
           continue;
         }
+
+        totalInsertedComplexes += await upsertRentOnlyComplexes(newComplexSourceTransactions, name);
 
         const inserted = await db
           .insert(aptRentTransactions)
