@@ -7,6 +7,10 @@ export interface RecentSearchItem {
 export const RECENT_SEARCHES_KEY = "donjup-recent-searches";
 export const RECENT_SEARCHES_EVENT = "donjup-recent-searches-change";
 export const MAX_RECENT_SEARCHES = 6;
+const EMPTY_RECENT_SEARCHES: RecentSearchItem[] = [];
+
+let cachedRawRecentSearches: string | null | undefined;
+let cachedRecentSearches: RecentSearchItem[] = EMPTY_RECENT_SEARCHES;
 
 function normalizeRecentQuery(query: string): string {
   return query.replace(/\s+/g, " ").trim();
@@ -44,18 +48,30 @@ export function mergeRecentSearches(
 }
 
 export function getRecentSearches(): RecentSearchItem[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_RECENT_SEARCHES;
 
   try {
     const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      cachedRawRecentSearches = raw;
+      cachedRecentSearches = EMPTY_RECENT_SEARCHES;
+      return cachedRecentSearches;
+    }
+
+    if (raw === cachedRawRecentSearches) {
+      return cachedRecentSearches;
+    }
 
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
+    cachedRawRecentSearches = raw;
+    cachedRecentSearches = Array.isArray(parsed)
       ? parsed.filter(isRecentSearchItem).slice(0, MAX_RECENT_SEARCHES)
-      : [];
+      : EMPTY_RECENT_SEARCHES;
+    return cachedRecentSearches;
   } catch {
-    return [];
+    cachedRawRecentSearches = undefined;
+    cachedRecentSearches = EMPTY_RECENT_SEARCHES;
+    return cachedRecentSearches;
   }
 }
 
