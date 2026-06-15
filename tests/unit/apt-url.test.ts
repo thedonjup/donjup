@@ -16,11 +16,18 @@ describe("apt url helpers", () => {
     })).toBe("/apt/11230-164");
   });
 
-  it("falls back to shortened region slug URLs", () => {
+  it("keeps region-prefixed fallback slugs on canonical single-segment URLs", () => {
     expect(aptUrl({
       regionCode: "11230",
-      slug: "11230-164",
-    })).toBe("/apt/11230/164");
+      slug: "11230-답십리동-두산",
+    })).toBe("/apt/11230-답십리동-두산");
+  });
+
+  it("keeps non-prefixed fallback slugs on legacy region slug URLs", () => {
+    expect(aptUrl({
+      regionCode: "11230",
+      slug: "래미안",
+    })).toBe("/apt/11230/래미안");
   });
 
   it("keeps non-prefixed slugs intact", () => {

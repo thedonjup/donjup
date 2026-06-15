@@ -1,11 +1,13 @@
 import { unstable_cache } from "next/cache";
-import { asc, isNotNull } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { PUBLIC_DATA_CACHE_TAGS } from "@/lib/cache-tags";
 import { db } from "@/lib/db";
 import { aptComplexes } from "@/lib/db/schema";
 
 export type AptSitemapItem = {
-  govtComplexId: string;
+  govtComplexId: string | null;
+  regionCode: string;
+  slug: string;
   updatedAt: string | null;
 };
 
@@ -24,24 +26,21 @@ async function fetchAptSitemapItems(
   const complexes = await db
     .select({
       govtComplexId: aptComplexes.govtComplexId,
+      regionCode: aptComplexes.regionCode,
+      slug: aptComplexes.slug,
       updatedAt: aptComplexes.updatedAt,
     })
     .from(aptComplexes)
-    .where(isNotNull(aptComplexes.govtComplexId))
     .orderBy(asc(aptComplexes.id))
     .offset(offset)
     .limit(itemsPerSitemap);
 
-  const items: AptSitemapItem[] = [];
-  for (const complex of complexes) {
-    if (complex.govtComplexId === null) continue;
-    items.push({
-      govtComplexId: complex.govtComplexId,
-      updatedAt: toIsoDateTime(complex.updatedAt),
-    });
-  }
-
-  return items;
+  return complexes.map((complex) => ({
+    govtComplexId: complex.govtComplexId,
+    regionCode: complex.regionCode,
+    slug: complex.slug,
+    updatedAt: toIsoDateTime(complex.updatedAt),
+  }));
 }
 
 export const getCachedAptSitemapItems = unstable_cache(

@@ -1,7 +1,7 @@
 /**
  * DB slug에서 URL용 짧은 slug 추출
  * DB slug: "11230-164" (govtComplexId) 또는 "서해그랑블5단지" (한글 fallback)
- * URL slug: "164" (regionCode 제거) 또는 "서해그랑블5단지" (그대로)
+ * legacy URL slug: "164" (regionCode 제거) 또는 "서해그랑블5단지" (그대로)
  */
 export function toUrlSlug(regionCode: string, dbSlug: string): string {
   const prefix = `${regionCode}-`;
@@ -40,7 +40,9 @@ export function aptUrl(complex: {
   if (complex.govtComplexId) {
     return `/apt/${complex.govtComplexId}`;
   }
-  // Fallback for pre-backfill complexes
+  if (complex.regionCode && complex.slug?.startsWith(`${complex.regionCode}-`)) {
+    return `/apt/${complex.slug}`;
+  }
   if (complex.regionCode && complex.slug) {
     return `/apt/${complex.regionCode}/${toUrlSlug(complex.regionCode, complex.slug)}`;
   }

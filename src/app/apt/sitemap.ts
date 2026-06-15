@@ -1,4 +1,5 @@
 import { getCachedAptSitemapItems } from "@/lib/apt-sitemap-query";
+import { aptUrl } from "@/lib/apt-url";
 import { logDatabaseFailure } from "@/lib/db/logging";
 import { createSitemapIds, parseSitemapCount } from "@/lib/sitemap-config";
 import type { MetadataRoute } from "next";
@@ -28,7 +29,11 @@ export default async function sitemap({
     const complexes = await getCachedAptSitemapItems(sitemapId, ITEMS_PER_SITEMAP);
 
     return complexes.map((c) => ({
-      url: `${baseUrl}/apt/${c.govtComplexId}`,
+      url: `${baseUrl}${aptUrl({
+        govtComplexId: c.govtComplexId,
+        regionCode: c.regionCode,
+        slug: c.slug,
+      })}`,
       lastModified: c.updatedAt || new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.6,
