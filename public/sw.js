@@ -1,4 +1,4 @@
-const CACHE_NAME = "donjup-v3";
+const CACHE_NAME = "donjup-v4";
 
 // Install: 즉시 활성화 (대기 없음)
 self.addEventListener("install", () => {
