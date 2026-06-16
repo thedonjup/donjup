@@ -34,11 +34,15 @@ export function makeSlug(regionCode: string, aptName: string): string {
 /** Central URL builder for apartment detail pages (per D-08) */
 export function aptUrl(complex: {
   govtComplexId?: string | null;
+  identityId?: string | null;
   regionCode?: string | null;
   slug?: string | null;
 }): string {
   if (complex.govtComplexId) {
     return `/apt/${complex.govtComplexId}`;
+  }
+  if (complex.identityId) {
+    return `/apt/${complex.identityId}`;
   }
   if (complex.regionCode && complex.slug?.startsWith(`${complex.regionCode}-`)) {
     return `/apt/${complex.slug}`;

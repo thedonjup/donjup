@@ -7,6 +7,7 @@ export interface MapTransactionRow {
   id: string;
   complex_id: string;
   govt_complex_id: string | null;
+  identity_id: string | null;
   apt_name: string;
   region_code: string;
   trade_price: number | string;
@@ -31,6 +32,7 @@ export function normalizeMapTransactionRow(
     id: row.id,
     complex_id: row.complex_id,
     govt_complex_id: row.govt_complex_id,
+    identity_id: row.identity_id,
     apt_name: row.apt_name,
     region_code: row.region_code,
     dong_name: row.dong_name ?? null,
@@ -44,6 +46,7 @@ export function normalizeMapTransactionRow(
     trade_date: row.trade_date,
     detail_url: aptUrl({
       govtComplexId: row.govt_complex_id,
+      identityId: row.identity_id,
       regionCode: row.region_code,
       slug: row.complex_slug,
     }),

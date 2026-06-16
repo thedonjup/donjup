@@ -23,6 +23,14 @@ describe("apt url helpers", () => {
     })).toBe("/apt/11230-답십리동-두산");
   });
 
+  it("uses identity URLs before legacy fallback slugs", () => {
+    expect(aptUrl({
+      identityId: "natural-11230-답십리동-두산-2000-1",
+      regionCode: "11230",
+      slug: "11230-답십리동-두산",
+    })).toBe("/apt/natural-11230-답십리동-두산-2000-1");
+  });
+
   it("keeps non-prefixed fallback slugs on legacy region slug URLs", () => {
     expect(aptUrl({
       regionCode: "11230",

@@ -10,6 +10,7 @@ import {
 export const aptTransactions = pgTable("apt_transactions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   complexId: text("complex_id"),
+  identityId: text("identity_id"),
   regionCode: text("region_code").notNull(),
   regionName: text("region_name").notNull(),
   aptName: text("apt_name").notNull(),

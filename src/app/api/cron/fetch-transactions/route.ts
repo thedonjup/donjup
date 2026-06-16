@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
-import { aptTransactions, aptComplexes } from "@/lib/db/schema";
+import {
+  aptComplexAliases,
+  aptComplexes,
+  aptComplexIdentities,
+  aptComplexIdentitySources,
+  aptTransactions,
+} from "@/lib/db/schema";
 import { desc, eq, and, inArray } from "drizzle-orm";
 import { fetchTransactions, delay } from "@/lib/api/molit";
 import {
@@ -10,6 +16,11 @@ import {
 } from "@/lib/api/molit-multi";
 import { calcDropLevel } from "@/lib/constants/drop-level";
 import { makeSlug } from "@/lib/apt-url";
+import {
+  makeIdentityCanonicalId,
+  makeIdentityId,
+  normalizeComplexName,
+} from "@/lib/complex-identity";
 import { PROPERTY_TYPES, type PropertyType } from "@/lib/constants/property-types";
 import { safeErrorListItem } from "@/lib/api/safe-error-response";
 import { cronDatabaseGuard } from "@/lib/api/cron-db-guard";
@@ -28,8 +39,11 @@ interface RecentTradePriceRow {
   tradePrice: number;
 }
 
-type ComplexIdCache = Map<string, string | null>;
 type RecentTradePriceCache = Map<string, RecentTradePriceRow[]>;
+type ResolvedComplexLink = {
+  complexId: string | null;
+  identityId: string | null;
+};
 
 export function normalizeGovtComplexId(
   regionCode: string,
@@ -92,8 +106,8 @@ function complexNameCacheKey(input: {
   return `name:${input.regionCode}:${input.propertyType}:${input.aptName}`;
 }
 
-async function resolveComplexIdCached(
-  cache: ComplexIdCache,
+async function resolveComplexLinkCached(
+  cache: Map<string, ResolvedComplexLink>,
   input: {
     regionCode: string;
     regionName: string;
@@ -103,18 +117,18 @@ async function resolveComplexIdCached(
     govtComplexId: string | null;
     propertyType: PropertyType;
   }
-): Promise<string | null> {
+): Promise<ResolvedComplexLink> {
   const govtKey = complexGovtCacheKey(input.govtComplexId);
   const nameKey = complexNameCacheKey(input);
 
-  if (govtKey && cache.has(govtKey)) return cache.get(govtKey) ?? null;
-  if (cache.has(nameKey)) return cache.get(nameKey) ?? null;
+  if (govtKey && cache.has(govtKey)) return cache.get(govtKey) ?? { complexId: null, identityId: null };
+  if (cache.has(nameKey)) return cache.get(nameKey) ?? { complexId: null, identityId: null };
 
-  const complexId = await resolveComplexId(input);
-  cache.set(nameKey, complexId);
-  if (govtKey) cache.set(govtKey, complexId);
+  const link = await resolveComplexLink(input);
+  cache.set(nameKey, link);
+  if (govtKey) cache.set(govtKey, link);
 
-  return complexId;
+  return link;
 }
 
 function recentTradePriceCacheKey(input: {
@@ -169,7 +183,33 @@ function appendRecentTradePrice(
   }
 }
 
-async function resolveComplexId(input: {
+function complexIdentityInput(input: {
+  regionCode: string;
+  dongName: string;
+  aptName: string;
+  builtYear: number;
+  govtComplexId: string | null;
+  propertyType: PropertyType;
+}) {
+  return {
+    regionCode: input.regionCode,
+    dongName: input.dongName,
+    aptName: input.aptName,
+    builtYear: input.builtYear || null,
+    propertyType: input.propertyType,
+    govtComplexId: input.govtComplexId,
+  };
+}
+
+function identitySourceId(source: string, sourceComplexId: string): string {
+  return `source:${source}:${sourceComplexId}`;
+}
+
+function identityAliasId(aliasType: string, aliasValue: string): string {
+  return `alias:${aliasType}:${aliasValue}`;
+}
+
+async function upsertComplexIdentity(input: {
   regionCode: string;
   regionName: string;
   dongName: string;
@@ -177,21 +217,108 @@ async function resolveComplexId(input: {
   builtYear: number;
   govtComplexId: string | null;
   propertyType: PropertyType;
-}): Promise<string | null> {
+  complexId: string;
+  slug: string;
+}): Promise<string> {
+  const identityInput = complexIdentityInput(input);
+  const identityId = makeIdentityId(identityInput);
+  const canonicalId = makeIdentityCanonicalId(identityInput);
+  const source = input.govtComplexId ? "molit_apt_seq" : "natural";
+  const sourceComplexId = input.govtComplexId ?? canonicalId;
+
+  await db.insert(aptComplexIdentities).values({
+    id: identityId,
+    canonicalId,
+    regionCode: input.regionCode,
+    regionName: input.regionName,
+    dongName: input.dongName,
+    aptName: input.aptName,
+    normalizedName: normalizeComplexName(input.aptName),
+    builtYear: input.builtYear || null,
+    confidence: input.govtComplexId ? 100 : 90,
+  }).onConflictDoNothing();
+
+  await db.insert(aptComplexIdentitySources).values({
+    id: identitySourceId(source, sourceComplexId),
+    identityId,
+    source,
+    sourceComplexId,
+    sourcePayload: {
+      complexId: input.complexId,
+      slug: input.slug,
+      source: "fetch-transactions",
+      govtComplexId: input.govtComplexId,
+    },
+    confidence: input.govtComplexId ? 100 : 90,
+  }).onConflictDoNothing();
+
+  await db.insert(aptComplexAliases).values([
+    {
+      id: identityAliasId("complex_id", input.complexId),
+      identityId,
+      aliasType: "complex_id",
+      aliasValue: input.complexId,
+    },
+    {
+      id: identityAliasId("slug", input.slug),
+      identityId,
+      aliasType: "slug",
+      aliasValue: input.slug,
+    },
+    ...(input.govtComplexId
+      ? [{
+          id: identityAliasId("govt_complex_id", input.govtComplexId),
+          identityId,
+          aliasType: "govt_complex_id",
+          aliasValue: input.govtComplexId,
+        }]
+      : []),
+  ]).onConflictDoNothing();
+
+  return identityId;
+}
+
+async function resolveComplexLink(input: {
+  regionCode: string;
+  regionName: string;
+  dongName: string;
+  aptName: string;
+  builtYear: number;
+  govtComplexId: string | null;
+  propertyType: PropertyType;
+}): Promise<ResolvedComplexLink> {
   if (input.govtComplexId) {
     const byGovtId = await db
-      .select({ id: aptComplexes.id })
+      .select({
+        id: aptComplexes.id,
+        identityId: aptComplexes.identityId,
+        slug: aptComplexes.slug,
+      })
       .from(aptComplexes)
       .where(eq(aptComplexes.govtComplexId, input.govtComplexId))
       .limit(1);
 
-    if (byGovtId[0]) return byGovtId[0].id;
+    if (byGovtId[0]) {
+      const identityId = byGovtId[0].identityId ?? await upsertComplexIdentity({
+        ...input,
+        complexId: byGovtId[0].id,
+        slug: byGovtId[0].slug,
+      });
+      if (!byGovtId[0].identityId) {
+        await db.update(aptComplexes)
+          .set({ identityId, propertyType: input.propertyType })
+          .where(eq(aptComplexes.id, byGovtId[0].id));
+      }
+      return { complexId: byGovtId[0].id, identityId };
+    }
   }
 
   const byName = await db
     .select({
       id: aptComplexes.id,
       govtComplexId: aptComplexes.govtComplexId,
+      identityId: aptComplexes.identityId,
+      slug: aptComplexes.slug,
     })
     .from(aptComplexes)
     .where(
@@ -203,22 +330,45 @@ async function resolveComplexId(input: {
     .limit(1);
 
   if (byName[0]) {
+    const slug = input.govtComplexId ?? byName[0].slug;
+    const identityId = byName[0].identityId ?? await upsertComplexIdentity({
+      ...input,
+      complexId: byName[0].id,
+      slug,
+    });
+
     if (input.govtComplexId && !byName[0].govtComplexId) {
       await db
         .update(aptComplexes)
         .set({
           govtComplexId: input.govtComplexId,
+          identityId,
+          slug,
+          propertyType: input.propertyType,
+        })
+        .where(eq(aptComplexes.id, byName[0].id));
+    } else if (!byName[0].identityId) {
+      await db
+        .update(aptComplexes)
+        .set({
+          identityId,
           propertyType: input.propertyType,
         })
         .where(eq(aptComplexes.id, byName[0].id));
     }
 
-    return byName[0].id;
+    return { complexId: byName[0].id, identityId };
   }
 
   const slug = input.govtComplexId ?? makeSlug(input.regionCode, input.aptName);
+  const identityId = await upsertComplexIdentity({
+    ...input,
+    complexId: slug,
+    slug,
+  });
 
   await db.insert(aptComplexes).values({
+    id: slug,
     regionCode: input.regionCode,
     regionName: input.regionName,
     dongName: input.dongName,
@@ -226,11 +376,15 @@ async function resolveComplexId(input: {
     builtYear: input.builtYear || null,
     slug,
     govtComplexId: input.govtComplexId,
+    identityId,
     propertyType: input.propertyType,
   }).onConflictDoNothing();
 
   const createdRows = await db
-    .select({ id: aptComplexes.id })
+    .select({
+      id: aptComplexes.id,
+      identityId: aptComplexes.identityId,
+    })
     .from(aptComplexes)
     .where(
       input.govtComplexId
@@ -242,7 +396,10 @@ async function resolveComplexId(input: {
     )
     .limit(1);
 
-  return createdRows[0]?.id ?? null;
+  return {
+    complexId: createdRows[0]?.id ?? null,
+    identityId: createdRows[0]?.identityId ?? identityId,
+  };
 }
 
 export async function GET(request: Request) {
@@ -275,7 +432,7 @@ export async function GET(request: Request) {
   let totalNewHigh = 0;
   let totalSignificantDrop = 0;
   const errors: string[] = [];
-  const complexIdCache: ComplexIdCache = new Map();
+  const complexIdCache: Map<string, ResolvedComplexLink> = new Map();
   const recentTradePriceCache: RecentTradePriceCache = new Map();
 
   for (const [regionCode, regionName] of regionEntries) {
@@ -343,7 +500,7 @@ export async function GET(request: Request) {
           const dropLevel = calcDropLevel(changeRate);
           const aptSeq = "aptSeq" in tx ? tx.aptSeq : null;
           const govtComplexId = normalizeGovtComplexId(regionCode, aptSeq);
-          const complexId = await resolveComplexIdCached(complexIdCache, {
+          const complexLink = await resolveComplexLinkCached(complexIdCache, {
             regionCode,
             regionName,
             dongName: tx.dongName,
@@ -355,7 +512,8 @@ export async function GET(request: Request) {
 
           await db.insert(aptTransactions).values({
             id: txId,
-            complexId,
+            complexId: complexLink.complexId,
+            identityId: complexLink.identityId,
             regionCode,
             regionName,
             aptName: tx.aptName,

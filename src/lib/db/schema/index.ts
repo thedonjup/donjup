@@ -1,5 +1,6 @@
 export * from "./apt-transactions";
 export * from "./apt-rent-transactions";
+export * from "./apt-complex-identities";
 export * from "./finance-rates";
 export * from "./apt-complexes";
 export * from "./daily-reports";

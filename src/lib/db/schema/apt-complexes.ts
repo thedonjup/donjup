@@ -17,6 +17,7 @@ export const aptComplexes = pgTable("apt_complexes", {
   builtYear: integer("built_year"),
   slug: text("slug").notNull().unique(),
   govtComplexId: text("govt_complex_id").unique(),
+  identityId: text("identity_id"),
   parkingCount: integer("parking_count"),
   heatingMethod: text("heating_method"),
   floorCount: integer("floor_count"),

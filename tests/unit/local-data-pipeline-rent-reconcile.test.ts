@@ -98,6 +98,7 @@ describe("local data pipeline rent reconcile", () => {
         slug: "11230-2036",
         apt_name: "두산위브",
         govt_complex_id: "11230-2036",
+        identity_id: "molit-11230-2036",
       }),
       expect.objectContaining({
         slug: "11230-답십리동-두산",
@@ -105,6 +106,7 @@ describe("local data pipeline rent reconcile", () => {
         dong_name: "답십리동",
         built_year: 2000,
         govt_complex_id: null,
+        identity_id: "natural-11230-답십리동-두산-2000-1",
       }),
     ]);
   });

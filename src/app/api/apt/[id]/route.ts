@@ -33,8 +33,14 @@ export async function GET(
         complex.aptName,
         complex.regionCode,
         complex.propertyType,
+        complex.identityId,
       ),
-      getCachedAptDetailRentTransactions(complex.aptName, complex.regionCode),
+      getCachedAptDetailRentTransactions(
+        complex.aptName,
+        complex.regionCode,
+        complex.identityId,
+        complex.id,
+      ),
     ]);
 
     const transactions = saleTransactions.map((transaction) => ({
@@ -66,6 +72,7 @@ export async function GET(
           total_units: complex.totalUnits,
           slug: complex.slug,
           govt_complex_id: complex.govtComplexId,
+          identity_id: complex.identityId,
         },
         transactions,
         rents,

@@ -24,6 +24,7 @@ export default async function OgImage({
       complex.aptName,
       complex.regionCode,
       complex.propertyType,
+      complex.identityId,
     ))[0] ?? null
     : null;
 

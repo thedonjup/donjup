@@ -6,6 +6,7 @@ import { aptComplexes } from "@/lib/db/schema";
 
 export type AptSitemapItem = {
   govtComplexId: string | null;
+  identityId: string | null;
   regionCode: string;
   slug: string;
   updatedAt: string | null;
@@ -26,6 +27,7 @@ async function fetchAptSitemapItems(
   const complexes = await db
     .select({
       govtComplexId: aptComplexes.govtComplexId,
+      identityId: aptComplexes.identityId,
       regionCode: aptComplexes.regionCode,
       slug: aptComplexes.slug,
       updatedAt: aptComplexes.updatedAt,
@@ -37,6 +39,7 @@ async function fetchAptSitemapItems(
 
   return complexes.map((complex) => ({
     govtComplexId: complex.govtComplexId,
+    identityId: complex.identityId,
     regionCode: complex.regionCode,
     slug: complex.slug,
     updatedAt: toIsoDateTime(complex.updatedAt),
@@ -45,7 +48,7 @@ async function fetchAptSitemapItems(
 
 export const getCachedAptSitemapItems = unstable_cache(
   fetchAptSitemapItems,
-  ["apt-sitemap-items-v1"],
+  ["apt-sitemap-items-v2"],
   {
     revalidate: 86400,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_COMPLEXES],

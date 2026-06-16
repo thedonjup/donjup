@@ -558,6 +558,7 @@ export default async function SearchPage({
             {results.map((apt, index) => {
               const detailHref = aptUrl({
                 govtComplexId: apt.govt_complex_id,
+                identityId: apt.identity_id,
                 regionCode: apt.region_code,
                 slug: apt.slug,
               });

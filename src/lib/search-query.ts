@@ -171,6 +171,7 @@ export async function getSearchResults({
       c.total_units,
       c.slug,
       c.govt_complex_id,
+      c.identity_id,
       latest_tx.trade_price AS latest_trade_price,
       latest_tx.trade_date AS latest_trade_date,
       latest_tx.change_rate AS latest_change_rate,
@@ -202,7 +203,7 @@ export async function getSearchResults({
 
 export const getCachedSearchResults = unstable_cache(
   getSearchResults,
-  ["search-results-v1"],
+  ["search-results-v2"],
   {
     revalidate: 300,
     tags: [

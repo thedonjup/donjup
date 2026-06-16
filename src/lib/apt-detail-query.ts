@@ -21,6 +21,7 @@ export type {
 
 export type AptDetailNearbyComplex = {
   govt_complex_id: string | null;
+  identity_id: string | null;
   slug: string;
   apt_name: string;
   region_code: string;
@@ -65,10 +66,12 @@ function saleTransactionWhere(
   complexId: string,
   aptName: string,
   regionCode: string,
-  propertyType: number
+  propertyType: number,
+  identityId?: string | null
 ) {
   return or(
     eq(aptTransactions.complexId, complexId),
+    identityId ? eq(aptTransactions.identityId, identityId) : undefined,
     and(
       eq(aptTransactions.aptName, aptName),
       eq(aptTransactions.regionCode, regionCode),
@@ -111,7 +114,14 @@ export async function getAptDetailComplexByGovtId(
     .limit(1);
 
   const complex = complexRows[0] ?? null;
-  if (complex || !govtComplexId.includes("-")) return complex;
+  if (complex) return complex;
+
+  const identityRows = await db.select().from(aptComplexes)
+    .where(eq(aptComplexes.identityId, govtComplexId))
+    .limit(1);
+
+  const identityComplex = identityRows[0] ?? null;
+  if (identityComplex || !govtComplexId.includes("-")) return identityComplex;
 
   const fallbackRows = await db.select().from(aptComplexes)
     .where(eq(aptComplexes.slug, govtComplexId))
@@ -128,6 +138,7 @@ export async function getAptDetailComplexByLookupId(
       eq(aptComplexes.id, id),
       eq(aptComplexes.slug, id),
       eq(aptComplexes.govtComplexId, id),
+      eq(aptComplexes.identityId, id),
     ))
     .limit(1);
 
@@ -176,7 +187,8 @@ export async function getAptDetailSaleTransactions(
   complexId: string,
   aptName: string,
   regionCode: string,
-  propertyType: number
+  propertyType: number,
+  identityId?: string | null
 ): Promise<AptDetailSaleTransaction[]> {
   const rows = await db.select({
     id: aptTransactions.id,
@@ -191,7 +203,7 @@ export async function getAptDetailSaleTransactions(
     deal_type: aptTransactions.dealType,
     drop_level: aptTransactions.dropLevel,
   }).from(aptTransactions)
-    .where(saleTransactionWhere(complexId, aptName, regionCode, propertyType))
+    .where(saleTransactionWhere(complexId, aptName, regionCode, propertyType, identityId))
     .orderBy(desc(aptTransactions.tradeDate))
     .limit(APT_DETAIL_SALE_LIMIT);
 
@@ -200,7 +212,9 @@ export async function getAptDetailSaleTransactions(
 
 export async function getAptDetailRentTransactions(
   aptName: string,
-  regionCode: string
+  regionCode: string,
+  identityId?: string | null,
+  complexId?: string | null
 ): Promise<AptDetailRentTransaction[]> {
   const rows = await db.select({
     id: aptRentTransactions.id,
@@ -212,9 +226,13 @@ export async function getAptDetailRentTransactions(
     contract_type: aptRentTransactions.contractType,
     trade_date: aptRentTransactions.tradeDate,
   }).from(aptRentTransactions)
-    .where(and(
-      eq(aptRentTransactions.aptName, aptName),
-      eq(aptRentTransactions.regionCode, regionCode),
+    .where(or(
+      identityId ? eq(aptRentTransactions.identityId, identityId) : undefined,
+      complexId ? eq(aptRentTransactions.complexId, complexId) : undefined,
+      and(
+        eq(aptRentTransactions.aptName, aptName),
+        eq(aptRentTransactions.regionCode, regionCode),
+      ),
     ))
     .orderBy(desc(aptRentTransactions.tradeDate))
     .limit(APT_DETAIL_RENT_LIMIT);
@@ -230,6 +248,7 @@ export async function getAptDetailNearbyComplexes(
 
   return db.select({
     govt_complex_id: aptComplexes.govtComplexId,
+    identity_id: aptComplexes.identityId,
     slug: aptComplexes.slug,
     apt_name: aptComplexes.aptName,
     region_code: aptComplexes.regionCode,
@@ -247,7 +266,7 @@ export async function getAptDetailNearbyComplexes(
 
 export const getCachedAptDetailComplexByGovtId = unstable_cache(
   getAptDetailComplexByGovtId,
-  ["apt-detail-complex-by-govt-id-v1"],
+  ["apt-detail-complex-by-govt-or-identity-id-v2"],
   {
     revalidate: APT_DETAIL_REVALIDATE_SECONDS,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_COMPLEXES],
@@ -256,7 +275,7 @@ export const getCachedAptDetailComplexByGovtId = unstable_cache(
 
 export const getCachedAptDetailComplexByLookupId = unstable_cache(
   getAptDetailComplexByLookupId,
-  ["apt-detail-complex-by-lookup-id-v1"],
+  ["apt-detail-complex-by-lookup-id-v2"],
   {
     revalidate: APT_DETAIL_REVALIDATE_SECONDS,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_COMPLEXES],
@@ -274,7 +293,7 @@ export const getCachedAptDetailComplexBySlug = unstable_cache(
 
 export const getCachedAptDetailSaleTransactions = unstable_cache(
   getAptDetailSaleTransactions,
-  ["apt-detail-sale-transactions-v1"],
+  ["apt-detail-sale-transactions-v2"],
   {
     revalidate: APT_DETAIL_REVALIDATE_SECONDS,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_TRANSACTIONS],
@@ -283,7 +302,7 @@ export const getCachedAptDetailSaleTransactions = unstable_cache(
 
 export const getCachedAptDetailRentTransactions = unstable_cache(
   getAptDetailRentTransactions,
-  ["apt-detail-rent-transactions-v1"],
+  ["apt-detail-rent-transactions-v2"],
   {
     revalidate: APT_DETAIL_REVALIDATE_SECONDS,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_RENT_TRANSACTIONS],
@@ -292,7 +311,7 @@ export const getCachedAptDetailRentTransactions = unstable_cache(
 
 export const getCachedAptDetailNearbyComplexes = unstable_cache(
   getAptDetailNearbyComplexes,
-  ["apt-detail-nearby-complexes-v1"],
+  ["apt-detail-nearby-complexes-v2"],
   {
     revalidate: APT_DETAIL_REVALIDATE_SECONDS,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_COMPLEXES],

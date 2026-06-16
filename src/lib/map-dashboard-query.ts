@@ -14,6 +14,7 @@ async function fetchMapTransactions() {
       id: aptTransactions.id,
       complex_id: aptComplexes.id,
       govt_complex_id: aptComplexes.govtComplexId,
+      identity_id: aptComplexes.identityId,
       apt_name: aptTransactions.aptName,
       region_code: aptTransactions.regionCode,
       trade_price: aptTransactions.tradePrice,
@@ -40,7 +41,7 @@ async function fetchMapTransactions() {
 
 export const getCachedMapTransactions = unstable_cache(
   fetchMapTransactions,
-  ["map-transactions-v1"],
+  ["map-transactions-v2"],
   {
     revalidate: 1800,
     tags: [

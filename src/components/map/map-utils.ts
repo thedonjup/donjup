@@ -4,6 +4,7 @@ export interface MapTransaction {
   id: string;
   complex_id: string;
   govt_complex_id: string | null;
+  identity_id?: string | null;
   apt_name: string;
   region_code: string;
   dong_name: string | null;

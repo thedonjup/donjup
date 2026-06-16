@@ -8,6 +8,7 @@ const baseRow = {
   id: "tx-1",
   complex_id: "complex-1",
   govt_complex_id: "11230-164",
+  identity_id: "molit-11230-164",
   apt_name: "Sample Apt",
   region_code: "11230",
   trade_price: 100000,

@@ -12,6 +12,7 @@ export interface SearchResult {
   total_units: number | null;
   slug: string;
   govt_complex_id: string | null;
+  identity_id: string | null;
   latest_trade_price: number | null;
   latest_trade_date: string | null;
   latest_change_rate: number | null;
@@ -31,6 +32,7 @@ export interface SearchResultRow {
   total_units: number | string | null;
   slug: string;
   govt_complex_id: string | null;
+  identity_id: string | null;
   latest_trade_price: number | string | null;
   latest_trade_date: string | null;
   latest_change_rate: number | string | null;

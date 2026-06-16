@@ -42,6 +42,9 @@ const BATCH_GROUPS = {
 
 const REQUIRED_TABLES = [
   "apt_complexes",
+  "apt_complex_identities",
+  "apt_complex_identity_sources",
+  "apt_complex_aliases",
   "apt_transactions",
   "apt_rent_transactions",
   "finance_rates",
@@ -599,6 +602,55 @@ function normalizeGovtComplexId(regionCode, aptSeq) {
     : trimmed;
 
   return `${regionCode}-${cleanSeq}`;
+}
+
+function normalizeComplexName(value) {
+  return String(value ?? "").normalize("NFKC").replace(/[\s-]/g, "").toLowerCase();
+}
+
+function identitySlugPart(value) {
+  const slug = String(value ?? "")
+    .trim()
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .replace(/[^가-힣a-zA-Z0-9]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+
+  return slug || "unknown";
+}
+
+function identityBuiltYear(value) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? String(parsed) : "unknown";
+}
+
+function molitIdentityId(govtComplexId) {
+  return `molit-${identitySlugPart(govtComplexId)}`;
+}
+
+function naturalIdentityId(row) {
+  return [
+    "natural",
+    identitySlugPart(row.regionCode),
+    identitySlugPart(row.dongName),
+    identitySlugPart(row.aptName),
+    identityBuiltYear(row.builtYear),
+    APT_PROPERTY_TYPE,
+  ].join("-");
+}
+
+function identityIdForRow(row, govtComplexId = null) {
+  return govtComplexId ? molitIdentityId(govtComplexId) : naturalIdentityId(row);
+}
+
+function identitySourceId(source, sourceComplexId) {
+  return `source:${source}:${sourceComplexId}`;
+}
+
+function identityAliasId(aliasType, aliasValue) {
+  return `alias:${aliasType}:${aliasValue}`;
 }
 
 function uniqueById(rows, idFn) {
@@ -1256,6 +1308,7 @@ export function complexRows(saleRows, rentRows = []) {
   for (const row of saleRows) {
     const govtComplexId = normalizeGovtComplexId(row.regionCode, row.aptSeq);
     const slug = govtComplexId ?? makeSlug(row.regionCode, row.aptName);
+    const identityId = identityIdForRow(row, govtComplexId);
     naturalKeys.add(complexNaturalKey(row));
     complexes.set(slug, {
       id: slug,
@@ -1266,6 +1319,7 @@ export function complexRows(saleRows, rentRows = []) {
       built_year: row.builtYear || null,
       slug,
       govt_complex_id: govtComplexId,
+      identity_id: identityId,
       property_type: APT_PROPERTY_TYPE,
     });
   }
@@ -1275,6 +1329,7 @@ export function complexRows(saleRows, rentRows = []) {
     if (naturalKeys.has(naturalKey)) continue;
 
     const slug = makeRentComplexSlug(row.regionCode, row.dongName, row.aptName);
+    const identityId = identityIdForRow(row);
     naturalKeys.add(naturalKey);
     complexes.set(slug, {
       id: slug,
@@ -1285,6 +1340,7 @@ export function complexRows(saleRows, rentRows = []) {
       built_year: row.builtYear || null,
       slug,
       govt_complex_id: null,
+      identity_id: identityId,
       property_type: APT_PROPERTY_TYPE,
     });
   }
@@ -1292,14 +1348,101 @@ export function complexRows(saleRows, rentRows = []) {
   return [...complexes.values()];
 }
 
+function identityRowsFromComplexRows(rows) {
+  return rows.map((row) => ({
+    id: row.identity_id,
+    canonical_id: row.govt_complex_id
+      ? `molit:${row.govt_complex_id}`
+      : [
+          "natural",
+          row.region_code,
+          row.dong_name || "unknown",
+          row.apt_name,
+          identityBuiltYear(row.built_year),
+          row.property_type || APT_PROPERTY_TYPE,
+        ].join(":"),
+    region_code: row.region_code,
+    region_name: row.region_name,
+    dong_name: row.dong_name,
+    apt_name: row.apt_name,
+    normalized_name: normalizeComplexName(row.apt_name),
+    built_year: row.built_year,
+    confidence: row.govt_complex_id ? 100 : 90,
+  }));
+}
+
+function identitySourceRowsFromComplexRows(rows) {
+  return rows.map((row) => {
+    const source = row.govt_complex_id ? "molit_apt_seq" : "natural";
+    const sourceComplexId = row.govt_complex_id
+      ? row.govt_complex_id
+      : [
+          "natural",
+          row.region_code,
+          row.dong_name || "unknown",
+          row.apt_name,
+          identityBuiltYear(row.built_year),
+          row.property_type || APT_PROPERTY_TYPE,
+        ].join(":");
+
+    return {
+      id: identitySourceId(source, sourceComplexId),
+      identity_id: row.identity_id,
+      source,
+      source_complex_id: sourceComplexId,
+      source_payload: JSON.stringify({ complexId: row.id, slug: row.slug, govtComplexId: row.govt_complex_id }),
+      confidence: row.govt_complex_id ? 100 : 90,
+    };
+  });
+}
+
+function identityAliasRowsFromComplexRows(rows) {
+  return rows.flatMap((row) => {
+    const aliases = [
+      ["complex_id", row.id],
+      ["slug", row.slug],
+      row.govt_complex_id ? ["govt_complex_id", row.govt_complex_id] : null,
+    ].filter(Boolean);
+
+    return aliases.map(([aliasType, aliasValue]) => ({
+      id: identityAliasId(aliasType, aliasValue),
+      identity_id: row.identity_id,
+      alias_type: aliasType,
+      alias_value: aliasValue,
+    }));
+  });
+}
+
+function complexRowLookupKey(row) {
+  return JSON.stringify([
+    row.region_code,
+    row.dong_name || "",
+    row.apt_name,
+    row.property_type || APT_PROPERTY_TYPE,
+  ]);
+}
+
+function complexLinkLookup(rows) {
+  const lookup = new Map();
+  for (const row of rows) {
+    lookup.set(complexRowLookupKey(row), {
+      id: row.id,
+      identity_id: row.identity_id,
+    });
+  }
+  return lookup;
+}
+
 function saleDbRows(saleRows) {
   return saleRows.map((row) => {
     const govtComplexId = normalizeGovtComplexId(row.regionCode, row.aptSeq);
     const slug = govtComplexId ?? makeSlug(row.regionCode, row.aptName);
+    const identityId = identityIdForRow(row, govtComplexId);
 
     return {
       id: saleTransactionId(row),
       complex_id: slug,
+      identity_id: identityId,
       region_code: row.regionCode,
       region_name: row.regionName,
       apt_name: row.aptName,
@@ -1318,23 +1461,28 @@ function saleDbRows(saleRows) {
   });
 }
 
-function rentDbRows(rentRows) {
-  return rentRows.map((row) => ({
-    id: rentTransactionId(row),
-    region_code: row.regionCode,
-    region_name: row.regionName,
-    apt_name: row.aptName,
-    size_sqm: String(row.sizeSqm),
-    floor: row.floor,
-    deposit: row.deposit,
-    monthly_rent: row.monthlyRent,
-    rent_type: row.rentType,
-    contract_type: row.contractType || null,
-    trade_date: row.tradeDate,
-    pre_deposit: row.preDeposit,
-    pre_monthly_rent: row.preMonthlyRent,
-    raw_data: row.rawData,
-  }));
+function rentDbRows(rentRows, complexLookup = new Map()) {
+  return rentRows.map((row) => {
+    const linkedComplex = complexLookup.get(complexNaturalKey(row));
+    return {
+      id: rentTransactionId(row),
+      complex_id: linkedComplex?.id ?? null,
+      identity_id: linkedComplex?.identity_id ?? naturalIdentityId(row),
+      region_code: row.regionCode,
+      region_name: row.regionName,
+      apt_name: row.aptName,
+      size_sqm: String(row.sizeSqm),
+      floor: row.floor,
+      deposit: row.deposit,
+      monthly_rent: row.monthlyRent,
+      rent_type: row.rentType,
+      contract_type: row.contractType || null,
+      trade_date: row.tradeDate,
+      pre_deposit: row.preDeposit,
+      pre_monthly_rent: row.preMonthlyRent,
+      raw_data: row.rawData,
+    };
+  });
 }
 
 async function fetchRentRowsForReconcile(pool) {
@@ -1374,6 +1522,7 @@ async function reconcileRentsCommand(options) {
     const dbRows = await fetchRentRowsForReconcile(pool);
     const plan = buildRentReconcilePlan(localRows, dbRows);
     const missingRows = plan.missing.map((item) => item.row);
+    const rentLinkLookup = complexLinkLookup(complexRows(readJsonLines(SALE_FILE), localRows));
     const summary = {
       mode: apply ? "apply" : "dry-run",
       summaryPath,
@@ -1411,6 +1560,8 @@ async function reconcileRentsCommand(options) {
         "apt_rent_transactions",
         [
           "id",
+          "complex_id",
+          "identity_id",
           "region_code",
           "region_name",
           "apt_name",
@@ -1425,7 +1576,7 @@ async function reconcileRentsCommand(options) {
           "pre_monthly_rent",
           "raw_data",
         ],
-        rentDbRows(missingRows)
+        rentDbRows(missingRows, rentLinkLookup)
       );
     }
 
@@ -1450,10 +1601,15 @@ async function upload(options) {
   const apply = options.apply === "true";
   const saleRows = uniqueById(readJsonLines(SALE_FILE), saleTransactionId);
   const rentRows = uniqueById(readJsonLines(RENT_FILE), rentTransactionId);
+  const complexesForUpload = complexRows(saleRows, rentRows);
+  const complexLookup = complexLinkLookup(complexesForUpload);
   const summary = {
     mode: apply ? "apply" : "dry-run",
     localSaleRows: saleRows.length,
     localRentRows: rentRows.length,
+    insertedIdentities: 0,
+    insertedIdentitySources: 0,
+    insertedIdentityAliases: 0,
     insertedComplexes: 0,
     insertedSaleRows: 0,
     insertedRentRows: 0,
@@ -1471,6 +1627,52 @@ async function upload(options) {
       return;
     }
 
+    summary.insertedIdentities = await insertChunk(
+      pool,
+      "apt_complex_identities",
+      [
+        "id",
+        "canonical_id",
+        "region_code",
+        "region_name",
+        "dong_name",
+        "apt_name",
+        "normalized_name",
+        "built_year",
+        "confidence",
+      ],
+      identityRowsFromComplexRows(complexesForUpload),
+      "id"
+    );
+
+    summary.insertedIdentitySources = await insertChunk(
+      pool,
+      "apt_complex_identity_sources",
+      [
+        "id",
+        "identity_id",
+        "source",
+        "source_complex_id",
+        "source_payload",
+        "confidence",
+      ],
+      identitySourceRowsFromComplexRows(complexesForUpload),
+      "id"
+    );
+
+    summary.insertedIdentityAliases = await insertChunk(
+      pool,
+      "apt_complex_aliases",
+      [
+        "id",
+        "identity_id",
+        "alias_type",
+        "alias_value",
+      ],
+      identityAliasRowsFromComplexRows(complexesForUpload),
+      "id"
+    );
+
     summary.insertedComplexes = await insertChunk(
       pool,
       "apt_complexes",
@@ -1483,9 +1685,10 @@ async function upload(options) {
         "built_year",
         "slug",
         "govt_complex_id",
+        "identity_id",
         "property_type",
       ],
-      complexRows(saleRows, rentRows)
+      complexesForUpload
     );
 
     summary.insertedSaleRows = await insertChunk(
@@ -1494,6 +1697,7 @@ async function upload(options) {
       [
         "id",
         "complex_id",
+        "identity_id",
         "region_code",
         "region_name",
         "apt_name",
@@ -1517,6 +1721,8 @@ async function upload(options) {
       "apt_rent_transactions",
       [
         "id",
+        "complex_id",
+        "identity_id",
         "region_code",
         "region_name",
         "apt_name",
@@ -1531,7 +1737,7 @@ async function upload(options) {
         "pre_monthly_rent",
         "raw_data",
       ],
-      rentDbRows(rentRows)
+      rentDbRows(rentRows, complexLookup)
     );
 
     await updateManifest({ lastUpload: { ...summary, uploadedAt: new Date().toISOString() } });

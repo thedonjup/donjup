@@ -48,11 +48,23 @@ export async function generateMetadata({
       return { title: "단지 정보 | 돈줍" };
     }
 
+  const canonicalPath = aptUrl({
+    govtComplexId: complex.govtComplexId,
+    identityId: complex.identityId,
+    regionCode: complex.regionCode,
+    slug: complex.slug,
+  });
+
+  if (shouldRedirectToAptCanonical(`/apt/${govtComplexId}`, canonicalPath)) {
+    permanentRedirect(canonicalPath);
+  }
+
   const latestTxn = (await getCachedAptDetailSaleTransactions(
     complex.id,
     complex.aptName,
     complex.regionCode,
     complex.propertyType,
+    complex.identityId,
   ))[0] ?? null;
   const changeRate = latestTxn?.change_rate ?? null;
   const tradePrice = latestTxn?.trade_price ?? null;
@@ -81,14 +93,14 @@ export async function generateMetadata({
     ogDescription = `${complexRegionName} ${complexDongName ?? ""} 아파트 실거래가 시세를 확인하세요`;
   }
 
-  const pageUrl = `https://donjup.com/apt/${govtComplexId}`;
-  const ogImageUrl = `https://donjup.com/apt/${govtComplexId}/opengraph-image`;
+  const pageUrl = `https://donjup.com${canonicalPath}`;
+  const ogImageUrl = `https://donjup.com${canonicalPath}/opengraph-image`;
 
   const seoTitle = `${complexAptName} 실거래가 - ${complexRegionName} ${complexDongName ?? ""}`;
   return {
     title: seoTitle,
     description: `${complexAptName} 아파트 실거래가 시세, 최고가 대비 변동률, 거래 이력을 확인하세요. ${complexRegionName} ${complexDongName ?? ""} 매매·전월세 시세 비교.`,
-    alternates: { canonical: `/apt/${govtComplexId}` },
+    alternates: { canonical: canonicalPath },
     keywords: [
       `${complexAptName} 실거래가`,
       `${complexAptName} 시세`,
@@ -157,9 +169,10 @@ export default async function AptDetailPage({
     notFound();
   }
 
-  const detailContentId = complex.govtComplexId ?? complex.slug;
+  const detailContentId = complex.govtComplexId ?? complex.identityId ?? complex.slug;
   const detailPath = aptUrl({
     govtComplexId: complex.govtComplexId,
+    identityId: complex.identityId,
     regionCode: complex.regionCode,
     slug: complex.slug,
   });
@@ -181,6 +194,7 @@ export default async function AptDetailPage({
       complex.aptName,
       complex.regionCode,
       complex.propertyType,
+      complex.identityId,
     );
   } catch (err) {
     saleDataUnavailable = true;
@@ -195,6 +209,8 @@ export default async function AptDetailPage({
     rentTxns = await getCachedAptDetailRentTransactions(
       complex.aptName,
       complex.regionCode,
+      complex.identityId,
+      complex.id,
     );
   } catch (err) {
     rentDataUnavailable = true;
@@ -432,7 +448,7 @@ export default async function AptDetailPage({
             {nearbyComplexes.map((nc) => (
               <Link
                 key={nc.slug}
-                href={aptUrl({ govtComplexId: nc.govt_complex_id, regionCode: nc.region_code, slug: nc.slug })}
+                href={aptUrl({ govtComplexId: nc.govt_complex_id, identityId: nc.identity_id, regionCode: nc.region_code, slug: nc.slug })}
                 className="card-hover rounded-2xl border p-4 transition-colors"
                 style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
               >

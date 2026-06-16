@@ -31,6 +31,7 @@ export default async function sitemap({
     return complexes.map((c) => ({
       url: `${baseUrl}${aptUrl({
         govtComplexId: c.govtComplexId,
+        identityId: c.identityId,
         regionCode: c.regionCode,
         slug: c.slug,
       })}`,

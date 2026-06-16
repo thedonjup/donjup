@@ -3,7 +3,10 @@ import { and, eq, inArray } from "drizzle-orm";
 import { verifyCronAuth } from "@/lib/api/auth";
 import { db } from "@/lib/db";
 import {
+  aptComplexAliases,
   aptComplexes,
+  aptComplexIdentities,
+  aptComplexIdentitySources,
   aptRentTransactions,
   type NewAptComplex,
   type NewAptRentTransaction,
@@ -14,6 +17,11 @@ import {
 } from "@/lib/api/molit-rent";
 import { delay } from "@/lib/api/molit";
 import { makeSlug } from "@/lib/apt-url";
+import {
+  makeIdentityCanonicalId,
+  makeIdentityId,
+  normalizeComplexName,
+} from "@/lib/complex-identity";
 import { logger } from "@/lib/logger";
 import { sendSlackAlert } from "@/lib/alert";
 import { safeErrorListItem } from "@/lib/api/safe-error-response";
@@ -79,6 +87,34 @@ function rentComplexSlug(transaction: ParsedRentTransaction): string {
   );
 }
 
+function rentIdentityId(transaction: ParsedRentTransaction): string {
+  return makeIdentityId({
+    regionCode: transaction.regionCode,
+    dongName: transaction.dongName || null,
+    aptName: transaction.aptName,
+    builtYear: transaction.builtYear || null,
+    propertyType: APT_PROPERTY_TYPE,
+  });
+}
+
+function rentCanonicalId(transaction: ParsedRentTransaction): string {
+  return makeIdentityCanonicalId({
+    regionCode: transaction.regionCode,
+    dongName: transaction.dongName || null,
+    aptName: transaction.aptName,
+    builtYear: transaction.builtYear || null,
+    propertyType: APT_PROPERTY_TYPE,
+  });
+}
+
+function identitySourceId(source: string, sourceComplexId: string): string {
+  return `source:${source}:${sourceComplexId}`;
+}
+
+function identityAliasId(aliasType: string, aliasValue: string): string {
+  return `alias:${aliasType}:${aliasValue}`;
+}
+
 function rentComplexKey(input: {
   regionCode: string;
   dongName: string | null;
@@ -96,7 +132,10 @@ async function upsertRentOnlyComplexes(
   transactions: ParsedRentTransaction[],
   regionName: string
 ): Promise<number> {
-  const candidates = new Map<string, NewAptComplex>();
+  const candidates = new Map<string, {
+    complex: NewAptComplex;
+    sourceTransaction: ParsedRentTransaction;
+  }>();
 
   for (const transaction of transactions) {
     if (!transaction.aptName) continue;
@@ -109,20 +148,24 @@ async function upsertRentOnlyComplexes(
     if (candidates.has(key)) continue;
 
     candidates.set(key, {
-      regionCode: transaction.regionCode,
-      regionName,
-      dongName: transaction.dongName || null,
-      aptName: transaction.aptName,
-      builtYear: transaction.builtYear || null,
-      slug: rentComplexSlug(transaction),
-      govtComplexId: null,
-      propertyType: APT_PROPERTY_TYPE,
+      complex: {
+        regionCode: transaction.regionCode,
+        regionName,
+        dongName: transaction.dongName || null,
+        aptName: transaction.aptName,
+        builtYear: transaction.builtYear || null,
+        slug: rentComplexSlug(transaction),
+        govtComplexId: null,
+        identityId: rentIdentityId(transaction),
+        propertyType: APT_PROPERTY_TYPE,
+      },
+      sourceTransaction: transaction,
     });
   }
 
   if (candidates.size === 0) return 0;
 
-  const rows = [...candidates.values()];
+  const rows = [...candidates.values()].map((candidate) => candidate.complex);
   const aptNames = [...new Set(rows.map((row) => row.aptName))];
   const existingRows = await db
     .select({
@@ -150,6 +193,53 @@ async function upsertRentOnlyComplexes(
 
   if (missingRows.length === 0) return 0;
 
+  const missingKeys = new Set(missingRows.map((row) => rentComplexKey({
+    regionCode: row.regionCode,
+    dongName: row.dongName ?? null,
+    aptName: row.aptName,
+  })));
+  const missingSourceTransactions = [...candidates.values()]
+    .filter((candidate) => missingKeys.has(rentComplexKey({
+      regionCode: candidate.complex.regionCode,
+      dongName: candidate.complex.dongName ?? null,
+      aptName: candidate.complex.aptName,
+    })))
+    .map((candidate) => candidate.sourceTransaction);
+
+  await db.insert(aptComplexIdentities).values(missingSourceTransactions.map((transaction) => ({
+    id: rentIdentityId(transaction),
+    canonicalId: rentCanonicalId(transaction),
+    regionCode: transaction.regionCode,
+    regionName,
+    dongName: transaction.dongName || null,
+    aptName: transaction.aptName,
+    normalizedName: normalizeComplexName(transaction.aptName),
+    builtYear: transaction.builtYear || null,
+    confidence: 90,
+  }))).onConflictDoNothing();
+
+  await db.insert(aptComplexIdentitySources).values(missingSourceTransactions.map((transaction) => {
+    const sourceComplexId = rentCanonicalId(transaction);
+    return {
+      id: identitySourceId("natural", sourceComplexId),
+      identityId: rentIdentityId(transaction),
+      source: "natural",
+      sourceComplexId,
+      sourcePayload: {
+        slug: rentComplexSlug(transaction),
+        source: "fetch-rents",
+      },
+      confidence: 90,
+    };
+  })).onConflictDoNothing();
+
+  await db.insert(aptComplexAliases).values(missingSourceTransactions.map((transaction) => ({
+    id: identityAliasId("slug", rentComplexSlug(transaction)),
+    identityId: rentIdentityId(transaction),
+    aliasType: "slug",
+    aliasValue: rentComplexSlug(transaction),
+  }))).onConflictDoNothing();
+
   const inserted = await db
     .insert(aptComplexes)
     .values(missingRows)
@@ -157,6 +247,43 @@ async function upsertRentOnlyComplexes(
     .returning({ id: aptComplexes.id });
 
   return inserted.length;
+}
+
+async function rentComplexLinks(transactions: ParsedRentTransaction[]): Promise<Map<string, {
+  id: string;
+  identityId: string | null;
+}>> {
+  if (transactions.length === 0) return new Map();
+
+  const aptNames = [...new Set(transactions.map((transaction) => transaction.aptName))];
+  const rows = await db
+    .select({
+      id: aptComplexes.id,
+      identityId: aptComplexes.identityId,
+      regionCode: aptComplexes.regionCode,
+      dongName: aptComplexes.dongName,
+      aptName: aptComplexes.aptName,
+    })
+    .from(aptComplexes)
+    .where(and(
+      eq(aptComplexes.regionCode, transactions[0].regionCode),
+      inArray(aptComplexes.aptName, aptNames)
+    ))
+    .limit(Math.max(aptNames.length * 4, 1));
+
+  const links = new Map<string, { id: string; identityId: string | null }>();
+  for (const row of rows) {
+    links.set(rentComplexKey({
+      regionCode: row.regionCode,
+      dongName: row.dongName,
+      aptName: row.aptName,
+    }), {
+      id: row.id,
+      identityId: row.identityId,
+    });
+  }
+
+  return links;
 }
 
 export async function GET(request: Request) {
@@ -200,7 +327,6 @@ export async function GET(request: Request) {
 
         const transactionIds = transactions.map(rentTransactionIdFromParsed);
         const existingIds = await existingRentTransactionIds(transactionIds);
-        const newTransactions: NewAptRentTransaction[] = [];
         const newComplexSourceTransactions: ParsedRentTransaction[] = [];
 
         for (const t of transactions) {
@@ -209,8 +335,26 @@ export async function GET(request: Request) {
           if (existingIds.has(id)) continue;
 
           newComplexSourceTransactions.push(t);
-          newTransactions.push({
-            id,
+          existingIds.add(id);
+        }
+
+        if (newComplexSourceTransactions.length === 0) {
+          await delay(300);
+          continue;
+        }
+
+        totalInsertedComplexes += await upsertRentOnlyComplexes(newComplexSourceTransactions, name);
+        const complexLinks = await rentComplexLinks(newComplexSourceTransactions);
+        const newTransactions: NewAptRentTransaction[] = newComplexSourceTransactions.map((t) => {
+          const link = complexLinks.get(rentComplexKey({
+            regionCode: t.regionCode,
+            dongName: t.dongName || null,
+            aptName: t.aptName,
+          }));
+          return {
+            id: rentTransactionIdFromParsed(t),
+            complexId: link?.id ?? rentComplexSlug(t),
+            identityId: link?.identityId ?? rentIdentityId(t),
             regionCode: t.regionCode,
             regionName: `${name} ${t.dongName}`,
             aptName: t.aptName,
@@ -224,16 +368,8 @@ export async function GET(request: Request) {
             preDeposit: t.preDeposit,
             preMonthlyRent: t.preMonthlyRent,
             rawData: t.rawData,
-          });
-          existingIds.add(id);
-        }
-
-        if (newTransactions.length === 0) {
-          await delay(300);
-          continue;
-        }
-
-        totalInsertedComplexes += await upsertRentOnlyComplexes(newComplexSourceTransactions, name);
+          };
+        });
 
         const inserted = await db
           .insert(aptRentTransactions)
