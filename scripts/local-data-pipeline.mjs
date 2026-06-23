@@ -10,11 +10,18 @@ const DEFAULT_LOCAL_DATA_DIR = ".donjup-local-data";
 const SALE_FILE = "sale-transactions.jsonl";
 const RENT_FILE = "rent-transactions.jsonl";
 const MANIFEST_FILE = "manifest.json";
+const EXTENDED_PERIOD_MANIFEST_FILE = "extended-period-manifest.json";
 const DEFAULT_MONTH_COUNT = 1;
 const MAX_MONTH_COUNT = 6;
 const REQUEST_DELAY_MS = 300;
 const UPLOAD_BATCH_SIZE = 500;
 const SIGNAL_UPDATE_BATCH_SIZE = 250;
+const DEFAULT_EXTENDED_MAX_REQUESTS = 140;
+const DEFAULT_EXTENDED_MAX_RUNTIME_SECONDS = 1800;
+const DEFAULT_EXTENDED_MAX_RETRIES = 2;
+const DEFAULT_EXTENDED_RETRY_DELAY_MS = 30_000;
+const DEFAULT_MOLIT_TIMEOUT_MS = 20_000;
+const DEFAULT_SCOPED_MAX_UPSERTS = 100_000;
 const DEFAULT_GEOCODE_BATCH_SIZE = 120;
 const MAX_GEOCODE_BATCH_SIZE = 500;
 const DEFAULT_GEOCODE_DELAY_MS = 80;
@@ -38,6 +45,27 @@ const BATCH_GROUPS = {
   2: ["41"],
   3: ["42", "43", "44", "45"],
   4: ["46", "47", "48", "50"],
+};
+
+const EXTENDED_PERIOD_BATCH_MONTHS = {
+  A: 3,
+  B: 6,
+  C: 12,
+  D: 24,
+};
+
+const UPLOAD_ARTIFACT_FILES = {
+  review: "upload-review.json",
+  saleCandidates: "insert-candidates-sale.jsonl",
+  rentCandidates: "insert-candidates-rent.jsonl",
+  saleOutOfScope: "out-of-scope-sale.jsonl",
+  rentOutOfScope: "out-of-scope-rent.jsonl",
+  saleInserted: "inserted-sale-ids.jsonl",
+  rentInserted: "inserted-rent-ids.jsonl",
+  complexInserted: "inserted-complex-ids.jsonl",
+  identityInserted: "inserted-identity-ids.jsonl",
+  identitySourceInserted: "inserted-identity-source-ids.jsonl",
+  aliasInserted: "inserted-alias-ids.jsonl",
 };
 
 const REQUIRED_TABLES = [
@@ -115,6 +143,42 @@ function runPath(prefix, extension) {
   return resolve(runsDir(), `${prefix}-${runTimestamp()}.${extension}`);
 }
 
+function runDirForId(runId) {
+  if (!runId) return runsDir();
+
+  const safeRunId = String(runId)
+    .replace(/[^a-zA-Z0-9_.-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  const prefixedRunId = safeRunId.startsWith("extended-period-")
+    ? safeRunId
+    : `extended-period-${safeRunId}`;
+  const dir = resolve(runsDir(), prefixedRunId);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function extendedManifestPath() {
+  return dataFilePath(EXTENDED_PERIOD_MANIFEST_FILE);
+}
+
+async function readJsonFile(path, fallback = {}) {
+  try {
+    return JSON.parse(await readFile(path, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+async function writeJsonFile(path, payload) {
+  await writeFile(path, JSON.stringify(payload, null, 2), "utf8");
+}
+
+async function writeJsonLines(path, rows) {
+  const body = rows.map((row) => JSON.stringify(row)).join("\n");
+  await writeFile(path, body ? `${body}\n` : "", "utf8");
+}
+
 function parseArgs(argv) {
   const [command = "status", ...rest] = argv;
   const options = {};
@@ -181,6 +245,62 @@ export function getRecentYearMonths(count, baseDate = new Date()) {
 
     return `${date.getUTCFullYear()}${month}`;
   });
+}
+
+function normalizeYearMonth(value) {
+  const normalized = String(value ?? "").replace(/[^0-9]/g, "");
+  if (!/^\d{6}$/.test(normalized)) return null;
+
+  const month = Number(normalized.slice(4, 6));
+  return month >= 1 && month <= 12 ? normalized : null;
+}
+
+function monthRange(fromYearMonth, toYearMonth) {
+  const from = normalizeYearMonth(fromYearMonth);
+  const to = normalizeYearMonth(toYearMonth);
+  if (!from || !to) return [];
+
+  const fromDate = new Date(Date.UTC(Number(from.slice(0, 4)), Number(from.slice(4, 6)) - 1, 1));
+  const toDate = new Date(Date.UTC(Number(to.slice(0, 4)), Number(to.slice(4, 6)) - 1, 1));
+  const step = fromDate <= toDate ? 1 : -1;
+  const months = [];
+  const cursor = new Date(fromDate);
+
+  while ((step > 0 && cursor <= toDate) || (step < 0 && cursor >= toDate)) {
+    months.push(`${cursor.getUTCFullYear()}${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`);
+    cursor.setUTCMonth(cursor.getUTCMonth() + step);
+  }
+
+  return months;
+}
+
+function monthsFromOptions(options, fallbackCount = DEFAULT_MONTH_COUNT, maxCount = MAX_MONTH_COUNT) {
+  if (options.ym) {
+    return [...new Set(String(options.ym)
+      .split(",")
+      .map((value) => normalizeYearMonth(value))
+      .filter(Boolean))];
+  }
+
+  if (options["from-ym"] || options["to-ym"]) {
+    const months = monthRange(options["from-ym"], options["to-ym"]);
+    if (months.length > 0) return months;
+  }
+
+  return getRecentYearMonths(parsePositiveInt(options.months, fallbackCount, maxCount));
+}
+
+function yearMonthFromTradeDate(value) {
+  const normalized = String(value ?? "").slice(0, 7).replace(/[^0-9]/g, "");
+  return normalizeYearMonth(normalized);
+}
+
+function rowYearMonth(row) {
+  return normalizeYearMonth(row.dealYearMonth) ?? yearMonthFromTradeDate(row.tradeDate);
+}
+
+function rowRunId(row) {
+  return row.extendedRunId ?? row.collectionRunId ?? row.runId ?? null;
 }
 
 function loadRegionHierarchy() {
@@ -377,7 +497,7 @@ function parseRentXml(xml, regionCode) {
   });
 }
 
-async function fetchMolitRows(kind, regionCode, dealYearMonth) {
+async function fetchMolitRows(kind, regionCode, dealYearMonth, timeoutMs = DEFAULT_MOLIT_TIMEOUT_MS) {
   const apiKey = process.env.MOLIT_API_KEY;
   if (!apiKey) {
     throw new Error("MOLIT_API_KEY is required");
@@ -387,10 +507,13 @@ async function fetchMolitRows(kind, regionCode, dealYearMonth) {
   const url = `${baseUrl}?serviceKey=${apiKey}&LAWD_CD=${regionCode}&DEAL_YMD=${dealYearMonth}&pageNo=1&numOfRows=9999`;
   const response = await fetch(url, {
     headers: { "User-Agent": "DonJup/1.0" },
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!response.ok) {
-    throw new Error(`MOLIT ${kind} API failed: ${response.status} ${response.statusText}`);
+    const error = new Error(`MOLIT ${kind} API failed: ${response.status} ${response.statusText}`);
+    error.status = response.status;
+    throw error;
   }
 
   const xml = await response.text();
@@ -429,6 +552,318 @@ async function updateManifest(update) {
   await writeFile(manifestPath, JSON.stringify(nextManifest, null, 2), "utf8");
 }
 
+function extendedItemKey(kind, dealYearMonth, regionCode) {
+  return `${kind}:${dealYearMonth}:${regionCode}`;
+}
+
+async function loadExtendedManifest() {
+  const manifest = await readJsonFile(extendedManifestPath(), {});
+  return {
+    version: 1,
+    items: {},
+    runs: {},
+    ...manifest,
+    items: manifest.items ?? {},
+    runs: manifest.runs ?? {},
+  };
+}
+
+async function writeExtendedManifest(manifest) {
+  await writeJsonFile(extendedManifestPath(), {
+    ...manifest,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+function isExtendedItemComplete(item) {
+  return ["fetched", "empty", "uploaded", "verified"].includes(item?.status);
+}
+
+function classifyRetryableError(error) {
+  const status = Number(error?.status);
+  if ([429, 500, 502, 503, 504].includes(status)) {
+    return { retryable: true, status };
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  const statusFromMessage = Number(message.match(/\b(429|500|502|503|504)\b/)?.[1]);
+  return {
+    retryable: [429, 500, 502, 503, 504].includes(statusFromMessage),
+    status: Number.isFinite(status) && status > 0 ? status : statusFromMessage || null,
+  };
+}
+
+function extendedMonthsForOptions(options) {
+  if (options.batch) {
+    const batch = String(options.batch).trim().toUpperCase();
+    const monthCount = EXTENDED_PERIOD_BATCH_MONTHS[batch];
+    if (!monthCount) {
+      throw new Error(`Invalid --batch: ${options.batch}`);
+    }
+    return getRecentYearMonths(monthCount);
+  }
+
+  return monthsFromOptions(options, 3, 36);
+}
+
+function extendedKindsForOptions(options) {
+  const kinds = options.kind === "both" || !options.kind
+    ? ["sale", "rent"]
+    : [options.kind];
+
+  for (const kind of kinds) {
+    if (!["sale", "rent"].includes(kind)) {
+      throw new Error(`Invalid --kind: ${kind}`);
+    }
+  }
+
+  return kinds;
+}
+
+async function fetchDbMonthSet(kinds) {
+  const pool = await dbPool();
+  try {
+    const monthSet = new Set();
+    if (kinds.includes("sale")) {
+      const result = await pool.query(
+        `SELECT DISTINCT replace(substring(trade_date, 1, 7), '-', '') AS ym
+         FROM apt_transactions
+         WHERE trade_date IS NOT NULL`
+      );
+      for (const row of result.rows) {
+        if (normalizeYearMonth(row.ym)) monthSet.add(`sale:${row.ym}`);
+      }
+    }
+    if (kinds.includes("rent")) {
+      const result = await pool.query(
+        `SELECT DISTINCT replace(substring(trade_date, 1, 7), '-', '') AS ym
+         FROM apt_rent_transactions
+         WHERE trade_date IS NOT NULL`
+      );
+      for (const row of result.rows) {
+        if (normalizeYearMonth(row.ym)) monthSet.add(`rent:${row.ym}`);
+      }
+    }
+    return monthSet;
+  } finally {
+    await pool.end();
+  }
+}
+
+async function extendedCollect(options) {
+  const runId = options["run-id"] || `extended-period-${runTimestamp()}`;
+  const kinds = extendedKindsForOptions(options);
+  const months = extendedMonthsForOptions(options);
+  const regionEntries = regionEntriesForOptions({
+    ...options,
+    batch: options["region-batch"],
+  });
+  const limitRegions = parsePositiveInt(options["limit-regions"], regionEntries.length);
+  const selectedRegionEntries = regionEntries.slice(0, limitRegions);
+  const maxRequests = parsePositiveInt(
+    options["max-requests"],
+    DEFAULT_EXTENDED_MAX_REQUESTS,
+    Number.MAX_SAFE_INTEGER
+  );
+  const maxRuntimeSeconds = parsePositiveInt(
+    options["max-runtime-seconds"],
+    DEFAULT_EXTENDED_MAX_RUNTIME_SECONDS,
+    24 * 60 * 60
+  );
+  const maxRetries = parseNonNegativeInt(options["max-retries"], DEFAULT_EXTENDED_MAX_RETRIES, 10);
+  const retryDelayMs = parsePositiveInt(options["retry-delay-ms"], DEFAULT_EXTENDED_RETRY_DELAY_MS, 30 * 60_000);
+  const timeoutMs = parsePositiveInt(options["timeout-ms"], DEFAULT_MOLIT_TIMEOUT_MS, 120_000);
+  const dryRun = parseBooleanOption(options["dry-run"], false);
+  const skipDbMonths = parseBooleanOption(options["skip-db-months"], true);
+  const collectedAt = new Date().toISOString();
+  const startedMs = Date.now();
+  const manifest = await loadExtendedManifest();
+  let dbMonthSet = new Set();
+  let dbMonthSkipError = null;
+  if (skipDbMonths) {
+    try {
+      dbMonthSet = await fetchDbMonthSet(kinds);
+    } catch (error) {
+      dbMonthSkipError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  const runDir = runDirForId(runId);
+  const summaryPath = resolve(runDir, "extended-collect-summary.json");
+  const summary = {
+    runId,
+    mode: dryRun ? "dry-run" : "collect",
+    kinds,
+    months,
+    regionCount: selectedRegionEntries.length,
+    maxRequests,
+    maxRuntimeSeconds,
+    maxRetries,
+    retryDelayMs,
+    timeoutMs,
+    skipDbMonths,
+    dbMonthSkipError,
+    summaryPath,
+    startedAt: collectedAt,
+    plannedItems: 0,
+    skippedComplete: 0,
+    skippedDbMonth: 0,
+    fetched: 0,
+    empty: 0,
+    failedRetryable: 0,
+    failedFinal: 0,
+    requests: 0,
+    rows: { sale: 0, rent: 0 },
+    stopReason: null,
+    samples: [],
+  };
+
+  ensureLocalDataDir();
+
+  const workItems = [];
+  for (const kind of kinds) {
+    for (const [regionCode, regionName] of selectedRegionEntries) {
+      for (const dealYearMonth of months) {
+        const key = extendedItemKey(kind, dealYearMonth, regionCode);
+        summary.plannedItems += 1;
+        if (dbMonthSet.has(`${kind}:${dealYearMonth}`)) {
+          summary.skippedDbMonth += 1;
+          continue;
+        }
+        if (isExtendedItemComplete(manifest.items[key])) {
+          summary.skippedComplete += 1;
+          continue;
+        }
+        workItems.push({ key, kind, regionCode, regionName, dealYearMonth });
+      }
+    }
+  }
+
+  manifest.runs[runId] = {
+    runId,
+    kinds,
+    months,
+    regionCount: selectedRegionEntries.length,
+    startedAt: collectedAt,
+    dryRun,
+  };
+
+  if (dryRun) {
+    summary.pendingItems = workItems.length;
+    await writeExtendedManifest(manifest);
+    await writeJsonFile(summaryPath, summary);
+    console.log(JSON.stringify(summary, null, 2));
+    return;
+  }
+
+  for (const item of workItems) {
+    if (summary.requests >= maxRequests) {
+      summary.stopReason = "max-requests";
+      break;
+    }
+    if ((Date.now() - startedMs) / 1000 >= maxRuntimeSeconds) {
+      summary.stopReason = "max-runtime";
+      break;
+    }
+
+    manifest.items[item.key] = {
+      ...(manifest.items[item.key] ?? {}),
+      status: "fetching",
+      runId,
+      kind: item.kind,
+      dealYearMonth: item.dealYearMonth,
+      regionCode: item.regionCode,
+      regionName: item.regionName,
+      attemptCount: manifest.items[item.key]?.attemptCount ?? 0,
+      updatedAt: new Date().toISOString(),
+    };
+    await writeExtendedManifest(manifest);
+
+    let lastError = null;
+    let rows = [];
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt += 1) {
+      try {
+        summary.requests += 1;
+        rows = (await fetchMolitRows(item.kind, item.regionCode, item.dealYearMonth, timeoutMs))
+          .map((row) => ({
+            ...row,
+            regionName: item.regionName,
+            dealYearMonth: item.dealYearMonth,
+            collectedAt,
+            collectionRunId: runId,
+            extendedRunId: runId,
+          }));
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+        const { retryable } = classifyRetryableError(error);
+        if (!retryable || attempt > maxRetries) break;
+        await delay(retryDelayMs * attempt);
+      }
+    }
+
+    if (lastError) {
+      const { retryable, status } = classifyRetryableError(lastError);
+      const statusName = retryable ? "failed_retryable" : "failed_final";
+      manifest.items[item.key] = {
+        ...manifest.items[item.key],
+        status: statusName,
+        httpStatus: status,
+        error: lastError instanceof Error ? lastError.message : String(lastError),
+        retryAfter: retryable ? new Date(Date.now() + retryDelayMs).toISOString() : null,
+        attemptCount: (manifest.items[item.key]?.attemptCount ?? 0) + maxRetries + 1,
+        updatedAt: new Date().toISOString(),
+      };
+      if (retryable) summary.failedRetryable += 1;
+      else summary.failedFinal += 1;
+      if (summary.samples.length < 20) {
+        summary.samples.push({
+          key: item.key,
+          status: statusName,
+          error: manifest.items[item.key].error,
+        });
+      }
+      await writeExtendedManifest(manifest);
+      continue;
+    }
+
+    await appendJsonLines(item.kind === "rent" ? RENT_FILE : SALE_FILE, rows);
+    summary.rows[item.kind] += rows.length;
+    if (rows.length === 0) summary.empty += 1;
+    else summary.fetched += 1;
+
+    manifest.items[item.key] = {
+      ...manifest.items[item.key],
+      status: rows.length === 0 ? "empty" : "fetched",
+      rowCount: rows.length,
+      attemptCount: (manifest.items[item.key]?.attemptCount ?? 0) + 1,
+      fetchedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await writeExtendedManifest(manifest);
+    await delay(REQUEST_DELAY_MS);
+  }
+
+  if (!summary.stopReason) {
+    summary.stopReason = "complete";
+  }
+  summary.finishedAt = new Date().toISOString();
+  await writeJsonFile(summaryPath, summary);
+  await writeExtendedManifest({
+    ...manifest,
+    runs: {
+      ...manifest.runs,
+      [runId]: {
+        ...manifest.runs[runId],
+        finishedAt: summary.finishedAt,
+        stopReason: summary.stopReason,
+        summaryPath,
+      },
+    },
+  });
+  console.log(JSON.stringify(summary, null, 2));
+}
+
 async function collect(options) {
   const kinds = options.kind === "both" || !options.kind
     ? ["sale", "rent"]
@@ -440,15 +875,12 @@ async function collect(options) {
     }
   }
 
-  const months = options.ym
-    ? String(options.ym).split(",").map((value) => value.trim()).filter(Boolean)
-    : getRecentYearMonths(
-        parsePositiveInt(options.months, DEFAULT_MONTH_COUNT, MAX_MONTH_COUNT)
-      );
+  const months = monthsFromOptions(options);
   const regionEntries = regionEntriesForOptions(options);
   const limitRegions = parsePositiveInt(options["limit-regions"], regionEntries.length);
   const selectedRegionEntries = regionEntries.slice(0, limitRegions);
   const collectedAt = new Date().toISOString();
+  const collectionRunId = options["run-id"] ? String(options["run-id"]) : null;
   const summary = {
     sale: 0,
     rent: 0,
@@ -468,6 +900,7 @@ async function collect(options) {
               regionName,
               dealYearMonth,
               collectedAt,
+              collectionRunId,
             }));
           await appendJsonLines(kind === "rent" ? RENT_FILE : SALE_FILE, rows);
           summary[kind] += rows.length;
@@ -519,6 +952,10 @@ function saleTransactionId(row) {
 }
 
 export function rentTransactionId(row) {
+  if (typeof row.id === "string" && row.id.startsWith("rent:")) {
+    return row.id;
+  }
+
   const signature = JSON.stringify([
     row.regionCode,
     row.dongName,
@@ -918,6 +1355,63 @@ async function insertChunk(pool, table, columns, rows, conflictTarget) {
   }
 
   return inserted;
+}
+
+async function insertChunkReturningIds(pool, table, columns, rows, conflictTarget) {
+  if (rows.length === 0) return [];
+
+  const insertedIds = [];
+
+  for (let index = 0; index < rows.length; index += UPLOAD_BATCH_SIZE) {
+    const chunk = rows.slice(index, index + UPLOAD_BATCH_SIZE);
+    const values = [];
+    const placeholders = chunk.map((row, rowIndex) => {
+      const params = columns.map((column, columnIndex) => {
+        values.push(row[column]);
+        return `$${rowIndex * columns.length + columnIndex + 1}`;
+      });
+
+      return `(${params.join(", ")})`;
+    });
+    const conflict = conflictTarget
+      ? `ON CONFLICT (${conflictTarget}) DO NOTHING`
+      : "ON CONFLICT DO NOTHING";
+    const sql = `
+      INSERT INTO ${table} (${columns.join(", ")})
+      VALUES ${placeholders.join(", ")}
+      ${conflict}
+      RETURNING id
+    `;
+    const result = await pool.query(sql, values);
+    insertedIds.push(...result.rows.map((row) => row.id));
+  }
+
+  return insertedIds;
+}
+
+async function existingIds(pool, table, ids) {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  const found = new Set();
+
+  for (let index = 0; index < uniqueIds.length; index += UPLOAD_BATCH_SIZE) {
+    const chunk = uniqueIds.slice(index, index + UPLOAD_BATCH_SIZE);
+    if (chunk.length === 0) continue;
+
+    const placeholders = chunk.map((_, chunkIndex) => `$${chunkIndex + 1}`).join(", ");
+    const result = await pool.query(
+      `SELECT id FROM ${table} WHERE id IN (${placeholders})`,
+      chunk
+    );
+    for (const row of result.rows) {
+      found.add(row.id);
+    }
+  }
+
+  return found;
+}
+
+function countInsertable(rows, existing) {
+  return rows.filter((row) => !existing.has(row.id)).length;
 }
 
 async function fetchSignalRows(pool, regionCode) {
@@ -1485,6 +1979,276 @@ function rentDbRows(rentRows, complexLookup = new Map()) {
   });
 }
 
+export function buildUploadScope(options) {
+  const runId = options["run-id"] ? String(options["run-id"]) : null;
+  const months = options.ym || options.months || options["from-ym"] || options["to-ym"]
+    ? monthsFromOptions(options, 1, 36)
+    : [];
+
+  return {
+    runId,
+    months,
+    monthSet: new Set(months),
+    isScoped: Boolean(runId && months.length > 0),
+  };
+}
+
+export function requireScopedApply(options) {
+  if (options.apply !== "true") return;
+
+  const scope = buildUploadScope(options);
+  if (!scope.isScoped) {
+    throw new Error("Scoped upload required: use --run-id plus --ym/--months/--from-ym/--to-ym before --apply=true");
+  }
+}
+
+export function scopedRows(rows, idFn, scope) {
+  const uniqueRows = uniqueById(rows, idFn);
+  if (!scope.isScoped) {
+    return {
+      sourceRows: uniqueRows,
+      candidateRows: uniqueRows,
+      outOfScopeRows: [],
+    };
+  }
+
+  const sourceRows = uniqueRows.filter((row) => rowRunId(row) === scope.runId);
+  const candidateRows = [];
+  const outOfScopeRows = [];
+
+  for (const row of sourceRows) {
+    const yearMonth = rowYearMonth(row);
+    if (yearMonth && scope.monthSet.has(yearMonth)) {
+      candidateRows.push(row);
+    } else {
+      outOfScopeRows.push(row);
+    }
+  }
+
+  return { sourceRows, candidateRows, outOfScopeRows };
+}
+
+async function buildUploadReview(pool, rowsByTable, summary) {
+  const review = {
+    ...summary,
+    tables: {},
+  };
+
+  for (const [key, tableInfo] of Object.entries(rowsByTable)) {
+    const existing = await existingIds(pool, tableInfo.table, tableInfo.rows.map((row) => row.id));
+    review.tables[key] = {
+      table: tableInfo.table,
+      candidateRows: tableInfo.rows.length,
+      existingRows: existing.size,
+      insertableRows: countInsertable(tableInfo.rows, existing),
+    };
+    tableInfo.existing = existing;
+  }
+
+  review.totalInsertableRows = Object.values(review.tables)
+    .reduce((total, table) => total + table.insertableRows, 0);
+
+  return review;
+}
+
+function scopedUploadArtifacts(runId) {
+  const dir = runDirForId(runId);
+  return Object.fromEntries(
+    Object.entries(UPLOAD_ARTIFACT_FILES)
+      .map(([key, file]) => [key, resolve(dir, file)])
+  );
+}
+
+async function writeInsertedIds(path, ids) {
+  await writeJsonLines(path, ids.map((id) => ({ id })));
+}
+
+async function markExtendedManifestUploaded(runId, months) {
+  const manifest = await loadExtendedManifest();
+  const monthSet = new Set(months);
+  let updatedItems = 0;
+
+  for (const [key, item] of Object.entries(manifest.items)) {
+    if (item.runId !== runId) continue;
+    if (!monthSet.has(item.dealYearMonth)) continue;
+    if (!["fetched", "empty"].includes(item.status)) continue;
+
+    manifest.items[key] = {
+      ...item,
+      status: "uploaded",
+      uploadedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    updatedItems += 1;
+  }
+
+  manifest.runs[runId] = {
+    ...(manifest.runs[runId] ?? { runId }),
+    uploadedAt: new Date().toISOString(),
+  };
+  await writeExtendedManifest(manifest);
+  return updatedItems;
+}
+
+function readJsonLinesPath(path) {
+  if (!existsSync(path)) return [];
+
+  return readFileSync(path, "utf8")
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+function readInsertedIds(path) {
+  return readJsonLinesPath(path).map((row) => row.id).filter(Boolean);
+}
+
+async function countIds(pool, table, ids) {
+  return (await existingIds(pool, table, ids)).size;
+}
+
+async function deleteIds(pool, table, ids) {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  let deleted = 0;
+
+  for (let index = 0; index < uniqueIds.length; index += UPLOAD_BATCH_SIZE) {
+    const chunk = uniqueIds.slice(index, index + UPLOAD_BATCH_SIZE);
+    if (chunk.length === 0) continue;
+
+    const placeholders = chunk.map((_, chunkIndex) => `$${chunkIndex + 1}`).join(", ");
+    const result = await pool.query(
+      `DELETE FROM ${table} WHERE id IN (${placeholders})`,
+      chunk
+    );
+    deleted += result.rowCount ?? 0;
+  }
+
+  return deleted;
+}
+
+async function countReferences(pool, table, column, ids) {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  let count = 0;
+
+  for (let index = 0; index < uniqueIds.length; index += UPLOAD_BATCH_SIZE) {
+    const chunk = uniqueIds.slice(index, index + UPLOAD_BATCH_SIZE);
+    if (chunk.length === 0) continue;
+
+    const placeholders = chunk.map((_, chunkIndex) => `$${chunkIndex + 1}`).join(", ");
+    const result = await pool.query(
+      `SELECT count(*)::INT AS count FROM ${table} WHERE ${column} IN (${placeholders})`,
+      chunk
+    );
+    count += Number(result.rows[0]?.count ?? 0);
+  }
+
+  return count;
+}
+
+async function rollbackUpload(options) {
+  const runId = options["run-id"] ? String(options["run-id"]) : null;
+  if (!runId) {
+    throw new Error("Rollback requires --run-id. Month/name/region rollback is forbidden.");
+  }
+
+  const apply = options.apply === "true";
+  const artifacts = scopedUploadArtifacts(runId);
+  const summaryPath = resolve(runDirForId(runId), "rollback-review.json");
+  const ids = {
+    sale: readInsertedIds(artifacts.saleInserted),
+    rent: readInsertedIds(artifacts.rentInserted),
+    aliases: readInsertedIds(artifacts.aliasInserted),
+    identitySources: readInsertedIds(artifacts.identitySourceInserted),
+    complexes: readInsertedIds(artifacts.complexInserted),
+    identities: readInsertedIds(artifacts.identityInserted),
+  };
+  const insertedFileCount = Object.values(ids).reduce((total, list) => total + list.length, 0);
+  if (insertedFileCount === 0) {
+    throw new Error(`Rollback refused: inserted ID files are missing or empty for run ${runId}`);
+  }
+
+  const pool = await dbPool();
+  const summary = {
+    runId,
+    mode: apply ? "apply" : "dry-run",
+    summaryPath,
+    insertedIds: Object.fromEntries(Object.entries(ids).map(([key, list]) => [key, list.length])),
+    existingBefore: {},
+    referenceChecks: {},
+    deleted: {
+      sale: 0,
+      rent: 0,
+      aliases: 0,
+      identitySources: 0,
+      complexes: 0,
+      identities: 0,
+    },
+    startedAt: new Date().toISOString(),
+  };
+
+  try {
+    summary.existingBefore.sale = await countIds(pool, "apt_transactions", ids.sale);
+    summary.existingBefore.rent = await countIds(pool, "apt_rent_transactions", ids.rent);
+    summary.existingBefore.aliases = await countIds(pool, "apt_complex_aliases", ids.aliases);
+    summary.existingBefore.identitySources = await countIds(pool, "apt_complex_identity_sources", ids.identitySources);
+    summary.existingBefore.complexes = await countIds(pool, "apt_complexes", ids.complexes);
+    summary.existingBefore.identities = await countIds(pool, "apt_complex_identities", ids.identities);
+
+    summary.referenceChecks.complexTransactionRefs = await countReferences(pool, "apt_transactions", "complex_id", ids.complexes)
+      + await countReferences(pool, "apt_rent_transactions", "complex_id", ids.complexes);
+    summary.referenceChecks.identityRefs = await countReferences(pool, "apt_complexes", "identity_id", ids.identities)
+      + await countReferences(pool, "apt_transactions", "identity_id", ids.identities)
+      + await countReferences(pool, "apt_rent_transactions", "identity_id", ids.identities)
+      + await countReferences(pool, "apt_complex_identity_sources", "identity_id", ids.identities)
+      + await countReferences(pool, "apt_complex_aliases", "identity_id", ids.identities);
+
+    if (!apply) {
+      summary.finishedAt = new Date().toISOString();
+      await writeJsonFile(summaryPath, summary);
+      console.log(JSON.stringify(summary, null, 2));
+      return;
+    }
+
+    await pool.query("BEGIN");
+    try {
+      summary.deleted.sale = await deleteIds(pool, "apt_transactions", ids.sale);
+      summary.deleted.rent = await deleteIds(pool, "apt_rent_transactions", ids.rent);
+      summary.deleted.aliases = await deleteIds(pool, "apt_complex_aliases", ids.aliases);
+      summary.deleted.identitySources = await deleteIds(pool, "apt_complex_identity_sources", ids.identitySources);
+
+      const complexRefsAfterTransactions = await countReferences(pool, "apt_transactions", "complex_id", ids.complexes)
+        + await countReferences(pool, "apt_rent_transactions", "complex_id", ids.complexes);
+      if (complexRefsAfterTransactions === 0) {
+        summary.deleted.complexes = await deleteIds(pool, "apt_complexes", ids.complexes);
+      } else {
+        summary.skippedComplexDeleteReason = "referenced";
+      }
+
+      const identityRefsAfterDependents = await countReferences(pool, "apt_complexes", "identity_id", ids.identities)
+        + await countReferences(pool, "apt_transactions", "identity_id", ids.identities)
+        + await countReferences(pool, "apt_rent_transactions", "identity_id", ids.identities)
+        + await countReferences(pool, "apt_complex_identity_sources", "identity_id", ids.identities)
+        + await countReferences(pool, "apt_complex_aliases", "identity_id", ids.identities);
+      if (identityRefsAfterDependents === 0) {
+        summary.deleted.identities = await deleteIds(pool, "apt_complex_identities", ids.identities);
+      } else {
+        summary.skippedIdentityDeleteReason = "referenced";
+      }
+
+      await pool.query("COMMIT");
+    } catch (error) {
+      await pool.query("ROLLBACK");
+      throw error;
+    }
+
+    summary.finishedAt = new Date().toISOString();
+    await writeJsonFile(summaryPath, summary);
+    console.log(JSON.stringify(summary, null, 2));
+  } finally {
+    await pool.end();
+  }
+}
+
 async function fetchRentRowsForReconcile(pool) {
   const result = await pool.query(
     `SELECT id, apt_name, size_sqm, floor, trade_date, deposit, monthly_rent
@@ -1598,15 +2362,40 @@ async function reconcileRentsCommand(options) {
 }
 
 async function upload(options) {
+  requireScopedApply(options);
+
   const apply = options.apply === "true";
-  const saleRows = uniqueById(readJsonLines(SALE_FILE), saleTransactionId);
-  const rentRows = uniqueById(readJsonLines(RENT_FILE), rentTransactionId);
+  const scope = buildUploadScope(options);
+  const maxUpserts = parsePositiveInt(
+    options["max-upserts"],
+    DEFAULT_SCOPED_MAX_UPSERTS,
+    Number.MAX_SAFE_INTEGER
+  );
+  const saleScope = scopedRows(readJsonLines(SALE_FILE), saleTransactionId, scope);
+  const rentScope = scopedRows(readJsonLines(RENT_FILE), rentTransactionId, scope);
+  const saleRows = saleScope.candidateRows;
+  const rentRows = rentScope.candidateRows;
   const complexesForUpload = complexRows(saleRows, rentRows);
   const complexLookup = complexLinkLookup(complexesForUpload);
+  const artifacts = scopedUploadArtifacts(scope.runId ?? `upload-${runTimestamp()}`);
+  const identityRows = identityRowsFromComplexRows(complexesForUpload);
+  const identitySourceRows = identitySourceRowsFromComplexRows(complexesForUpload);
+  const identityAliasRows = identityAliasRowsFromComplexRows(complexesForUpload);
+  const saleRowsForDb = saleDbRows(saleRows);
+  const rentRowsForDb = rentDbRows(rentRows, complexLookup);
   const summary = {
     mode: apply ? "apply" : "dry-run",
+    scoped: scope.isScoped,
+    runId: scope.runId,
+    months: scope.months,
+    maxUpserts,
     localSaleRows: saleRows.length,
     localRentRows: rentRows.length,
+    sourceSaleRows: saleScope.sourceRows.length,
+    sourceRentRows: rentScope.sourceRows.length,
+    outOfScopeSaleRows: saleScope.outOfScopeRows.length,
+    outOfScopeRentRows: rentScope.outOfScopeRows.length,
+    reviewPath: artifacts.review,
     insertedIdentities: 0,
     insertedIdentitySources: 0,
     insertedIdentityAliases: 0,
@@ -1622,125 +2411,186 @@ async function upload(options) {
       throw new Error(`DB schema is not ready: ${verification.missing.join(", ")}`);
     }
 
+    const rowsByTable = {
+      identities: { table: "apt_complex_identities", rows: identityRows },
+      identitySources: { table: "apt_complex_identity_sources", rows: identitySourceRows },
+      identityAliases: { table: "apt_complex_aliases", rows: identityAliasRows },
+      complexes: { table: "apt_complexes", rows: complexesForUpload },
+      sale: { table: "apt_transactions", rows: saleRowsForDb },
+      rent: { table: "apt_rent_transactions", rows: rentRowsForDb },
+    };
+    const review = await buildUploadReview(pool, rowsByTable, {
+      ...summary,
+      createdAt: new Date().toISOString(),
+    });
+    await writeJsonFile(artifacts.review, review);
+    await writeJsonLines(artifacts.saleCandidates, saleRowsForDb);
+    await writeJsonLines(artifacts.rentCandidates, rentRowsForDb);
+    await writeJsonLines(artifacts.saleOutOfScope, saleScope.outOfScopeRows);
+    await writeJsonLines(artifacts.rentOutOfScope, rentScope.outOfScopeRows);
+
+    summary.totalInsertableRows = review.totalInsertableRows;
+    summary.tables = review.tables;
+
     if (!apply) {
       console.log(JSON.stringify(summary, null, 2));
       return;
     }
 
-    summary.insertedIdentities = await insertChunk(
-      pool,
-      "apt_complex_identities",
-      [
-        "id",
-        "canonical_id",
-        "region_code",
-        "region_name",
-        "dong_name",
-        "apt_name",
-        "normalized_name",
-        "built_year",
-        "confidence",
-      ],
-      identityRowsFromComplexRows(complexesForUpload),
-      "id"
-    );
+    if (summary.outOfScopeSaleRows > 0 || summary.outOfScopeRentRows > 0) {
+      throw new Error(`Scoped upload refused: outOfScopeRows > 0; review=${artifacts.review}`);
+    }
+    if (review.totalInsertableRows > maxUpserts) {
+      throw new Error(`Scoped upload refused: insertableRows ${review.totalInsertableRows} exceeds maxUpserts ${maxUpserts}; review=${artifacts.review}`);
+    }
 
-    summary.insertedIdentitySources = await insertChunk(
-      pool,
-      "apt_complex_identity_sources",
-      [
-        "id",
-        "identity_id",
-        "source",
-        "source_complex_id",
-        "source_payload",
-        "confidence",
-      ],
-      identitySourceRowsFromComplexRows(complexesForUpload),
-      "id"
-    );
+    await pool.query("BEGIN");
+    try {
+      const insertedIdentityIds = await insertChunkReturningIds(
+        pool,
+        "apt_complex_identities",
+        [
+          "id",
+          "canonical_id",
+          "region_code",
+          "region_name",
+          "dong_name",
+          "apt_name",
+          "normalized_name",
+          "built_year",
+          "confidence",
+        ],
+        identityRows,
+        "id"
+      );
 
-    summary.insertedIdentityAliases = await insertChunk(
-      pool,
-      "apt_complex_aliases",
-      [
-        "id",
-        "identity_id",
-        "alias_type",
-        "alias_value",
-      ],
-      identityAliasRowsFromComplexRows(complexesForUpload),
-      "id"
-    );
+      const insertedIdentitySourceIds = await insertChunkReturningIds(
+        pool,
+        "apt_complex_identity_sources",
+        [
+          "id",
+          "identity_id",
+          "source",
+          "source_complex_id",
+          "source_payload",
+          "confidence",
+        ],
+        identitySourceRows,
+        "id"
+      );
 
-    summary.insertedComplexes = await insertChunk(
-      pool,
-      "apt_complexes",
-      [
-        "id",
-        "region_code",
-        "region_name",
-        "dong_name",
-        "apt_name",
-        "built_year",
-        "slug",
-        "govt_complex_id",
-        "identity_id",
-        "property_type",
-      ],
-      complexesForUpload
-    );
+      const insertedAliasIds = await insertChunkReturningIds(
+        pool,
+        "apt_complex_aliases",
+        [
+          "id",
+          "identity_id",
+          "alias_type",
+          "alias_value",
+        ],
+        identityAliasRows,
+        "id"
+      );
 
-    summary.insertedSaleRows = await insertChunk(
-      pool,
-      "apt_transactions",
-      [
-        "id",
-        "complex_id",
-        "identity_id",
-        "region_code",
-        "region_name",
-        "apt_name",
-        "size_sqm",
-        "floor",
-        "trade_price",
-        "trade_date",
-        "highest_price",
-        "change_rate",
-        "is_new_high",
-        "is_significant_drop",
-        "deal_type",
-        "drop_level",
-        "property_type",
-      ],
-      saleDbRows(saleRows)
-    );
+      const insertedComplexIds = await insertChunkReturningIds(
+        pool,
+        "apt_complexes",
+        [
+          "id",
+          "region_code",
+          "region_name",
+          "dong_name",
+          "apt_name",
+          "built_year",
+          "slug",
+          "govt_complex_id",
+          "identity_id",
+          "property_type",
+        ],
+        complexesForUpload
+      );
 
-    summary.insertedRentRows = await insertChunk(
-      pool,
-      "apt_rent_transactions",
-      [
-        "id",
-        "complex_id",
-        "identity_id",
-        "region_code",
-        "region_name",
-        "apt_name",
-        "size_sqm",
-        "floor",
-        "deposit",
-        "monthly_rent",
-        "rent_type",
-        "contract_type",
-        "trade_date",
-        "pre_deposit",
-        "pre_monthly_rent",
-        "raw_data",
-      ],
-      rentDbRows(rentRows, complexLookup)
-    );
+      const insertedSaleIds = await insertChunkReturningIds(
+        pool,
+        "apt_transactions",
+        [
+          "id",
+          "complex_id",
+          "identity_id",
+          "region_code",
+          "region_name",
+          "apt_name",
+          "size_sqm",
+          "floor",
+          "trade_price",
+          "trade_date",
+          "highest_price",
+          "change_rate",
+          "is_new_high",
+          "is_significant_drop",
+          "deal_type",
+          "drop_level",
+          "property_type",
+        ],
+        saleRowsForDb
+      );
+
+      const insertedRentIds = await insertChunkReturningIds(
+        pool,
+        "apt_rent_transactions",
+        [
+          "id",
+          "complex_id",
+          "identity_id",
+          "region_code",
+          "region_name",
+          "apt_name",
+          "size_sqm",
+          "floor",
+          "deposit",
+          "monthly_rent",
+          "rent_type",
+          "contract_type",
+          "trade_date",
+          "pre_deposit",
+          "pre_monthly_rent",
+          "raw_data",
+        ],
+        rentRowsForDb
+      );
+
+      await pool.query("COMMIT");
+
+      await writeInsertedIds(artifacts.identityInserted, insertedIdentityIds);
+      await writeInsertedIds(artifacts.identitySourceInserted, insertedIdentitySourceIds);
+      await writeInsertedIds(artifacts.aliasInserted, insertedAliasIds);
+      await writeInsertedIds(artifacts.complexInserted, insertedComplexIds);
+      await writeInsertedIds(artifacts.saleInserted, insertedSaleIds);
+      await writeInsertedIds(artifacts.rentInserted, insertedRentIds);
+
+      summary.insertedIdentities = insertedIdentityIds.length;
+      summary.insertedIdentitySources = insertedIdentitySourceIds.length;
+      summary.insertedIdentityAliases = insertedAliasIds.length;
+      summary.insertedComplexes = insertedComplexIds.length;
+      summary.insertedSaleRows = insertedSaleIds.length;
+      summary.insertedRentRows = insertedRentIds.length;
+      summary.insertedArtifacts = {
+        identities: artifacts.identityInserted,
+        identitySources: artifacts.identitySourceInserted,
+        aliases: artifacts.aliasInserted,
+        complexes: artifacts.complexInserted,
+        sale: artifacts.saleInserted,
+        rent: artifacts.rentInserted,
+      };
+    } catch (error) {
+      await pool.query("ROLLBACK");
+      throw error;
+    }
 
     await updateManifest({ lastUpload: { ...summary, uploadedAt: new Date().toISOString() } });
+    if (scope.isScoped) {
+      summary.extendedManifestUploadedItems = await markExtendedManifestUploaded(scope.runId, scope.months);
+    }
 
     if (summary.insertedSaleRows > 0 && options.recalculate !== "false") {
       summary.signalRecalculation = await recalculateSignals(
@@ -1809,8 +2659,10 @@ function usage() {
   node scripts/local-data-pipeline.mjs verify-db
   node scripts/local-data-pipeline.mjs collect --kind=sale|rent|both --months=1 --batch=0
   node scripts/local-data-pipeline.mjs collect --kind=sale --ym=202605 --region=11680
-  node scripts/local-data-pipeline.mjs upload
-  node scripts/local-data-pipeline.mjs upload --apply=true
+  node scripts/local-data-pipeline.mjs extended-collect --batch=A --max-requests=140
+  node scripts/local-data-pipeline.mjs upload --run-id=extended-period-... --ym=202604
+  node scripts/local-data-pipeline.mjs upload --run-id=extended-period-... --ym=202604 --apply=true --max-upserts=100000
+  node scripts/local-data-pipeline.mjs rollback-upload --run-id=extended-period-... --apply=true
   node scripts/local-data-pipeline.mjs recalculate-signals
   node scripts/local-data-pipeline.mjs reconcile-rents --apply=true
   node scripts/local-data-pipeline.mjs geocode-complexes --limit=1000 --batch-size=120
@@ -1827,6 +2679,9 @@ async function main() {
     case "collect":
       await collect(options);
       break;
+    case "extended-collect":
+      await extendedCollect(options);
+      break;
     case "status":
       status();
       break;
@@ -1835,6 +2690,9 @@ async function main() {
       break;
     case "upload":
       await upload(options);
+      break;
+    case "rollback-upload":
+      await rollbackUpload(options);
       break;
     case "recalculate-signals":
       await recalculateSignalsCommand(options);

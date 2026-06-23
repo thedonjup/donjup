@@ -8,6 +8,7 @@ This keeps interactive logs small while preserving enough detail to audit or res
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import os
 import subprocess
@@ -17,9 +18,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from donjup_ops_lock import LockBusyError, acquire_flock, release_flock
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_DIR = ROOT / ".donjup-local-data"
+EXTENDED_LOCK_FILE = "extended-period.lock"
 
 
 def local_data_dir() -> Path:
@@ -30,6 +34,10 @@ def run_dir() -> Path:
     path = local_data_dir() / "runs"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def extended_lock_path() -> Path:
+    return local_data_dir() / EXTENDED_LOCK_FILE
 
 
 def timestamp() -> str:
@@ -144,6 +152,18 @@ def main() -> int:
     parser.add_argument("--verify-delay", type=int, default=10)
     args = parser.parse_args()
 
+    if os.environ.get("DONJUP_EXTENDED_LOCK_HELD") != "1":
+        try:
+            lock_handle = acquire_flock(extended_lock_path(), purpose="backup")
+        except LockBusyError as error:
+            print(
+                f"extended-period locked: {error.path} "
+                f"metadata={json.dumps(error.metadata, ensure_ascii=False)}",
+                flush=True,
+            )
+            return 75
+        atexit.register(release_flock, lock_handle)
+
     run_id = timestamp()
     logs = run_dir()
     log_path = logs / f"backup-{run_id}.log"
@@ -179,6 +199,7 @@ def main() -> int:
                 f"--kind={args.kind}",
                 f"--months={args.months}",
                 f"--batch={batch}",
+                f"--run-id=backup-{run_id}",
             ],
             log_path,
             f"collect batch {batch}",
@@ -209,7 +230,14 @@ def main() -> int:
         if db_ok:
             print("upload apply...", flush=True)
             upload = run_command(
-                ["node", "scripts/local-data-pipeline.mjs", "upload", "--apply=true"],
+                [
+                    "node",
+                    "scripts/local-data-pipeline.mjs",
+                    "upload",
+                    "--apply=true",
+                    f"--run-id=backup-{run_id}",
+                    f"--months={args.months}",
+                ],
                 log_path,
                 "upload apply",
             )

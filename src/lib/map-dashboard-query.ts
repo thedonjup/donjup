@@ -1,14 +1,16 @@
 import { unstable_cache } from "next/cache";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { aptComplexes, aptTransactions } from "@/lib/db/schema";
 import { PUBLIC_DATA_CACHE_TAGS } from "@/lib/cache-tags";
 import {
+  createMapTransactionCutoffDate,
   MAP_TRANSACTION_LIMIT,
   normalizeMapTransactionRows,
 } from "@/lib/map-dashboard-data";
 
 async function fetchMapTransactions() {
+  const cutoff = createMapTransactionCutoffDate();
   const rows = await db
     .select({
       id: aptTransactions.id,
@@ -32,6 +34,7 @@ async function fetchMapTransactions() {
     .where(and(
       isNotNull(aptComplexes.latitude),
       isNotNull(aptComplexes.longitude),
+      gte(aptTransactions.tradeDate, cutoff),
     ))
     .orderBy(desc(aptTransactions.tradeDate))
     .limit(MAP_TRANSACTION_LIMIT);
@@ -41,7 +44,7 @@ async function fetchMapTransactions() {
 
 export const getCachedMapTransactions = unstable_cache(
   fetchMapTransactions,
-  ["map-transactions-v2"],
+  ["map-transactions-v3"],
   {
     revalidate: 1800,
     tags: [

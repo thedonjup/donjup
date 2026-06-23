@@ -2,6 +2,7 @@ import type { MapTransaction } from "@/components/map/map-utils";
 import { aptUrl } from "@/lib/apt-url";
 
 export const MAP_TRANSACTION_LIMIT = 500;
+export const MAP_TRANSACTION_MONTH_WINDOW = 3;
 
 export interface MapTransactionRow {
   id: string;
@@ -60,4 +61,10 @@ export function normalizeMapTransactionRows(
     const normalized = normalizeMapTransactionRow(row);
     return normalized ? [normalized] : [];
   });
+}
+
+export function createMapTransactionCutoffDate(now = new Date()): string {
+  const cutoff = new Date(now);
+  cutoff.setMonth(cutoff.getMonth() - MAP_TRANSACTION_MONTH_WINDOW);
+  return cutoff.toISOString().split("T")[0] ?? "";
 }

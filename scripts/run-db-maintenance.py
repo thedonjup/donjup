@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from donjup_ops_lock import LockBusyError, acquire_flock, release_flock
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_DIR = ROOT / ".donjup-local-data"
@@ -21,6 +23,7 @@ DEFAULT_BACKUP_BATCHES = "0,1,2,3,4"
 RUN_FILE_PREFIXES = ("backup-", "db-health-", "maintenance-", "timer-audit-")
 RUN_FILE_SUFFIXES = (".json", ".log")
 LOCK_FILE = "maintenance.lock"
+EXTENDED_LOCK_FILE = "extended-period.lock"
 
 
 def timestamp() -> str:
@@ -45,6 +48,10 @@ def runs_dir() -> Path:
 
 def maintenance_lock_path() -> Path:
     return ensure_local_data_dir() / LOCK_FILE
+
+
+def extended_lock_path() -> Path:
+    return ensure_local_data_dir() / EXTENDED_LOCK_FILE
 
 
 def acquire_maintenance_lock(path: Path) -> Any | None:
@@ -283,6 +290,17 @@ def main() -> int:
         print(f"maintenance locked: {lock_path}", flush=True)
         return 75
 
+    try:
+        extended_lock_handle = acquire_flock(extended_lock_path(), purpose="maintenance")
+    except LockBusyError as error:
+        release_maintenance_lock(lock_handle)
+        print(
+            f"extended-period locked: {error.path} "
+            f"metadata={json.dumps(error.metadata, ensure_ascii=False)}",
+            flush=True,
+        )
+        return 75
+
     run_id = timestamp()
     log_path = runs_dir() / f"maintenance-{run_id}.log"
     summary_path = runs_dir() / f"maintenance-{run_id}.json"
@@ -295,6 +313,7 @@ def main() -> int:
     }
 
     try:
+        os.environ["DONJUP_EXTENDED_LOCK_HELD"] = "1"
         print(f"maintenance run: {run_id}", flush=True)
         print(f"log: {log_path}", flush=True)
         print("health check...", flush=True)
@@ -367,6 +386,7 @@ def main() -> int:
         return 0
     finally:
         release_maintenance_lock(lock_handle)
+        release_flock(extended_lock_handle)
 
 
 if __name__ == "__main__":

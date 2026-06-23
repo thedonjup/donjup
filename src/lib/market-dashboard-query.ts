@@ -76,7 +76,11 @@ async function fetchMarketSidoStats(propertyType: number): Promise<MarketSidoSta
       const [countResult, dropResult, highResult, priceResult] = await Promise.all([
         db.select({ count: sql<number>`count(*)` })
           .from(aptTransactions)
-          .where(and(inArray(aptTransactions.regionCode, sigunguCodes), typeFilter)),
+          .where(and(
+            inArray(aptTransactions.regionCode, sigunguCodes),
+            gte(aptTransactions.tradeDate, cutoff),
+            typeFilter,
+          )),
         db.select({
           apt_name: aptTransactions.aptName,
           change_rate: aptTransactions.changeRate,
@@ -84,6 +88,7 @@ async function fetchMarketSidoStats(propertyType: number): Promise<MarketSidoSta
         }).from(aptTransactions)
           .where(and(
             inArray(aptTransactions.regionCode, sigunguCodes),
+            gte(aptTransactions.tradeDate, cutoff),
             isNotNull(aptTransactions.changeRate),
             lt(aptTransactions.changeRate, "0"),
             typeFilter,
@@ -96,6 +101,7 @@ async function fetchMarketSidoStats(propertyType: number): Promise<MarketSidoSta
         }).from(aptTransactions)
           .where(and(
             inArray(aptTransactions.regionCode, sigunguCodes),
+            gte(aptTransactions.tradeDate, cutoff),
             eq(aptTransactions.isNewHigh, true),
             typeFilter,
           ))
@@ -157,7 +163,11 @@ async function fetchMarketSigunguStats(sidoSlug: string): Promise<MarketSigunguS
     async ([code, name]) => {
       const [countResult, dropResult, highResult, priceResult] = await Promise.all([
         db.select({ count: sql<number>`count(*)` }).from(aptTransactions)
-          .where(eq(aptTransactions.regionCode, code)),
+          .where(and(
+            eq(aptTransactions.regionCode, code),
+            gte(aptTransactions.tradeDate, cutoff),
+            eq(aptTransactions.propertyType, 1),
+          )),
         db.select({
           apt_name: aptTransactions.aptName,
           change_rate: aptTransactions.changeRate,
@@ -165,8 +175,10 @@ async function fetchMarketSigunguStats(sidoSlug: string): Promise<MarketSigunguS
         }).from(aptTransactions)
           .where(and(
             eq(aptTransactions.regionCode, code),
+            gte(aptTransactions.tradeDate, cutoff),
             isNotNull(aptTransactions.changeRate),
             lt(aptTransactions.changeRate, "0"),
+            eq(aptTransactions.propertyType, 1),
           ))
           .orderBy(asc(aptTransactions.changeRate))
           .limit(1),
@@ -176,7 +188,9 @@ async function fetchMarketSigunguStats(sidoSlug: string): Promise<MarketSigunguS
         }).from(aptTransactions)
           .where(and(
             eq(aptTransactions.regionCode, code),
+            gte(aptTransactions.tradeDate, cutoff),
             eq(aptTransactions.isNewHigh, true),
+            eq(aptTransactions.propertyType, 1),
           ))
           .orderBy(desc(aptTransactions.tradeDate))
           .limit(1),
@@ -225,6 +239,7 @@ async function fetchMarketSigunguTransactions(
   regionCode: string,
   propertyType: number
 ): Promise<MarketSigunguTransactions> {
+  const cutoff = createMarketStatsCutoffDate();
   const typeFilter = propertyTypeFilter(propertyType);
   const txFields = {
     id: aptTransactions.id,
@@ -246,6 +261,7 @@ async function fetchMarketSigunguTransactions(
     db.select(txFields).from(aptTransactions)
       .where(and(
         eq(aptTransactions.regionCode, regionCode),
+        gte(aptTransactions.tradeDate, cutoff),
         isNotNull(aptTransactions.changeRate),
         lt(aptTransactions.changeRate, "0"),
         typeFilter,
@@ -255,17 +271,26 @@ async function fetchMarketSigunguTransactions(
     db.select(txFields).from(aptTransactions)
       .where(and(
         eq(aptTransactions.regionCode, regionCode),
+        gte(aptTransactions.tradeDate, cutoff),
         eq(aptTransactions.isNewHigh, true),
         typeFilter,
       ))
       .orderBy(desc(aptTransactions.tradeDate))
       .limit(10),
     db.select(txFields).from(aptTransactions)
-      .where(and(eq(aptTransactions.regionCode, regionCode), typeFilter))
+      .where(and(
+        eq(aptTransactions.regionCode, regionCode),
+        gte(aptTransactions.tradeDate, cutoff),
+        typeFilter,
+      ))
       .orderBy(desc(aptTransactions.tradeDate))
       .limit(20),
     db.select({ count: sql<number>`count(*)` }).from(aptTransactions)
-      .where(and(eq(aptTransactions.regionCode, regionCode), typeFilter)),
+      .where(and(
+        eq(aptTransactions.regionCode, regionCode),
+        gte(aptTransactions.tradeDate, cutoff),
+        typeFilter,
+      )),
   ]);
 
   return {
@@ -278,7 +303,7 @@ async function fetchMarketSigunguTransactions(
 
 export const getCachedMarketSidoStats = unstable_cache(
   fetchMarketSidoStats,
-  ["market-sido-stats-v1"],
+  ["market-sido-stats-v2"],
   {
     revalidate: 3600,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_TRANSACTIONS],
@@ -287,7 +312,7 @@ export const getCachedMarketSidoStats = unstable_cache(
 
 export const getCachedMarketSigunguStats = unstable_cache(
   fetchMarketSigunguStats,
-  ["market-sigungu-stats-v1"],
+  ["market-sigungu-stats-v2"],
   {
     revalidate: 3600,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_TRANSACTIONS],
@@ -296,7 +321,7 @@ export const getCachedMarketSigunguStats = unstable_cache(
 
 export const getCachedMarketSigunguTransactions = unstable_cache(
   fetchMarketSigunguTransactions,
-  ["market-sigungu-transactions-v1"],
+  ["market-sigungu-transactions-v2"],
   {
     revalidate: 1800,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_TRANSACTIONS],

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  createMapTransactionCutoffDate,
+  MAP_TRANSACTION_MONTH_WINDOW,
   normalizeMapTransactionRow,
   normalizeMapTransactionRows,
 } from "@/lib/map-dashboard-data";
@@ -38,5 +40,11 @@ describe("map dashboard data helpers", () => {
     expect(normalizeMapTransactionRow({ ...baseRow, longitude: null })).toBeNull();
     expect(normalizeMapTransactionRows([baseRow, { ...baseRow, id: "tx-2", latitude: null }]))
       .toHaveLength(1);
+  });
+
+  it("keeps map transaction queries on the recent window", () => {
+    expect(MAP_TRANSACTION_MONTH_WINDOW).toBe(3);
+    expect(createMapTransactionCutoffDate(new Date("2026-06-23T00:00:00.000Z")))
+      .toBe("2026-03-23");
   });
 });

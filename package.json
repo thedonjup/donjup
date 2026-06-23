@@ -21,6 +21,7 @@
     "db:maintenance": "python3 scripts/run-db-maintenance.py",
     "db:maintenance:check": "python3 scripts/run-db-maintenance.py --no-backup --prune-dry-run",
     "db:backup": "python3 scripts/run-local-backup.py --batches=0,1,2,3,4 --months=1 --kind=both --upload",
+    "db:extended-period": "python3 scripts/run-extended-period.py",
     "db:recalculate-signals": "node scripts/local-data-pipeline.mjs recalculate-signals",
     "db:reconcile-rents": "node scripts/local-data-pipeline.mjs reconcile-rents",
     "db:geocode-complexes": "node scripts/local-data-pipeline.mjs geocode-complexes",
