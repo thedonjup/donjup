@@ -1,0 +1,12 @@
+.donjup-local-data/
+.next/
+node_modules/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.pytest_cache/
+.venv/
+venv/
+*.log
+*.tsbuildinfo
