@@ -213,6 +213,14 @@ function parseNonNegativeInt(value, fallback, max = Number.MAX_SAFE_INTEGER) {
   return Math.min(parsed, max);
 }
 
+export function parseScopedMaxUpserts(value) {
+  return parseNonNegativeInt(
+    value,
+    DEFAULT_SCOPED_MAX_UPSERTS,
+    Number.MAX_SAFE_INTEGER
+  );
+}
+
 function parseBooleanOption(value, fallback = true) {
   if (value === undefined) return fallback;
 
@@ -2366,11 +2374,7 @@ async function upload(options) {
 
   const apply = options.apply === "true";
   const scope = buildUploadScope(options);
-  const maxUpserts = parsePositiveInt(
-    options["max-upserts"],
-    DEFAULT_SCOPED_MAX_UPSERTS,
-    Number.MAX_SAFE_INTEGER
-  );
+  const maxUpserts = parseScopedMaxUpserts(options["max-upserts"]);
   const saleScope = scopedRows(readJsonLines(SALE_FILE), saleTransactionId, scope);
   const rentScope = scopedRows(readJsonLines(RENT_FILE), rentTransactionId, scope);
   const saleRows = saleScope.candidateRows;

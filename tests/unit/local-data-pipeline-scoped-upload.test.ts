@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildUploadScope,
+  parseScopedMaxUpserts,
   requireScopedApply,
   scopedRows,
 } from "../../scripts/local-data-pipeline.mjs";
@@ -39,5 +40,10 @@ describe("local data pipeline scoped upload guards", () => {
     ]);
     expect(result.candidateRows.map((row) => row.id)).toEqual(["in-scope"]);
     expect(result.outOfScopeRows.map((row) => row.id)).toEqual(["wrong-month"]);
+  });
+
+  it("keeps zero max upserts as an apply kill switch", () => {
+    expect(parseScopedMaxUpserts("0")).toBe(0);
+    expect(parseScopedMaxUpserts("25")).toBe(25);
   });
 });

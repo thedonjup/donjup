@@ -329,16 +329,15 @@ Batch A 구현 전까지 현재 명령만 사용할 때의 안전 조건:
 3. `upload --apply=false` 결과와 direct DB month count로 예상 insert가 202604 범위인지 확인한다.
 4. out-of-scope row가 있으면 기존 `upload --apply=true`를 실행하지 않고 scoped upload 구현을 먼저 한다.
 
-구현 시에는 기존 `collect`를 그대로 반복 호출하는 wrapper를 만들거나, `local-data-pipeline`에 `backfill-period` command를 추가한다.
+현재 구현은 `scripts/run-extended-period.py`를 package script `pnpm db:extended-period`로 실행한다. 예전 설계 단계의 `scripts/extended-period-backfill.mjs` 명령은 사용하지 않는다.
 
-권장 wrapper:
+권장 실행:
 
 ```bash
-node scripts/extended-period-backfill.mjs plan --months=3 --kind=both
-node scripts/extended-period-backfill.mjs collect --run-id=extended-period-YYYYMMDD --months=202604 --kind=both --max-requests=140
-node scripts/extended-period-backfill.mjs upload --run-id=extended-period-YYYYMMDD --months=202604 --apply=false
-node scripts/extended-period-backfill.mjs upload --run-id=extended-period-YYYYMMDD --months=202604 --apply=true --max-upserts=50000
-node scripts/extended-period-backfill.mjs verify --run-id=extended-period-YYYYMMDD
+pnpm db:extended-period --batch=A --kind=both --max-requests=140 --max-upserts=0 --no-refresh-cache
+pnpm db:extended-period --run-id=extended-period-YYYYMMDD --ym=202604 --kind=both --max-upserts=50000 --apply --no-refresh-cache
+node scripts/local-data-pipeline.mjs refresh-cache --app-origin=https://donjup.com
+pnpm --silent db:status:ops
 ```
 
 ### 4.5 scoped upload 설계
@@ -1001,14 +1000,13 @@ node scripts/local-data-pipeline.mjs upload
 scoped upload 구현 후:
 
 ```bash
-node scripts/extended-period-backfill.mjs upload \
+node scripts/local-data-pipeline.mjs upload \
   --run-id=extended-period-YYYYMMDD \
-  --months=202604 \
-  --apply=false
+  --ym=202604
 
-node scripts/extended-period-backfill.mjs upload \
+node scripts/local-data-pipeline.mjs upload \
   --run-id=extended-period-YYYYMMDD \
-  --months=202604 \
+  --ym=202604 \
   --apply=true \
   --max-upserts=50000 \
   --refresh-cache=false
@@ -1029,12 +1027,14 @@ pnpm --silent db:status:ops
 구현 후 권장 명령:
 
 ```bash
-node scripts/extended-period-backfill.mjs plan --months=3 --kind=both
-node scripts/extended-period-backfill.mjs collect --run-id=extended-period-YYYYMMDD --max-requests=140
-node scripts/extended-period-backfill.mjs upload --run-id=extended-period-YYYYMMDD --months=202604 --apply=false
-node scripts/extended-period-backfill.mjs upload --run-id=extended-period-YYYYMMDD --months=202604 --apply=true --max-upserts=50000
-node scripts/extended-period-backfill.mjs verify --run-id=extended-period-YYYYMMDD
-node scripts/extended-period-backfill.mjs smoke --run-id=extended-period-YYYYMMDD
+pnpm db:extended-period --batch=A --kind=both --max-requests=140 --max-upserts=0 --no-refresh-cache
+pnpm db:extended-period --run-id=extended-period-YYYYMMDD --ym=202604 --kind=both --max-upserts=50000 --apply --no-refresh-cache
+
+# rollback dry-run. 실제 삭제는 --apply=true를 별도로 명시할 때만 허용한다.
+node scripts/local-data-pipeline.mjs rollback-upload --run-id=extended-period-YYYYMMDD
+
+node scripts/local-data-pipeline.mjs refresh-cache --app-origin=https://donjup.com
+pnpm --silent db:status:ops
 ```
 
 ## 12. 필요한 코드 변경 후보 파일
@@ -1043,7 +1043,7 @@ node scripts/extended-period-backfill.mjs smoke --run-id=extended-period-YYYYMMD
 
 | 파일 | 변경 후보 |
 | --- | --- |
-| `scripts/extended-period-backfill.mjs` | Batch A 전용 wrapper, scoped collect/upload/verify/smoke |
+| `scripts/run-extended-period.py` | Batch A/B/C/D wrapper, scoped collect/upload, lock, run log |
 | `scripts/local-data-pipeline.mjs` | extended manifest/checkpoint, missing-only collect, upload cap, run log |
 | `scripts/run-local-backup.py` | `extended-period.lock` acquire 실패 시 backup skip |
 | `scripts/run-db-maintenance.py` | backup 실행 전 `extended-period.lock` 가드 |
