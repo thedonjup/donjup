@@ -27,6 +27,7 @@ import AptDetailUnavailable from "@/components/apt/AptDetailUnavailable";
 import MiniLoanCalculator from "@/components/apt/MiniLoanCalculator";
 import AptNews from "@/components/apt/AptNews";
 import Comments from "@/components/apt/Comments";
+import NearbyComplexComparison from "@/components/apt/NearbyComplexComparison";
 import ViewDetailTracker from "@/components/analytics/ViewDetailTracker";
 
 export const revalidate = 3600;
@@ -226,6 +227,7 @@ export default async function AptDetailPage({
       nearbyComplexes = await getCachedAptDetailNearbyComplexes(
         complex.id,
         complex.dongName,
+        complex.regionCode,
       );
     } catch (err) {
       nearbyDataUnavailable = true;
@@ -441,26 +443,7 @@ export default async function AptDetailPage({
         <Comments aptSlug={detailContentId} />
       </div>
 
-      {nearbyComplexes.length > 0 && (
-        <div className="mt-12">
-          <h2 className="mb-4 text-lg font-bold t-text">같은 동네 다른 단지</h2>
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-            {nearbyComplexes.map((nc) => (
-              <Link
-                key={nc.slug}
-                href={aptUrl({ govtComplexId: nc.govt_complex_id, identityId: nc.identity_id, regionCode: nc.region_code, slug: nc.slug })}
-                className="card-hover rounded-2xl border p-4 transition-colors"
-                style={{ borderColor: "var(--color-border)", background: "var(--color-surface-card)" }}
-              >
-                <p className="font-bold t-text text-sm truncate">{nc.apt_name}</p>
-                <p className="mt-1 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                  {nc.dong_name ?? nc.region_name}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      <NearbyComplexComparison complexes={nearbyComplexes} />
     </div>
   );
 }

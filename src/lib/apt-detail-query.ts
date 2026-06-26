@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { and, desc, eq, ne, or } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import type {
   AptRentTransaction as AptDetailRentTransaction,
   AptTransaction as AptDetailSaleTransaction,
@@ -29,6 +29,14 @@ export type AptDetailNearbyComplex = {
   dong_name: string | null;
   built_year: number | null;
   total_units: number | null;
+  latest_trade_price: number | null;
+  latest_trade_date: string | null;
+  latest_rent_deposit: number | null;
+  latest_rent_monthly_rent: number | null;
+  latest_rent_date: string | null;
+  jeonse_ratio: number | null;
+  gap_amount: number | null;
+  trade_count: number;
 };
 
 type SaleRow = {
@@ -54,6 +62,53 @@ type RentRow = {
   rent_type: string | null;
   contract_type: string | null;
   trade_date: string | null;
+};
+
+type NearbyRow = {
+  id: string;
+  govt_complex_id: string | null;
+  identity_id: string | null;
+  slug: string;
+  apt_name: string;
+  region_code: string;
+  region_name: string;
+  dong_name: string | null;
+  built_year: number | string | null;
+  total_units: number | string | null;
+  property_type: number | string;
+  latest_trade_price: number | string | null;
+  latest_trade_date: string | null;
+  latest_rent_deposit: number | string | null;
+  latest_rent_monthly_rent: number | string | null;
+  latest_rent_date: string | null;
+  jeonse_ratio: number | string | null;
+  gap_amount: number | string | null;
+  trade_count: number | string | null;
+};
+
+type NearbyBaseRow = Omit<
+  NearbyRow,
+  | "latest_trade_price"
+  | "latest_trade_date"
+  | "latest_rent_deposit"
+  | "latest_rent_monthly_rent"
+  | "latest_rent_date"
+  | "jeonse_ratio"
+  | "gap_amount"
+  | "trade_count"
+>;
+
+type NearbySaleMetricRow = {
+  trade_price: number | string | null;
+  trade_date: string | null;
+  size_sqm: number | string | null;
+};
+
+type NearbyRentMetricRow = {
+  deposit: number | string | null;
+  monthly_rent: number | string | null;
+  trade_date: string | null;
+  size_sqm: number | string | null;
 };
 
 const APT_DETAIL_REVALIDATE_SECONDS = 3600;
@@ -103,6 +158,175 @@ function normalizeRentTransaction(row: RentRow): AptDetailRentTransaction {
     monthly_rent: row.monthly_rent ?? 0,
     rent_type: row.rent_type ?? "",
     trade_date: row.trade_date ?? "",
+  };
+}
+
+function normalizeNearbyComplex(row: NearbyRow): AptDetailNearbyComplex {
+  return {
+    govt_complex_id: row.govt_complex_id,
+    identity_id: row.identity_id,
+    slug: row.slug,
+    apt_name: row.apt_name,
+    region_code: row.region_code,
+    region_name: row.region_name,
+    dong_name: row.dong_name,
+    built_year: row.built_year === null ? null : Number(row.built_year),
+    total_units: row.total_units === null ? null : Number(row.total_units),
+    latest_trade_price: row.latest_trade_price === null ? null : Number(row.latest_trade_price),
+    latest_trade_date: row.latest_trade_date,
+    latest_rent_deposit: row.latest_rent_deposit === null ? null : Number(row.latest_rent_deposit),
+    latest_rent_monthly_rent: row.latest_rent_monthly_rent === null
+      ? null
+      : Number(row.latest_rent_monthly_rent),
+    latest_rent_date: row.latest_rent_date,
+    jeonse_ratio: row.jeonse_ratio === null ? null : Number(row.jeonse_ratio),
+    gap_amount: row.gap_amount === null ? null : Number(row.gap_amount),
+    trade_count: row.trade_count === null ? 0 : Number(row.trade_count),
+  };
+}
+
+function normalizeNearbySaleMetric(
+  row: NearbySaleMetricRow | null | undefined
+): NearbySaleMetricRow | null {
+  if (!row?.trade_date) return null;
+
+  return {
+    trade_price: row.trade_price === null ? null : Number(row.trade_price),
+    trade_date: row.trade_date,
+    size_sqm: row.size_sqm === null ? null : Number(row.size_sqm),
+  };
+}
+
+function normalizeNearbyRentMetric(
+  row: NearbyRentMetricRow | null | undefined
+): NearbyRentMetricRow | null {
+  if (!row?.trade_date) return null;
+
+  return {
+    deposit: row.deposit === null ? null : Number(row.deposit),
+    monthly_rent: row.monthly_rent === null ? null : Number(row.monthly_rent),
+    trade_date: row.trade_date,
+    size_sqm: row.size_sqm === null ? null : Number(row.size_sqm),
+  };
+}
+
+function isSameSizeRent(
+  rent: NearbyRentMetricRow,
+  saleSize: number | string | null | undefined
+): boolean {
+  if (saleSize === null || saleSize === undefined || rent.size_sqm === null) return true;
+  return Math.abs(Number(rent.size_sqm) - Number(saleSize)) <= 1;
+}
+
+async function getLatestNearbySaleMetric(
+  complex: NearbyBaseRow
+): Promise<NearbySaleMetricRow | null> {
+  const byComplex = await db.execute(sql`
+    SELECT t.trade_price, t.trade_date, t.size_sqm
+    FROM apt_transactions@idx_txn_complex t
+    WHERE t.complex_id = ${complex.id}
+    ORDER BY t.trade_date DESC
+    LIMIT 1
+  `);
+  const complexMetric = normalizeNearbySaleMetric(
+    (byComplex.rows as unknown as NearbySaleMetricRow[])[0],
+  );
+  if (complexMetric || !complex.identity_id) return complexMetric;
+
+  const byIdentity = await db.execute(sql`
+    SELECT t.trade_price, t.trade_date, t.size_sqm
+    FROM apt_transactions@idx_transactions_identity_id t
+    WHERE t.identity_id = ${complex.identity_id}
+    ORDER BY t.trade_date DESC
+    LIMIT 1
+  `);
+
+  return normalizeNearbySaleMetric(
+    (byIdentity.rows as unknown as NearbySaleMetricRow[])[0],
+  );
+}
+
+async function getLatestNearbyRentMetric(
+  complex: NearbyBaseRow,
+  saleSize: number | string | null | undefined
+): Promise<NearbyRentMetricRow | null> {
+  const byComplex = await db.execute(sql`
+    SELECT r.deposit, r.monthly_rent, r.trade_date, r.size_sqm
+    FROM apt_rent_transactions@idx_rent_complex_date r
+    WHERE r.complex_id = ${complex.id}
+    ORDER BY r.trade_date DESC
+    LIMIT 5
+  `);
+  const complexMetric = (byComplex.rows as unknown as NearbyRentMetricRow[])
+    .map(normalizeNearbyRentMetric)
+    .find((row): row is NearbyRentMetricRow => row !== null && isSameSizeRent(row, saleSize));
+  if (complexMetric || !complex.identity_id) return complexMetric ?? null;
+
+  const byIdentity = await db.execute(sql`
+    SELECT r.deposit, r.monthly_rent, r.trade_date, r.size_sqm
+    FROM apt_rent_transactions@idx_rent_identity_date r
+    WHERE r.identity_id = ${complex.identity_id}
+    ORDER BY r.trade_date DESC
+    LIMIT 5
+  `);
+
+  return (byIdentity.rows as unknown as NearbyRentMetricRow[])
+    .map(normalizeNearbyRentMetric)
+    .find((row): row is NearbyRentMetricRow => row !== null && isSameSizeRent(row, saleSize)) ?? null;
+}
+
+async function getNearbyTradeCount(complex: NearbyBaseRow): Promise<number> {
+  const byComplex = await db.execute(sql`
+    SELECT COUNT(*)::INT AS cnt
+    FROM apt_transactions@idx_txn_complex t
+    WHERE t.complex_id = ${complex.id}
+  `);
+  const complexCount = Number((byComplex.rows[0] as { cnt?: number | string } | undefined)?.cnt ?? 0);
+  if (!complex.identity_id) return complexCount;
+
+  const byIdentity = await db.execute(sql`
+    SELECT COUNT(*)::INT AS cnt
+    FROM apt_transactions@idx_transactions_identity_id t
+    WHERE t.identity_id = ${complex.identity_id}
+      AND (t.complex_id IS NULL OR t.complex_id <> ${complex.id})
+  `);
+  const identityCount = Number((byIdentity.rows[0] as { cnt?: number | string } | undefined)?.cnt ?? 0);
+
+  return complexCount + identityCount;
+}
+
+async function attachNearbyMetrics(
+  complex: NearbyBaseRow
+): Promise<NearbyRow> {
+  const latestSale = await getLatestNearbySaleMetric(complex);
+  const latestRent = await getLatestNearbyRentMetric(complex, latestSale?.size_sqm);
+  const tradeCount = await getNearbyTradeCount(complex);
+  const tradePrice = latestSale?.trade_price === null || latestSale?.trade_price === undefined
+    ? null
+    : Number(latestSale.trade_price);
+  const rentDeposit = latestRent?.deposit === null || latestRent?.deposit === undefined
+    ? null
+    : Number(latestRent.deposit);
+  const monthlyRent = latestRent?.monthly_rent === null || latestRent?.monthly_rent === undefined
+    ? null
+    : Number(latestRent.monthly_rent);
+  const jeonseRatio = tradePrice && tradePrice > 0 && rentDeposit !== null && monthlyRent === 0
+    ? Number(((rentDeposit / tradePrice) * 100).toFixed(1))
+    : null;
+  const gapAmount = tradePrice !== null && rentDeposit !== null && monthlyRent === 0
+    ? tradePrice - rentDeposit
+    : null;
+
+  return {
+    ...complex,
+    latest_trade_price: tradePrice,
+    latest_trade_date: latestSale?.trade_date ?? null,
+    latest_rent_deposit: rentDeposit,
+    latest_rent_monthly_rent: monthlyRent,
+    latest_rent_date: latestRent?.trade_date ?? null,
+    jeonse_ratio: jeonseRatio,
+    gap_amount: gapAmount,
+    trade_count: tradeCount,
   };
 }
 
@@ -242,26 +466,37 @@ export async function getAptDetailRentTransactions(
 
 export async function getAptDetailNearbyComplexes(
   complexId: string,
-  dongName: string | null
+  dongName: string | null,
+  regionCode: string
 ): Promise<AptDetailNearbyComplex[]> {
   if (!dongName) return [];
 
-  return db.select({
-    govt_complex_id: aptComplexes.govtComplexId,
-    identity_id: aptComplexes.identityId,
-    slug: aptComplexes.slug,
-    apt_name: aptComplexes.aptName,
-    region_code: aptComplexes.regionCode,
-    region_name: aptComplexes.regionName,
-    dong_name: aptComplexes.dongName,
-    built_year: aptComplexes.builtYear,
-    total_units: aptComplexes.totalUnits,
-  }).from(aptComplexes)
-    .where(and(
-      eq(aptComplexes.dongName, dongName),
-      ne(aptComplexes.id, complexId),
-    ))
-    .limit(APT_DETAIL_NEARBY_LIMIT);
+  const result = await db.execute(sql`
+    SELECT
+      c.id,
+      c.govt_complex_id,
+      c.identity_id,
+      c.slug,
+      c.apt_name,
+      c.region_code,
+      c.region_name,
+      c.dong_name,
+      c.built_year,
+      c.total_units,
+      c.property_type
+    FROM apt_complexes@idx_complexes_region c
+    WHERE c.region_code = ${regionCode}
+      AND c.dong_name = ${dongName}
+      AND c.id <> ${complexId}
+    ORDER BY c.total_units DESC NULLS LAST, c.built_year DESC NULLS LAST, c.apt_name ASC
+    LIMIT ${APT_DETAIL_NEARBY_LIMIT}
+  `);
+
+  const rowsWithMetrics = await Promise.all(
+    (result.rows as unknown as NearbyBaseRow[]).map(attachNearbyMetrics),
+  );
+
+  return rowsWithMetrics.map(normalizeNearbyComplex);
 }
 
 export const getCachedAptDetailComplexByGovtId = unstable_cache(
@@ -311,7 +546,7 @@ export const getCachedAptDetailRentTransactions = unstable_cache(
 
 export const getCachedAptDetailNearbyComplexes = unstable_cache(
   getAptDetailNearbyComplexes,
-  ["apt-detail-nearby-complexes-v2"],
+  ["apt-detail-nearby-complexes-v3"],
   {
     revalidate: APT_DETAIL_REVALIDATE_SECONDS,
     tags: [PUBLIC_DATA_CACHE_TAGS.APT_COMPLEXES],

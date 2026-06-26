@@ -4,7 +4,7 @@ import AdSlot from "@/components/ads/AdSlot";
 import TrackedLink from "@/components/analytics/TrackedLink";
 import SignalLandingFooter from "@/components/landing/SignalLandingFooter";
 import SignalLandingHeader from "@/components/landing/SignalLandingHeader";
-import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import { BreadcrumbJsonLd, DatasetJsonLd } from "@/components/seo/JsonLd";
 import {
   latestMonthlyVolume,
   marketTrendEmptyStateCopy,
@@ -102,6 +102,13 @@ export default async function TrendPage() {
           { name: "홈", href: "/" },
           { name: "부동산 시장 트렌드", href: "/trend" },
         ]}
+      />
+      <DatasetJsonLd
+        name="돈줍 전국 아파트 거래량 및 평균가 데이터셋"
+        description="국토교통부 실거래가 기반 전국 아파트 월별 거래량과 시도별 평균 거래가를 요약한 공개 데이터셋입니다."
+        url="https://donjup.com/trend"
+        keywords={["아파트 거래량", "부동산 통계", "실거래가", "시도별 평균가"]}
+        temporalCoverage={monthlyVolume.length > 0 ? `${monthlyVolume[0].month}/${monthlyVolume[monthlyVolume.length - 1].month}` : null}
       />
       <SignalLandingHeader
         eyebrow="시장 흐름판"

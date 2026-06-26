@@ -5,7 +5,7 @@ import AdSlot from "@/components/ads/AdSlot";
 import TrackedLink from "@/components/analytics/TrackedLink";
 import SignalLandingHeader from "@/components/landing/SignalLandingHeader";
 import SignalLandingFooter from "@/components/landing/SignalLandingFooter";
-import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import { BreadcrumbJsonLd, DatasetJsonLd } from "@/components/seo/JsonLd";
 import {
   latestRentTradeDate,
   maxMonthlyRent,
@@ -89,6 +89,13 @@ export default async function RentPage({
   return (
     <div>
       <BreadcrumbJsonLd items={[{ name: "홈", href: "/" }, { name: "전월세", href: "/rent" }]} />
+      <DatasetJsonLd
+        name="돈줍 전국 아파트 전월세 실거래 데이터셋"
+        description="국토교통부 전월세 실거래가 기반 전국 아파트 전세 보증금, 월세, 거래일, 면적 정보를 요약한 공개 데이터셋입니다."
+        url="https://donjup.com/rent"
+        keywords={["아파트 전세", "아파트 월세", "전월세 실거래가", "전세가율"]}
+        temporalCoverage={latestDate}
+      />
       <SignalLandingHeader
         eyebrow="Rent signal"
         title="전국 아파트 전월세 실거래가"

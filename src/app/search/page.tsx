@@ -9,7 +9,12 @@ import SignalLandingFooter from "@/components/landing/SignalLandingFooter";
 import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import HighlightedText from "@/components/search/HighlightedText";
 import { buildCompareHref } from "@/lib/compare-selection";
-import { PricePresets, SizePresets, YearPresets } from "@/components/search/FilterPresets";
+import {
+  InvestmentSignalPresets,
+  PricePresets,
+  SizePresets,
+  YearPresets,
+} from "@/components/search/FilterPresets";
 import RecentSearches from "@/components/search/RecentSearches";
 import {
   SEARCH_SUGGESTIONS,
@@ -25,6 +30,7 @@ import { logDatabaseFailure } from "@/lib/db/logging";
 import {
   filterInputValue,
   hasSearchFilters,
+  investmentSignalLabel,
   normalizeSearchQuery,
   parsePropertyType,
   parseSearchFilters,
@@ -135,6 +141,7 @@ export default async function SearchPage({
   const filterSizeMin = filterInputValue(filters.sizeMin);
   const filterSizeMax = filterInputValue(filters.sizeMax);
   const filterBuiltYearMin = filterInputValue(filters.builtYearMin);
+  const filterInvestmentSignal = filters.investmentSignal;
 
   const hasFilters = hasSearchFilters(filters);
   const hasSearch = query.length > 0 || hasFilters;
@@ -181,6 +188,7 @@ export default async function SearchPage({
   if (filterSizeMin) retryParams.set("sizeMin", filterSizeMin);
   if (filterSizeMax) retryParams.set("sizeMax", filterSizeMax);
   if (filterBuiltYearMin) retryParams.set("builtYearMin", filterBuiltYearMin);
+  if (filterInvestmentSignal) retryParams.set("signal", filterInvestmentSignal);
   const retryQueryString = retryParams.toString();
   const retryHref = retryQueryString
     ? `/search?${retryQueryString}`
@@ -196,6 +204,7 @@ export default async function SearchPage({
     if (filterSizeMin) nextParams.set("sizeMin", filterSizeMin);
     if (filterSizeMax) nextParams.set("sizeMax", filterSizeMax);
     if (filterBuiltYearMin) nextParams.set("builtYearMin", filterBuiltYearMin);
+    if (filterInvestmentSignal) nextParams.set("signal", filterInvestmentSignal);
 
     const queryString = nextParams.toString();
     return queryString ? `/search?${queryString}` : "/search";
@@ -233,6 +242,7 @@ export default async function SearchPage({
       <form action="/search" method="GET" className="mb-8">
         {validType !== 1 && <input type="hidden" name="type" value={validType} />}
         {sort !== "relevance" && <input type="hidden" name="sort" value={sort} />}
+        <input type="hidden" name="signal" value={filterInvestmentSignal ?? ""} />
 
         {/* Main search input */}
         <div className="flex gap-2 mb-4">
@@ -386,6 +396,16 @@ export default async function SearchPage({
                 />
                 <YearPresets />
               </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium t-text-secondary">
+                  투자 신호
+                </label>
+                <InvestmentSignalPresets currentSignal={filterInvestmentSignal} />
+                <p className="mt-2 text-[11px] leading-5 t-text-tertiary">
+                  검색어와 함께 사용할 때만 적용하며, 동일 면적의 최신 매매·전세가가 모두 있는 단지만 표시합니다.
+                </p>
+              </div>
             </div>
 
             <div className="mt-4 flex gap-2">
@@ -434,6 +454,11 @@ export default async function SearchPage({
           {filterBuiltYearMin && (
             <span className="rounded-full filter-tag px-2.5 py-1 text-xs font-medium">
               {filterBuiltYearMin}년 이후 준공
+            </span>
+          )}
+          {filterInvestmentSignal && (
+            <span className="rounded-full filter-tag px-2.5 py-1 text-xs font-medium">
+              {investmentSignalLabel(filterInvestmentSignal)}
             </span>
           )}
         </div>
@@ -658,6 +683,22 @@ export default async function SearchPage({
                       </span>
                     )}
                   </div>
+                  {(apt.jeonse_ratio !== null || apt.gap_amount !== null) && (
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-[var(--color-surface-elevated)] px-3 py-2">
+                        <span className="block font-medium t-text-tertiary">전세가율</span>
+                        <span className="mt-0.5 block font-bold tabular-nums t-text">
+                          {apt.jeonse_ratio !== null ? `${apt.jeonse_ratio.toFixed(1)}%` : "-"}
+                        </span>
+                      </div>
+                      <div className="rounded-lg bg-[var(--color-surface-elevated)] px-3 py-2">
+                        <span className="block font-medium t-text-tertiary">갭</span>
+                        <span className="mt-0.5 block font-bold tabular-nums t-text">
+                          {apt.gap_amount !== null ? formatPrice(apt.gap_amount) : "-"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <TrackedLink
                       href={detailHref}

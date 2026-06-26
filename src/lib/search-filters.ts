@@ -4,7 +4,13 @@ const MAX_SIZE_SQM = 1_000;
 const MIN_BUILT_YEAR = 1960;
 const MAX_BUILT_YEAR = 2030;
 const VALID_PROPERTY_TYPES = new Set([0, 1, 2, 3]);
+const VALID_INVESTMENT_SIGNALS = new Set([
+  "high-jeonse-ratio",
+  "low-gap",
+] as const);
 export const SEARCH_LIKE_ESCAPE = "\\";
+
+export type InvestmentSignal = "high-jeonse-ratio" | "low-gap";
 
 export type SearchParamValue = string | string[] | null | undefined;
 export type SearchParamSource = URLSearchParams | Record<string, string | string[] | undefined>;
@@ -15,6 +21,7 @@ export type SearchFilters = {
   sizeMin: number | null;
   sizeMax: number | null;
   builtYearMin: number | null;
+  investmentSignal: InvestmentSignal | null;
 };
 
 interface OrderedRange {
@@ -64,6 +71,15 @@ export function parsePropertyType(value: SearchParamValue): number {
   return Number.isInteger(parsed) && VALID_PROPERTY_TYPES.has(parsed) ? parsed : 1;
 }
 
+export function parseInvestmentSignal(value: SearchParamValue): InvestmentSignal | null {
+  const signal = firstValue(value).trim() as InvestmentSignal;
+  return VALID_INVESTMENT_SIGNALS.has(signal) ? signal : null;
+}
+
+export function investmentSignalLabel(signal: InvestmentSignal): string {
+  return signal === "high-jeonse-ratio" ? "전세가율 70%+" : "갭 2억 이하";
+}
+
 function orderRange(min: number | null, max: number | null): OrderedRange {
   if (min !== null && max !== null && min > max) {
     return { min: max, max: min };
@@ -108,6 +124,7 @@ export function parseSearchFilters(source: SearchParamSource): SearchFilters {
       min: MIN_BUILT_YEAR,
       max: MAX_BUILT_YEAR,
     }),
+    investmentSignal: parseInvestmentSignal(getParam(source, "signal")),
   };
 }
 

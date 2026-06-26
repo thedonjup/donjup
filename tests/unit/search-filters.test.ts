@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterInputValue,
   hasSearchFilters,
+  investmentSignalLabel,
   normalizeSearchQuery,
   parsePropertyType,
   parseSearchFilters,
@@ -31,6 +32,7 @@ describe("search filters", () => {
       sizeMin: 84,
       sizeMax: 84.99,
       builtYearMin: 2010,
+      investmentSignal: null,
     });
     expect(hasSearchFilters(filters)).toBe(true);
   });
@@ -64,6 +66,7 @@ describe("search filters", () => {
       sizeMin: null,
       sizeMax: null,
       builtYearMin: null,
+      investmentSignal: null,
     });
     expect(hasSearchFilters(filters)).toBe(false);
   });
@@ -88,5 +91,17 @@ describe("search filters", () => {
 
   it("escapes SQL LIKE wildcards in user search terms", () => {
     expect(toSearchLikePattern("100%_apt\\name")).toBe("%100\\%\\_apt\\\\name%");
+  });
+
+  it("parses investment signal presets as search filters", () => {
+    const highRatio = parseSearchFilters({ signal: "high-jeonse-ratio" });
+    const lowGap = parseSearchFilters({ signal: "low-gap" });
+    const invalid = parseSearchFilters({ signal: "all" });
+
+    expect(highRatio.investmentSignal).toBe("high-jeonse-ratio");
+    expect(lowGap.investmentSignal).toBe("low-gap");
+    expect(invalid.investmentSignal).toBeNull();
+    expect(hasSearchFilters(highRatio)).toBe(true);
+    expect(investmentSignalLabel("high-jeonse-ratio")).toBe("전세가율 70%+");
   });
 });

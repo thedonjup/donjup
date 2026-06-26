@@ -18,6 +18,8 @@ import {
 import type { SearchSortKey } from "@/lib/search-sort";
 
 type SqlChunk = ReturnType<typeof sql>;
+const HIGH_JEONSE_RATIO_THRESHOLD = 0.7;
+const LOW_GAP_MAX_MANWON = 20_000;
 
 export type SearchResultsQuery = {
   query: string;
@@ -86,6 +88,29 @@ function transactionConditions(filters: SearchFilters): SqlChunk[] {
   return conditions;
 }
 
+function investmentSignalConditions(filters: SearchFilters): SqlChunk[] {
+  if (filters.investmentSignal === "high-jeonse-ratio") {
+    return [
+      sql`latest_tx.trade_price IS NOT NULL`,
+      sql`latest_rent.deposit IS NOT NULL`,
+      sql`latest_rent.monthly_rent = 0`,
+      sql`latest_tx.trade_price > 0`,
+      sql`(latest_rent.deposit::DECIMAL / latest_tx.trade_price::DECIMAL) >= ${HIGH_JEONSE_RATIO_THRESHOLD}`,
+    ];
+  }
+
+  if (filters.investmentSignal === "low-gap") {
+    return [
+      sql`latest_tx.trade_price IS NOT NULL`,
+      sql`latest_rent.deposit IS NOT NULL`,
+      sql`latest_rent.monthly_rent = 0`,
+      sql`(latest_tx.trade_price - latest_rent.deposit) BETWEEN 0 AND ${LOW_GAP_MAX_MANWON}`,
+    ];
+  }
+
+  return [];
+}
+
 function createRelevanceOrder(searchRankTerm: string): SqlChunk {
   if (!searchRankTerm) {
     return sql`c.apt_name`;
@@ -128,6 +153,9 @@ export async function getSearchResults({
   if (query.length === 0 && !hasSearchFilters(filters)) {
     return [];
   }
+  if (query.length === 0 && filters.investmentSignal !== null) {
+    return [];
+  }
 
   const conditions: SqlChunk[] = [];
 
@@ -157,6 +185,8 @@ export async function getSearchResults({
     )`);
   }
 
+  conditions.push(...investmentSignalConditions(filters));
+
   const complexWhere = conditions.length > 0
     ? sql.join(conditions, sql` AND `)
     : sql`TRUE`;
@@ -178,10 +208,24 @@ export async function getSearchResults({
       latest_rent.deposit AS latest_rent_deposit,
       latest_rent.monthly_rent AS latest_rent_monthly_rent,
       latest_rent.trade_date AS latest_rent_date,
-      latest_rent.rent_type AS latest_rent_type
+      latest_rent.rent_type AS latest_rent_type,
+      CASE
+        WHEN latest_tx.trade_price > 0
+          AND latest_rent.deposit IS NOT NULL
+          AND latest_rent.monthly_rent = 0
+        THEN ROUND((latest_rent.deposit::DECIMAL / latest_tx.trade_price::DECIMAL) * 100, 1)
+        ELSE NULL
+      END AS jeonse_ratio,
+      CASE
+        WHEN latest_tx.trade_price IS NOT NULL
+          AND latest_rent.deposit IS NOT NULL
+          AND latest_rent.monthly_rent = 0
+        THEN latest_tx.trade_price - latest_rent.deposit
+        ELSE NULL
+      END AS gap_amount
     FROM apt_complexes c
     LEFT JOIN LATERAL (
-      SELECT t.trade_price, t.trade_date, t.change_rate
+      SELECT t.trade_price, t.trade_date, t.change_rate, t.size_sqm
       FROM apt_transactions t
       WHERE ${txMatch} ${txWhere}
       ORDER BY t.trade_date DESC
@@ -191,6 +235,11 @@ export async function getSearchResults({
       SELECT r.deposit, r.monthly_rent, r.trade_date, r.rent_type
       FROM apt_rent_transactions r
       WHERE ${rentMatch}
+        AND (
+          latest_tx.size_sqm IS NULL
+          OR r.size_sqm IS NULL
+          OR ABS(r.size_sqm::DECIMAL - latest_tx.size_sqm::DECIMAL) <= 1
+        )
       ORDER BY r.trade_date DESC
       LIMIT 1
     ) latest_rent ON TRUE

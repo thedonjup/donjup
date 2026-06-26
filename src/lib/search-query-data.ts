@@ -20,6 +20,8 @@ export interface SearchResult {
   latest_rent_monthly_rent: number | null;
   latest_rent_date: string | null;
   latest_rent_type: string | null;
+  jeonse_ratio: number | null;
+  gap_amount: number | null;
 }
 
 export interface SearchResultRow {
@@ -40,6 +42,8 @@ export interface SearchResultRow {
   latest_rent_monthly_rent: number | string | null;
   latest_rent_date: string | null;
   latest_rent_type: string | null;
+  jeonse_ratio: number | string | null;
+  gap_amount: number | string | null;
 }
 
 function nullableNumber(value: number | string | null): number | null {
@@ -60,5 +64,7 @@ export function normalizeSearchResultRow(row: SearchResultRow): SearchResult {
     latest_rent_monthly_rent: nullableNumber(row.latest_rent_monthly_rent),
     latest_rent_date: row.latest_rent_date,
     latest_rent_type: row.latest_rent_type,
+    jeonse_ratio: nullableNumber(row.jeonse_ratio),
+    gap_amount: nullableNumber(row.gap_amount),
   };
 }

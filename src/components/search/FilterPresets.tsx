@@ -93,3 +93,42 @@ export function YearPresets() {
     </div>
   );
 }
+
+export function InvestmentSignalPresets({
+  currentSignal,
+}: {
+  currentSignal: "high-jeonse-ratio" | "low-gap" | null;
+}) {
+  const presets = [
+    { label: "전세가율 70%+", value: "high-jeonse-ratio" },
+    { label: "갭 2억 이하", value: "low-gap" },
+    { label: "해제", value: "" },
+  ] as const;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {presets.map((preset) => {
+        const isActive = preset.value === (currentSignal ?? "");
+
+        return (
+          <button
+            key={preset.label}
+            type="button"
+            onClick={(e) => {
+              const form = (e.target as HTMLElement).closest("form");
+              const input = form?.querySelector<HTMLInputElement>('input[name="signal"]');
+              if (input) input.value = preset.value;
+            }}
+            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition ${
+              isActive
+                ? "bg-brand-600 text-white"
+                : "t-elevated t-text-tertiary hover:t-text-secondary"
+            }`}
+          >
+            {preset.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

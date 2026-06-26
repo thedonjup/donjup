@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   normalizeSearchResultRow,
   SEARCH_RESULT_LIMIT,
@@ -25,6 +27,8 @@ describe("search query helpers", () => {
       latest_rent_monthly_rent: "0",
       latest_rent_date: "2026-04-30",
       latest_rent_type: "전세",
+      jeonse_ratio: "50.0",
+      gap_amount: "90000",
     })).toEqual({
       id: "apt-1",
       apt_name: "Sample Apt",
@@ -45,6 +49,8 @@ describe("search query helpers", () => {
       latest_rent_monthly_rent: 0,
       latest_rent_date: "2026-04-30",
       latest_rent_type: "전세",
+      jeonse_ratio: 50,
+      gap_amount: 90000,
     });
   });
 
@@ -58,5 +64,14 @@ describe("search query helpers", () => {
     expect(searchRegionCode("\uAC15\uB0A8\uAD6C")).toBe("11680");
     expect(searchRegionCode("\uAC15\uB0A8")).toBe("11680");
     expect(searchRegionCode("unknown")).toBeNull();
+  });
+
+  it("keeps investment signal filters out of global unscoped search", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/lib/search-query.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("query.length === 0 && filters.investmentSignal !== null");
   });
 });

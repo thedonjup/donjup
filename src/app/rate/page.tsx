@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import AdSlot from "@/components/ads/AdSlot";
 import { RATE_LABELS, RATE_DESCRIPTIONS, RATE_ORDER } from "@/lib/format";
-import { FaqJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import {
+  BreadcrumbJsonLd,
+  FaqJsonLd,
+  FinancialProductJsonLd,
+} from "@/components/seo/JsonLd";
 import type { FinanceRate } from "@/types/db";
 import RateIndicatorAccordion from "@/components/rate/RateIndicatorAccordion";
 import type { IndicatorItem } from "@/components/rate/RateIndicatorAccordion";
@@ -170,6 +174,12 @@ export default async function RateDashboardPage() {
   return (
     <div>
       <BreadcrumbJsonLd items={[{ name: "홈", href: "/" }, { name: "금리 현황", href: "/rate" }]} />
+      <FinancialProductJsonLd
+        name="돈줍 주택담보대출 금리 비교"
+        description="은행별 주택담보대출 금리, 기준금리, COFIX, CD금리, 국고채 흐름을 함께 확인하는 무료 금리 대시보드입니다."
+        url="https://donjup.com/rate"
+        annualPercentageRate={avgRate}
+      />
       <FaqJsonLd
         items={[
           {

@@ -4,7 +4,7 @@ import PropertyTypeFilter from "@/components/PropertyTypeFilter";
 import TrackedLink from "@/components/analytics/TrackedLink";
 import SignalLandingFooter from "@/components/landing/SignalLandingFooter";
 import SignalLandingHeader from "@/components/landing/SignalLandingHeader";
-import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import { BreadcrumbJsonLd, DatasetJsonLd } from "@/components/seo/JsonLd";
 import {
   activeMarketRegionCount,
   highestMarketHigh,
@@ -92,6 +92,13 @@ export default async function MarketIndexPage({
           { name: "홈", href: "/" },
           { name: "지역별 시세", href: "/market" },
         ]}
+      />
+      <DatasetJsonLd
+        name="돈줍 전국 시도별 아파트 시세 데이터셋"
+        description="국토교통부 실거래가 기반 전국 시도별 아파트 거래량, 최대 하락, 신고가, 중위가를 요약한 공개 데이터셋입니다."
+        url="https://donjup.com/market"
+        keywords={["아파트 시세", "지역별 실거래가", "신고가", "아파트 하락률"]}
+        temporalCoverage="최근 3개월"
       />
       <PropertyTypeFilter currentType={validType} />
       <SignalLandingHeader
