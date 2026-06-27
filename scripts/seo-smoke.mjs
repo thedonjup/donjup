@@ -2,6 +2,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DEFAULT_ROUTES = [
   "/",
@@ -11,6 +12,15 @@ const DEFAULT_ROUTES = [
   "/rent",
   "/search?q=%EB%8B%B5%EC%8B%AD%EB%A6%AC%20%EB%91%90%EC%82%B0",
 ];
+
+const EXPECTED_JSON_LD_TYPES_BY_PATH = new Map([
+  ["/", ["WebSite", "FAQPage"]],
+  ["/rate", ["BreadcrumbList", "FinancialProduct", "FAQPage"]],
+  ["/trend", ["BreadcrumbList", "Dataset"]],
+  ["/market", ["BreadcrumbList", "Dataset"]],
+  ["/rent", ["BreadcrumbList", "Dataset"]],
+  ["/search", ["BreadcrumbList"]],
+]);
 
 function argValue(name, fallback = null) {
   const prefix = `--${name}=`;
@@ -26,7 +36,7 @@ function buildUrl(origin, route) {
   return new URL(route, origin).toString();
 }
 
-function extractCanonical(html) {
+export function extractCanonical(html) {
   const relFirst = html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["'][^>]*>/i);
   if (relFirst?.[1]) return relFirst[1];
 
@@ -34,7 +44,7 @@ function extractCanonical(html) {
   return hrefFirst?.[1] ?? null;
 }
 
-function extractJsonLd(html) {
+export function extractJsonLd(html) {
   const blocks = [];
   const regex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   for (const match of html.matchAll(regex)) {
@@ -43,6 +53,41 @@ function extractJsonLd(html) {
     blocks.push(JSON.parse(raw));
   }
   return blocks;
+}
+
+function addJsonLdType(types, value) {
+  if (Array.isArray(value)) {
+    for (const item of value) addJsonLdType(types, item);
+    return;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    types.add(value.trim());
+  }
+}
+
+export function jsonLdTypes(blocks) {
+  const types = new Set();
+
+  for (const block of blocks) {
+    if (!block || typeof block !== "object") continue;
+    addJsonLdType(types, block["@type"]);
+
+    if (Array.isArray(block["@graph"])) {
+      for (const item of block["@graph"]) {
+        if (item && typeof item === "object") {
+          addJsonLdType(types, item["@type"]);
+        }
+      }
+    }
+  }
+
+  return [...types].sort();
+}
+
+export function expectedJsonLdTypes(route) {
+  const pathname = new URL(route, "https://donjup.com").pathname;
+  return EXPECTED_JSON_LD_TYPES_BY_PATH.get(pathname) ?? [];
 }
 
 async function checkRoute(origin, route) {
@@ -56,6 +101,9 @@ async function checkRoute(origin, route) {
   const html = await response.text();
   const canonical = extractCanonical(html);
   const jsonLd = extractJsonLd(html);
+  const types = jsonLdTypes(jsonLd);
+  const expectedTypes = expectedJsonLdTypes(route);
+  const missingExpectedJsonLdTypes = expectedTypes.filter((type) => !types.includes(type));
 
   return {
     route,
@@ -65,7 +113,9 @@ async function checkRoute(origin, route) {
     elapsedMs: Date.now() - startedAt,
     canonical,
     jsonLdCount: jsonLd.length,
-    jsonLdTypes: jsonLd.map((item) => item?.["@type"] ?? null).filter(Boolean),
+    jsonLdTypes: types,
+    expectedJsonLdTypes: expectedTypes,
+    missingExpectedJsonLdTypes,
     naverSiteVerificationConfigured: html.includes("naver-site-verification"),
   };
 }
@@ -127,6 +177,9 @@ async function main() {
     ...routeResults
       .filter((route) => !route.ok || !route.canonical)
       .map((route) => `${route.route} invalid: ${route.status}, canonical=${route.canonical ?? "missing"}`),
+    ...routeResults
+      .filter((route) => route.missingExpectedJsonLdTypes.length > 0)
+      .map((route) => `${route.route} missing JSON-LD types: ${route.missingExpectedJsonLdTypes.join(", ")}`),
     ...errors.map((error) => `${error.route}: ${error.message}`),
   ];
 
@@ -154,7 +207,13 @@ async function main() {
   if (!report.ok) process.exitCode = 1;
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+const isCli = process.argv[1]
+  ? path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  : false;
+
+if (isCli) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

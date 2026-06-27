@@ -97,7 +97,7 @@ P1 반영 업데이트: 2026-06-27
 반영 판단:
 
 1. AdSense/GA4/UTM/쿠팡/CPA UI는 들어왔으나 실제 승인, 클릭/전환 추적, 수익 대시보드는 검증 필요다.
-2. RSS/feed, FinancialProduct/Dataset JSON-LD, 이메일 구독 폼은 아직 낮은 비용 P1로 남아 있다.
+2. RSS/feed와 FinancialProduct/Dataset JSON-LD는 P1로 반영됐다. 이메일 구독 폼은 외부 발송/수신 동의가 필요하므로 P2로 남긴다.
 3. 프리미엄/레퍼럴/결제는 장기 P3다.
 
 ### 3.5 `docs/marketing/seo-strategy.md`
@@ -108,7 +108,7 @@ SEO 문서는 canonical, BreadcrumbList, Organization, ItemList, FAQPage, Financ
 
 1. Organization, BreadcrumbList, FAQPage, ItemList 일부는 이미 있다.
 2. canonical도 주요 페이지에 존재하지만 전 페이지 SEO smoke가 필요하다.
-3. RSS/feed, FinancialProduct, Dataset, SearchResultsPage JSON-LD는 미구현이다.
+3. RSS/feed, FinancialProduct, Dataset은 P1로 반영됐다. SearchResultsPage JSON-LD는 검색 결과 구조화 데이터 정책을 정한 뒤 P2로 검토한다.
 
 ## 4. 기능 갭 총괄
 
@@ -148,14 +148,14 @@ SEO 문서는 canonical, BreadcrumbList, Organization, ItemList, FAQPage, Financ
 
 ### P1
 
-운영 정상화 직후 바로 구현할 수 있는 낮은 비용 기능:
+운영 정상화 직후 바로 검증/보강할 수 있는 낮은 비용 기능:
 
-1. RSS/feed 생성.
-2. FinancialProduct JSON-LD.
-3. Dataset JSON-LD.
-4. canonical/metadata SEO smoke runner.
-5. 전세가율/갭 필터의 read-only 확장.
-6. 주변 단지 비교 표 개선.
+1. RSS/feed 검증과 public smoke.
+2. FinancialProduct JSON-LD 검증.
+3. Dataset JSON-LD 검증.
+4. canonical/metadata/JSON-LD SEO smoke runner 보강.
+5. 전세가율/갭 필터의 read-only 확장 검증.
+6. 주변 단지 비교 표 성능/실패 처리 검증.
 7. 네이버 서치어드바이저 등록/제출 체크리스트와 sitemap 제출 문서화.
 
 P1 선정 이유:
@@ -491,10 +491,10 @@ pnpm build
 ## 14. 운영 정상화 이후 추천 실행 순서
 
 1. `docs/18` P0 운영 health green 복구.
-2. public smoke runner와 SEO smoke를 먼저 만든다.
-3. RSS/feed와 JSON-LD 확장을 적용한다.
-4. 전세가율/갭 필터를 read-only로 소량 노출한다.
-5. 주변 단지 비교 표를 상세 페이지에 보강한다.
+2. public smoke runner와 SEO smoke를 먼저 실행하고 부족한 gate를 보강한다.
+3. RSS/feed와 JSON-LD 확장은 중복 구현하지 않고 public/SEO smoke로 검증한다.
+4. 전세가율/갭 필터는 read-only 노출이 대량 scan을 만들지 않는지 검증한다.
+5. 주변 단지 비교 표는 상세 페이지 응답 지연이 있으면 fail-soft/lazy 분리를 후속 처리한다.
 6. news schema/cache를 정리한다.
 7. 관심 단지 서버 저장과 단지별 알림을 설계한다.
 8. 수익/CPA tracking dashboard를 만든다.
@@ -522,19 +522,20 @@ Phase 0: 기준선 확인
 - 구현됨/부분구현/미구현/검증필요 분류가 틀리면 문서부터 수정해.
 - public smoke와 `db:status:ops`가 red이면, 시장조사 기능 구현 전 영향 범위를 짧게 기록해.
 
-Phase 1: P1 실제 구현
+Phase 1: P1 검증/보강
 1. RSS/feed
-   - `src/app/feed.xml/route.ts` 또는 동등한 App Router route 추가
+   - `src/app/feed.xml/route.ts`가 있으면 중복 생성하지 말고 smoke/test 보강
+   - route가 없을 때만 동등한 App Router route 추가
    - 최근 daily report와 핵심 랜딩만 포함
    - XML escape, cache header, 테스트 추가
 
 2. SEO JSON-LD 확장
-   - `FinancialProductJsonLd` 후보를 `/rate` 또는 `/rate/calculator`에 추가
-   - `DatasetJsonLd` 후보를 `/trend`, `/market`, `/rent` 중 안전한 곳에 추가
+   - `FinancialProductJsonLd`가 `/rate` 또는 `/rate/calculator`에 있는지 확인하고 없을 때만 추가
+   - `DatasetJsonLd`가 `/trend`, `/market`, `/rent` 중 안전한 곳에 있는지 확인하고 없을 때만 추가
    - 기존 `JsonLd`, `BreadcrumbJsonLd`, `FaqJsonLd`, `ItemListJsonLd`와 중복되지 않게 구성
 
 3. SEO/canonical smoke
-   - 주요 route의 metadata/canonical/RSS/JSON-LD를 검증하는 테스트 또는 script 추가
+   - 주요 route의 metadata/canonical/RSS/JSON-LD를 검증하는 테스트 또는 script 추가/보강
    - 네이버 서치어드바이저 meta는 env 설정 여부만 확인하고 값은 출력하지 않음
 
 4. 전세가율/갭 read-only 확장
