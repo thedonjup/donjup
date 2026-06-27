@@ -14,7 +14,7 @@ const DEFAULT_ROUTES = [
 ];
 
 const EXPECTED_JSON_LD_TYPES_BY_PATH = new Map([
-  ["/", ["WebSite", "FAQPage"]],
+  ["/", ["Organization"]],
   ["/rate", ["BreadcrumbList", "FinancialProduct", "FAQPage"]],
   ["/trend", ["BreadcrumbList", "Dataset"]],
   ["/market", ["BreadcrumbList", "Dataset"]],
