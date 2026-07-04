@@ -229,6 +229,17 @@ def latest_backup_summary(data_dir: Path) -> dict[str, Any] | None:
     }
 
 
+def alignment_state(data_dir: Path) -> dict[str, Any]:
+    path = data_dir / "alignment-state.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"path": str(path), "exists": False}
+    if not isinstance(payload, dict):
+        return {"path": str(path), "exists": False, "error": "invalid payload"}
+    return {"path": str(path), "exists": True, **payload}
+
+
 def table_count(snapshot: dict[str, Any] | None, table: str) -> int | None:
     if not snapshot:
         return None
@@ -278,7 +289,60 @@ def warning_entry(code: str, message: str, current: int, threshold: int) -> dict
     }
 
 
-def build_alignment(local_status: dict[str, Any] | None, db_snapshot: dict[str, Any] | None) -> dict[str, Any]:
+def explain_delta(kind: str, delta: int | None, state: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(delta, int):
+        return {"status": "unknown", "unexplainedDelta": delta, "explainedRows": 0, "reason": "delta unavailable"}
+
+    if delta == 0:
+        return {"status": "applied", "unexplainedDelta": 0, "explainedRows": 0, "reason": "local and DB counts match"}
+
+    if not isinstance(state, dict) or not state.get("exists"):
+        return {"status": "review_required", "unexplainedDelta": delta, "explainedRows": 0, "reason": "alignment state missing"}
+
+    section = state.get(kind, {})
+    if not isinstance(section, dict):
+        return {"status": "review_required", "unexplainedDelta": delta, "explainedRows": 0, "reason": f"{kind} state missing"}
+
+    if kind == "sale" and delta > 0:
+        quarantined = int(section.get("quarantinedRows") or 0)
+        collected_only = int(section.get("collectedOnlyRows") or 0)
+        explained = max(quarantined, collected_only)
+        unexplained = max(0, delta - explained)
+        status = "quarantined" if quarantined >= delta else "collected_only" if collected_only >= delta else "review_required"
+        return {
+            "status": status,
+            "unexplainedDelta": unexplained,
+            "explainedRows": min(delta, explained),
+            "reason": "local-only sale rows are covered by collected-only/quarantine artifacts" if unexplained == 0 else "sale delta exceeds quarantine artifacts",
+            "artifact": section.get("quarantineArtifact"),
+            "manifest": section.get("quarantineManifest"),
+        }
+
+    if kind == "rent" and delta < 0:
+        db_first = int(section.get("dbFirstExportedRows") or 0)
+        missing_local = abs(delta)
+        unexplained = max(0, missing_local - db_first)
+        return {
+            "status": "db_first_exported" if unexplained == 0 else "review_required",
+            "unexplainedDelta": -unexplained if unexplained else 0,
+            "explainedRows": min(missing_local, db_first),
+            "reason": "DB-only rent rows are covered by DB-first export artifacts" if unexplained == 0 else "rent delta exceeds DB-first export artifacts",
+            "artifact": section.get("dbFirstExportArtifact"),
+        }
+
+    return {
+        "status": "review_required",
+        "unexplainedDelta": delta,
+        "explainedRows": 0,
+        "reason": f"{kind} delta direction is not covered by current artifacts",
+    }
+
+
+def build_alignment(
+    local_status: dict[str, Any] | None,
+    db_snapshot: dict[str, Any] | None,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if not local_status or not db_snapshot:
         return {}
 
@@ -287,16 +351,21 @@ def build_alignment(local_status: dict[str, Any] | None, db_snapshot: dict[str, 
     sale_db = table_count(db_snapshot, "apt_transactions")
     rent_db = table_count(db_snapshot, "apt_rent_transactions")
 
+    sale_delta = sale_local - sale_db if isinstance(sale_local, int) and sale_db is not None else None
+    rent_delta = rent_local - rent_db if isinstance(rent_local, int) and rent_db is not None else None
+
     return {
         "sale": {
             "localUniqueRows": sale_local,
             "dbRows": sale_db,
-            "deltaLocalMinusDb": sale_local - sale_db if isinstance(sale_local, int) and sale_db is not None else None,
+            "deltaLocalMinusDb": sale_delta,
+            "resolution": explain_delta("sale", sale_delta, state),
         },
         "rent": {
             "localUniqueRows": rent_local,
             "dbRows": rent_db,
-            "deltaLocalMinusDb": rent_local - rent_db if isinstance(rent_local, int) and rent_db is not None else None,
+            "deltaLocalMinusDb": rent_delta,
+            "resolution": explain_delta("rent", rent_delta, state),
         },
     }
 
@@ -348,7 +417,8 @@ def build_warnings(
 
     delta_limit = thresholds["localDbDeltaWarn"]
     for kind in ("sale", "rent"):
-        delta = alignment.get(kind, {}).get("deltaLocalMinusDb")
+        resolution = alignment.get(kind, {}).get("resolution", {})
+        delta = resolution.get("unexplainedDelta", alignment.get(kind, {}).get("deltaLocalMinusDb"))
         if isinstance(delta, int) and delta_limit > 0 and abs(delta) >= delta_limit:
             warnings.append(
                 warning_entry(
@@ -404,7 +474,8 @@ def main() -> int:
         db_snapshot = last_json_object(snapshot.stdout)
 
     local_size = directory_size_bytes(data_dir)
-    alignment = build_alignment(local_status, db_snapshot)
+    state = alignment_state(data_dir)
+    alignment = build_alignment(local_status, db_snapshot, state)
     thresholds = warning_thresholds(env)
     warnings = build_warnings(
         local_size=local_size,
@@ -421,6 +492,7 @@ def main() -> int:
             "sizeBytes": local_size,
             "status": local_status,
             "latestBackup": latest_backup_summary(data_dir),
+            "alignmentState": state,
         },
         "db": {
             "verified": db_verified,

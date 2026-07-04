@@ -189,54 +189,60 @@ export default async function AptDetailPage({
   let rentDataUnavailable = false;
   let nearbyDataUnavailable = false;
 
-  try {
-    txns = await getCachedAptDetailSaleTransactions(
+  const [saleResult, rentResult, nearbyResult] = await Promise.allSettled([
+    getCachedAptDetailSaleTransactions(
       complex.id,
       complex.aptName,
       complex.regionCode,
       complex.propertyType,
       complex.identityId,
-    );
-  } catch (err) {
-    saleDataUnavailable = true;
-    logDatabaseFailure("apt detail sale transaction query failed", err, {
-      route: "/apt/[govtComplexId]",
-      govtComplexId,
-      complexId: complex.id,
-    });
-  }
-
-  try {
-    rentTxns = await getCachedAptDetailRentTransactions(
+    ),
+    getCachedAptDetailRentTransactions(
       complex.aptName,
       complex.regionCode,
       complex.identityId,
       complex.id,
-    );
-  } catch (err) {
-    rentDataUnavailable = true;
-    logDatabaseFailure("apt detail rent transaction query failed", err, {
+    ),
+    complex.dongName
+      ? getCachedAptDetailNearbyComplexes(
+          complex.id,
+          complex.dongName,
+          complex.regionCode,
+        )
+      : Promise.resolve([]),
+  ]);
+
+  if (saleResult.status === "fulfilled") {
+    txns = saleResult.value;
+  } else {
+    saleDataUnavailable = true;
+    logDatabaseFailure("apt detail sale transaction query failed", saleResult.reason, {
       route: "/apt/[govtComplexId]",
       govtComplexId,
       complexId: complex.id,
     });
   }
 
-  if (complex.dongName) {
-    try {
-      nearbyComplexes = await getCachedAptDetailNearbyComplexes(
-        complex.id,
-        complex.dongName,
-        complex.regionCode,
-      );
-    } catch (err) {
-      nearbyDataUnavailable = true;
-      logDatabaseFailure("apt detail nearby complex query failed", err, {
-        route: "/apt/[govtComplexId]",
-        govtComplexId,
-        complexId: complex.id,
-      });
-    }
+  if (rentResult.status === "fulfilled") {
+    rentTxns = rentResult.value;
+  } else {
+    rentDataUnavailable = true;
+    logDatabaseFailure("apt detail rent transaction query failed", rentResult.reason, {
+      route: "/apt/[govtComplexId]",
+      govtComplexId,
+      complexId: complex.id,
+    });
+  }
+
+  if (nearbyResult.status === "fulfilled") {
+    nearbyComplexes = nearbyResult.value;
+  } else {
+    nearbyDataUnavailable = true;
+    logDatabaseFailure("apt detail nearby complex query failed", nearbyResult.reason, {
+      route: "/apt/[govtComplexId]",
+      govtComplexId,
+      complexId: complex.id,
+    });
   }
 
   const prices = txns.map((t) => t.trade_price);

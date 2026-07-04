@@ -255,6 +255,8 @@ def health_status(entry: dict[str, Any] | None) -> dict[str, Any] | None:
         "alignment": {
             "saleDelta": nested_get(alignment, ["sale", "deltaLocalMinusDb"]),
             "rentDelta": nested_get(alignment, ["rent", "deltaLocalMinusDb"]),
+            "saleResolution": nested_get(alignment, ["sale", "resolution"], {}),
+            "rentResolution": nested_get(alignment, ["rent", "resolution"], {}),
         },
         "warnings": warnings if isinstance(warnings, list) else [],
     }
@@ -661,6 +663,16 @@ def format_lines(status: dict[str, Any]) -> list[str]:
             f"saleDelta={alignment.get('saleDelta')} "
             f"rentDelta={alignment.get('rentDelta')}"
         )
+        sale_resolution = alignment.get("saleResolution") or {}
+        rent_resolution = alignment.get("rentResolution") or {}
+        if sale_resolution or rent_resolution:
+            lines.append(
+                "alignment resolution: "
+                f"sale={sale_resolution.get('status', 'n/a')} "
+                f"saleUnexplained={sale_resolution.get('unexplainedDelta', 'n/a')} "
+                f"rent={rent_resolution.get('status', 'n/a')} "
+                f"rentUnexplained={rent_resolution.get('unexplainedDelta', 'n/a')}"
+            )
         for warning in health.get("warnings", []):
             lines.append(
                 "warning: "
