@@ -86,14 +86,15 @@ export default async function TrendPage() {
 
   const totalVolume = totalMonthlyVolume(monthlyVolume);
   const latestVolume = latestMonthlyVolume(monthlyVolume);
-  const momChange = monthOverMonthChangeRate(monthlyVolume);
+  // Calendar completion is not proof of complete month/region ingestion.
+  const momChange = monthOverMonthChangeRate(monthlyVolume, false);
   const maxMonthly = Math.max(...monthlyVolume.map((m) => m.count), 1);
   const volumeEmptyState = marketTrendEmptyStateCopy("trend-volume", volumeUnavailable);
   const priceEmptyState = marketTrendEmptyStateCopy("trend-price", priceUnavailable);
   const basisLabel =
     volumeUnavailable || priceUnavailable
       ? "데이터 연결 확인 중"
-      : "최근 거래일 기준 · 돈줍 수집 실거래 데이터";
+      : `돈줍 수집 자료 · 최신 저장 월 ${latestVolume?.month ?? "확인 중"} · 월별 수집 완전성 미확인`;
 
   return (
     <div>
@@ -129,7 +130,7 @@ export default async function TrendPage() {
           {
             label: "전월 대비",
             value: momChange === null ? "-" : `${momChange > 0 ? "+" : ""}${momChange.toFixed(1)}%`,
-            hint: momChange === null ? "비교 가능한 전월 데이터가 필요합니다" : "최근 월 거래량 변화율입니다",
+            hint: momChange === null ? "월별 수집 완전성 확인 전까지 변화율을 제공하지 않습니다" : "최근 월 거래량 변화율입니다",
           },
           {
             label: "가격 비교 지역",
@@ -302,7 +303,7 @@ export default async function TrendPage() {
           methodItems={[
             "월별 거래량은 최근 거래일부터 역순으로 수집한 실거래 데이터를 월 단위로 묶어 계산합니다.",
             "시도별 평균 거래가는 각 시도에서 최근 거래 1,000건까지를 기준으로 비교합니다.",
-            "전월 대비는 최근 월과 직전 월의 거래량 변화율입니다.",
+            "월별 수집 완전성을 확인하기 전에는 거래량 변화율을 제공하지 않습니다.",
             "표의 시도명을 누르면 해당 지역의 시군구별 시세 페이지로 이동합니다.",
           ]}
           relatedLinks={[

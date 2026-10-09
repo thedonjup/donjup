@@ -83,7 +83,7 @@ export default async function MarketIndexPage({
   const emptyState = marketTrendEmptyStateCopy("market", dataUnavailable);
   const basisLabel = activeSidoCount > 0
     ? `최근 3개월 가격 통계 · ${activeSidoCount}/${totalSidoCount}개 시·도 거래 신호`
-    : emptyState.basisLabel;
+    : dataUnavailable ? emptyState.basisLabel : "최근 3개월 수집 자료 없음 · 데이터 수집 지연 여부 확인 중";
 
   return (
     <div>

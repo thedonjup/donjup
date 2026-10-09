@@ -50,14 +50,15 @@ function kindList(value) {
   return [value];
 }
 
-function filtersFromOptions(options, scope) {
+export function filtersFromOptions(options, scope) {
   const optionMonths = monthsFromOptions(options);
   const optionRegions = parseCsvSet(options.region || options.regions);
   const scopeMonths = new Set(scope.items.map((item) => item.dealYearMonth).filter(Boolean));
   const scopeRegions = new Set(scope.items.map((item) => item.regionCode).filter(Boolean));
+  const useManifestScope = Boolean(options.status || options.statuses || options["run-id"]);
   return {
-    months: optionMonths ?? (scopeMonths.size ? scopeMonths : null),
-    regions: optionRegions ?? (scopeRegions.size ? scopeRegions : null),
+    months: optionMonths ?? (useManifestScope && scopeMonths.size ? scopeMonths : null),
+    regions: optionRegions ?? (useManifestScope && scopeRegions.size ? scopeRegions : null),
   };
 }
 
@@ -321,8 +322,9 @@ async function main() {
   }, null, 2));
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
-
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

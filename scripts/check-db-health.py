@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import subprocess
 import sys
@@ -206,9 +207,14 @@ def directory_size_bytes(path: Path) -> int:
         return 0
 
     total = 0
-    for item in path.rglob("*"):
-        if item.is_file():
-            total += item.stat().st_size
+    pending = [path]
+    while pending:
+        with os.scandir(pending.pop()) as entries:
+            for entry in entries:
+                if entry.is_dir(follow_symlinks=False):
+                    pending.append(entry.path)
+                elif entry.is_file(follow_symlinks=False):
+                    total += entry.stat(follow_symlinks=False).st_size
     return total
 
 
@@ -237,6 +243,30 @@ def alignment_state(data_dir: Path) -> dict[str, Any]:
         return {"path": str(path), "exists": False}
     if not isinstance(payload, dict):
         return {"path": str(path), "exists": False, "error": "invalid payload"}
+    for kind, artifact_key, checksum_key in (
+        ("sale", "quarantineArtifact", "quarantineChecksum"),
+        ("rent", "dbFirstExportArtifact", "dbFirstExportChecksum"),
+    ):
+        section = payload.get(kind, {})
+        artifact = Path(section.get(artifact_key) or "")
+        recorded = str(artifact)
+        marker = ".donjup-local-data/"
+        if not artifact.is_file() and marker in recorded:
+            candidate = (data_dir / recorded.split(marker, 1)[1]).resolve()
+            if candidate.is_relative_to(data_dir.resolve()):
+                artifact = candidate
+        expected = section.get(checksum_key)
+        verified = False
+        if artifact.is_file() and expected:
+            digest = hashlib.sha256()
+            with artifact.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            verified = digest.hexdigest() == expected
+        section["artifactVerified"] = verified
+        section["recordedArtifactPath"] = recorded
+        if verified:
+            section[artifact_key] = str(artifact)
     return {"path": str(path), "exists": True, **payload}
 
 
@@ -302,6 +332,9 @@ def explain_delta(kind: str, delta: int | None, state: dict[str, Any] | None) ->
     section = state.get(kind, {})
     if not isinstance(section, dict):
         return {"status": "review_required", "unexplainedDelta": delta, "explainedRows": 0, "reason": f"{kind} state missing"}
+    if section.get("artifactVerified") is False:
+        return {"status": "review_required", "unexplainedDelta": delta, "explainedRows": 0,
+                "reason": "alignment artifact missing or checksum mismatch"}
 
     if kind == "sale" and delta > 0:
         quarantined = int(section.get("quarantinedRows") or 0)

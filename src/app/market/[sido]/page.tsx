@@ -93,7 +93,9 @@ export default async function MarketSidoPage({
   const activeRegionCount = activeMarketRegionCount(sigunguStats);
   const topDrop = strongestMarketDrop(sigunguStats);
   const topHigh = highestMarketHigh(sigunguStats);
-  const basisLabel = `${getCurrentMonth()} 기준 · 최근 3개월 가격 통계`;
+  const basisLabel = totalCount > 0
+    ? "최근 3개월 수집 자료 · 전체 거래량과 다를 수 있습니다"
+    : "최근 3개월 수집 자료 없음 · 데이터 수집 지연 여부 확인 중";
 
   return (
     <div>

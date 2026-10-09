@@ -82,7 +82,8 @@ export function latestMonthlyVolume(rows: MonthlyVolume[]): MonthlyVolume | null
   return rows.at(-1) ?? null;
 }
 
-export function monthOverMonthChangeRate(rows: MonthlyVolume[]): number | null {
+export function monthOverMonthChangeRate(rows: MonthlyVolume[], coverageVerified = true): number | null {
+  if (!coverageVerified) return null;
   if (rows.length < 2) return null;
 
   const current = rows[rows.length - 1].count;

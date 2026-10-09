@@ -16,8 +16,8 @@ const MAX_MONTH_COUNT = 6;
 const REQUEST_DELAY_MS = 300;
 const UPLOAD_BATCH_SIZE = 500;
 const SIGNAL_UPDATE_BATCH_SIZE = 250;
-const DEFAULT_EXTENDED_MAX_REQUESTS = 140;
-const DEFAULT_EXTENDED_MAX_RUNTIME_SECONDS = 1800;
+const DEFAULT_EXTENDED_MAX_REQUESTS = 20;
+const DEFAULT_EXTENDED_MAX_RUNTIME_SECONDS = 300;
 const DEFAULT_EXTENDED_MAX_RETRIES = 2;
 const DEFAULT_EXTENDED_RETRY_DELAY_MS = 30_000;
 const DEFAULT_MOLIT_TIMEOUT_MS = 20_000;
@@ -507,8 +507,11 @@ function parseRentXml(xml, regionCode) {
   });
 }
 
-export function validateMolitPage(xml, kind, regionCode, dealYearMonth) {
+export function validateMolitPage(xml, kind, regionCode, dealYearMonth, expectedPage) {
   const items = parseXmlItems(xml);
+  if (expectedPage !== undefined && Number(extractTag(xml, 'pageNo')) !== expectedPage) {
+    throw new Error('MOLIT response rejected: unexpected or missing pageNo');
+  }
   const rawTotal = extractTag(xml, "totalCount");
   const totalCount = rawTotal !== null && rawTotal !== undefined && /^\d+$/.test(rawTotal.trim())
     ? Number(rawTotal) : NaN;
@@ -535,7 +538,7 @@ export function validateMolitPage(xml, kind, regionCode, dealYearMonth) {
   return { rows, totalCount };
 }
 
-async function fetchMolitRows(kind, regionCode, dealYearMonth, timeoutMs = DEFAULT_MOLIT_TIMEOUT_MS, beforeRequest = () => {}) {
+export async function fetchMolitRows(kind, regionCode, dealYearMonth, timeoutMs = DEFAULT_MOLIT_TIMEOUT_MS, beforeRequest = () => {}) {
   const apiKey = process.env.MOLIT_API_KEY;
   if (!apiKey) {
     throw new Error("MOLIT_API_KEY is required");
@@ -561,7 +564,7 @@ async function fetchMolitRows(kind, regionCode, dealYearMonth, timeoutMs = DEFAU
   }
 
   const xml = await response.text();
-  const page = validateMolitPage(xml, kind, regionCode, dealYearMonth);
+  const page = validateMolitPage(xml, kind, regionCode, dealYearMonth, pageNo);
   if (totalCount !== undefined && totalCount !== page.totalCount) throw new Error('MOLIT totalCount changed during pagination');
   totalCount = page.totalCount;
   rows.push(...page.rows);
@@ -951,6 +954,9 @@ async function collect(options) {
     requests: 0,
     errors: [],
   };
+  const startedMs = Date.now();
+  const maxRequests = parsePositiveInt(options['max-requests'], 20, 140);
+  const maxRuntimeSeconds = parsePositiveInt(options['max-runtime-seconds'], 300, 1800);
 
   ensureLocalDataDir();
 
@@ -958,7 +964,12 @@ async function collect(options) {
     for (const [regionCode, regionName] of selectedRegionEntries) {
       for (const dealYearMonth of months) {
         try {
-          const rows = (await fetchMolitRows(kind, regionCode, dealYearMonth))
+          const rows = (await fetchMolitRows(kind, regionCode, dealYearMonth, DEFAULT_MOLIT_TIMEOUT_MS, () => {
+            if (summary.requests >= maxRequests || Date.now() - startedMs >= maxRuntimeSeconds * 1000) {
+              throw new Error('MOLIT request/runtime budget exhausted');
+            }
+            summary.requests += 1;
+          }))
             .map((row) => ({
               ...row,
               regionName,
@@ -968,13 +979,13 @@ async function collect(options) {
             }));
           await appendJsonLines(kind === "rent" ? RENT_FILE : SALE_FILE, rows);
           summary[kind] += rows.length;
-          summary.requests += 1;
           console.log(`${kind} ${regionCode} ${dealYearMonth}: ${rows.length}`);
         } catch (error) {
           const message = `${kind} ${regionCode} ${dealYearMonth}: ${error.message}`;
           summary.errors.push(message);
           console.error(message);
-          if ([401, 403, 429].includes(error.status)) break collection;
+          if ([401, 403, 429].includes(error.status)
+            || summary.requests >= maxRequests || Date.now() - startedMs >= maxRuntimeSeconds * 1000) break collection;
         }
 
         await delay(REQUEST_DELAY_MS);
