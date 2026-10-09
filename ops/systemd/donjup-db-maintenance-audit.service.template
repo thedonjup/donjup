@@ -1,9 +1,10 @@
 [Unit]
 Description=Audit DonJup DB maintenance timer
 Documentation=file:{{DOC_PATH}}
+RequiresMountsFor={{WORKDIR}}
 
 [Service]
 Type=oneshot
 WorkingDirectory={{WORKDIR}}
 Environment="PATH={{PATH}}"
-ExecStart={{PNPM}} --silent db:timer:audit:required
+ExecStart={{PYTHON}} scripts/audit-db-maintenance-timer.py --require-trigger

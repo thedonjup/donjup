@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { appendFile, readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { appendFile, readFile, writeFile, open, readdir } from "node:fs/promises";
+import { resolve, dirname } from "node:path";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -21,7 +21,7 @@ const DEFAULT_EXTENDED_MAX_RUNTIME_SECONDS = 1800;
 const DEFAULT_EXTENDED_MAX_RETRIES = 2;
 const DEFAULT_EXTENDED_RETRY_DELAY_MS = 30_000;
 const DEFAULT_MOLIT_TIMEOUT_MS = 20_000;
-const DEFAULT_SCOPED_MAX_UPSERTS = 100_000;
+const DEFAULT_SCOPED_MAX_UPSERTS = 1_000;
 const DEFAULT_GEOCODE_BATCH_SIZE = 120;
 const MAX_GEOCODE_BATCH_SIZE = 500;
 const DEFAULT_GEOCODE_DELAY_MS = 80;
@@ -217,7 +217,7 @@ export function parseScopedMaxUpserts(value) {
   return parseNonNegativeInt(
     value,
     DEFAULT_SCOPED_MAX_UPSERTS,
-    Number.MAX_SAFE_INTEGER
+    1_000
   );
 }
 
@@ -385,9 +385,11 @@ function extractTag(xml, tagName) {
 
 function parseXmlItems(xml) {
   const resultCode = extractTag(xml, "resultCode");
-  if (resultCode && resultCode !== "000" && resultCode !== "00") {
-    const resultMsg = extractTag(xml, "resultMsg") || "Unknown MOLIT API error";
-    throw new Error(`[${resultCode}] ${resultMsg}`);
+  if (!['000', '00'].includes(resultCode)) {
+    const error = new Error(`MOLIT response rejected: resultCode=${resultCode || 'missing'}`);
+    if (/SERVICE_KEY|ACCESS_DENIED|UNREGISTERED_IP/.test(xml) || ['30', '31', '32'].includes(resultCode)) error.status = 403;
+    if (/LIMITED_NUMBER|LIMITEDNUMBER/.test(xml) || resultCode === '22') error.status = 429;
+    throw error;
   }
 
   return xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
@@ -505,14 +507,48 @@ function parseRentXml(xml, regionCode) {
   });
 }
 
-async function fetchMolitRows(kind, regionCode, dealYearMonth, timeoutMs = DEFAULT_MOLIT_TIMEOUT_MS) {
+export function validateMolitPage(xml, kind, regionCode, dealYearMonth) {
+  const items = parseXmlItems(xml);
+  const rawTotal = extractTag(xml, "totalCount");
+  const totalCount = rawTotal !== null && rawTotal !== undefined && /^\d+$/.test(rawTotal.trim())
+    ? Number(rawTotal) : NaN;
+  if (!Number.isSafeInteger(totalCount) || totalCount < items.length) {
+    throw new Error('MOLIT response rejected: invalid totalCount');
+  }
+  const rows = kind === 'rent' ? parseRentXml(xml, regionCode) : parseSaleXml(xml, regionCode);
+  if (rows.length !== items.length) throw new Error('MOLIT response rejected: missing required fields');
+  for (const row of rows) {
+    const date = new Date(`${row.tradeDate}T00:00:00Z`);
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== row.tradeDate
+      || row.tradeDate.slice(0, 7).replace('-', '') !== dealYearMonth
+      || !Number.isFinite(row.sizeSqm) || row.sizeSqm <= 0
+      || (kind === 'sale' && (!Number.isFinite(row.tradePrice) || row.tradePrice <= 0))
+      || (kind === 'rent' && (!Number.isFinite(row.deposit) || row.deposit < 0
+        || !Number.isFinite(row.monthlyRent) || row.monthlyRent < 0))) {
+      throw new Error('MOLIT response rejected: invalid date/area/price');
+    }
+  }
+  // Cancellation records need a reviewed update policy, not a new sale insert.
+  if (items.some((xmlItem) => ['O', 'Y'].includes(extractTag(xmlItem, 'cdealType')?.trim()))) {
+    throw new Error('MOLIT cancellation records require review');
+  }
+  return { rows, totalCount };
+}
+
+async function fetchMolitRows(kind, regionCode, dealYearMonth, timeoutMs = DEFAULT_MOLIT_TIMEOUT_MS, beforeRequest = () => {}) {
   const apiKey = process.env.MOLIT_API_KEY;
   if (!apiKey) {
     throw new Error("MOLIT_API_KEY is required");
   }
 
   const baseUrl = kind === "rent" ? RENT_API_BASE : SALE_API_BASE;
-  const url = `${baseUrl}?serviceKey=${apiKey}&LAWD_CD=${regionCode}&DEAL_YMD=${dealYearMonth}&pageNo=1&numOfRows=9999`;
+  const rows = [];
+  let totalCount;
+  for (let pageNo = 1; pageNo <= 100; pageNo += 1) {
+  beforeRequest();
+  const url = new URL(baseUrl);
+  url.search = new URLSearchParams({ serviceKey: decodeURIComponent(apiKey), LAWD_CD: regionCode,
+    DEAL_YMD: dealYearMonth, pageNo: String(pageNo), numOfRows: '1000' }).toString();
   const response = await fetch(url, {
     headers: { "User-Agent": "DonJup/1.0" },
     signal: AbortSignal.timeout(timeoutMs),
@@ -525,9 +561,15 @@ async function fetchMolitRows(kind, regionCode, dealYearMonth, timeoutMs = DEFAU
   }
 
   const xml = await response.text();
-  return kind === "rent"
-    ? parseRentXml(xml, regionCode)
-    : parseSaleXml(xml, regionCode);
+  const page = validateMolitPage(xml, kind, regionCode, dealYearMonth);
+  if (totalCount !== undefined && totalCount !== page.totalCount) throw new Error('MOLIT totalCount changed during pagination');
+  totalCount = page.totalCount;
+  rows.push(...page.rows);
+  if (rows.length === totalCount) return rows;
+  if (!page.rows.length || rows.length > totalCount) throw new Error('MOLIT incomplete pagination');
+  await delay(REQUEST_DELAY_MS);
+  }
+  throw new Error('MOLIT pagination limit reached');
 }
 
 function delay(ms) {
@@ -583,8 +625,11 @@ async function writeExtendedManifest(manifest) {
   });
 }
 
-function isExtendedItemComplete(item) {
-  return ["fetched", "empty", "uploaded", "verified"].includes(item?.status);
+export function isExtendedItemComplete(item, month, now = new Date()) {
+  if (!["fetched", "empty", "uploaded", "verified"].includes(item?.status)) return false;
+  if (!month || !getRecentYearMonths(3, now).includes(month)) return true;
+  const age = now.getTime() - new Date(item.fetchedAt || 0).getTime();
+  return Number.isFinite(age) && age >= 0 && age < 24 * 60 * 60 * 1000;
 }
 
 function classifyRetryableError(error) {
@@ -682,7 +727,8 @@ async function extendedCollect(options) {
   const retryDelayMs = parsePositiveInt(options["retry-delay-ms"], DEFAULT_EXTENDED_RETRY_DELAY_MS, 30 * 60_000);
   const timeoutMs = parsePositiveInt(options["timeout-ms"], DEFAULT_MOLIT_TIMEOUT_MS, 120_000);
   const dryRun = parseBooleanOption(options["dry-run"], false);
-  const skipDbMonths = parseBooleanOption(options["skip-db-months"], true);
+  // A row in the DB proves neither regional coverage nor complete pagination.
+  const skipDbMonths = false;
   const collectedAt = new Date().toISOString();
   const startedMs = Date.now();
   const manifest = await loadExtendedManifest();
@@ -737,7 +783,7 @@ async function extendedCollect(options) {
           summary.skippedDbMonth += 1;
           continue;
         }
-        if (isExtendedItemComplete(manifest.items[key])) {
+        if (isExtendedItemComplete(manifest.items[key], dealYearMonth)) {
           summary.skippedComplete += 1;
           continue;
         }
@@ -751,6 +797,7 @@ async function extendedCollect(options) {
     kinds,
     months,
     regionCount: selectedRegionEntries.length,
+    regions: selectedRegionEntries.map(([code]) => code),
     startedAt: collectedAt,
     dryRun,
   };
@@ -790,8 +837,12 @@ async function extendedCollect(options) {
     let rows = [];
     for (let attempt = 1; attempt <= maxRetries + 1; attempt += 1) {
       try {
-        summary.requests += 1;
-        rows = (await fetchMolitRows(item.kind, item.regionCode, item.dealYearMonth, timeoutMs))
+        rows = (await fetchMolitRows(item.kind, item.regionCode, item.dealYearMonth, timeoutMs, () => {
+          if (summary.requests >= maxRequests || (Date.now() - startedMs) / 1000 >= maxRuntimeSeconds) {
+            throw new Error('MOLIT request/runtime budget exhausted');
+          }
+          summary.requests += 1;
+        }))
           .map((row) => ({
             ...row,
             regionName: item.regionName,
@@ -832,6 +883,10 @@ async function extendedCollect(options) {
         });
       }
       await writeExtendedManifest(manifest);
+      if ([401, 403, 429].includes(status)) {
+        summary.stopReason = `api-blocked-${status}`;
+        break;
+      }
       continue;
     }
 
@@ -853,7 +908,7 @@ async function extendedCollect(options) {
   }
 
   if (!summary.stopReason) {
-    summary.stopReason = "complete";
+    summary.stopReason = summary.failedRetryable || summary.failedFinal ? "incomplete" : "complete";
   }
   summary.finishedAt = new Date().toISOString();
   await writeJsonFile(summaryPath, summary);
@@ -870,6 +925,7 @@ async function extendedCollect(options) {
     },
   });
   console.log(JSON.stringify(summary, null, 2));
+  if (summary.stopReason !== 'complete') process.exitCode = 2;
 }
 
 async function collect(options) {
@@ -898,7 +954,7 @@ async function collect(options) {
 
   ensureLocalDataDir();
 
-  for (const kind of kinds) {
+  collection: for (const kind of kinds) {
     for (const [regionCode, regionName] of selectedRegionEntries) {
       for (const dealYearMonth of months) {
         try {
@@ -918,6 +974,7 @@ async function collect(options) {
           const message = `${kind} ${regionCode} ${dealYearMonth}: ${error.message}`;
           summary.errors.push(message);
           console.error(message);
+          if ([401, 403, 429].includes(error.status)) break collection;
         }
 
         await delay(REQUEST_DELAY_MS);
@@ -936,6 +993,7 @@ async function collect(options) {
   });
 
   console.log(JSON.stringify(summary, null, 2));
+  if (summary.errors.length) process.exitCode = 2;
 }
 
 function readJsonLines(fileName) {
@@ -1304,6 +1362,8 @@ async function dbPool() {
     ssl: { rejectUnauthorized: false },
     max: 1,
     connectionTimeoutMillis: 10_000,
+    query_timeout: 30_000,
+    statement_timeout: 30_000,
   });
 }
 
@@ -1365,13 +1425,14 @@ async function insertChunk(pool, table, columns, rows, conflictTarget) {
   return inserted;
 }
 
-async function insertChunkReturningIds(pool, table, columns, rows, conflictTarget) {
+export async function insertChunkReturningIds(pool, table, columns, rows, conflictTarget) {
   if (rows.length === 0) return [];
 
   const insertedIds = [];
+  const chunkSize = pool.uploadJournal ? 100 : UPLOAD_BATCH_SIZE;
 
-  for (let index = 0; index < rows.length; index += UPLOAD_BATCH_SIZE) {
-    const chunk = rows.slice(index, index + UPLOAD_BATCH_SIZE);
+  for (let index = 0; index < rows.length; index += chunkSize) {
+    const chunk = rows.slice(index, index + chunkSize);
     const values = [];
     const placeholders = chunk.map((row, rowIndex) => {
       const params = columns.map((column, columnIndex) => {
@@ -1390,11 +1451,59 @@ async function insertChunkReturningIds(pool, table, columns, rows, conflictTarge
       ${conflict}
       RETURNING id
     `;
-    const result = await pool.query(sql, values);
-    insertedIds.push(...result.rows.map((row) => row.id));
+    if (!pool.uploadJournal) {
+      const result = await pool.query(sql, values);
+      insertedIds.push(...result.rows.map((row) => row.id));
+      continue;
+    }
+    if (Date.now() > pool.uploadJournal.deadline) throw new Error('Upload runtime budget exhausted; resume with the same run-id');
+    const journalPath = resolve(pool.uploadJournal.dir, `commit-${randomUUID()}.json`);
+    await pool.query('BEGIN');
+    let committing = false;
+    try {
+      const result = await pool.query(sql, values);
+      const ids = result.rows.map((row) => row.id);
+      const journal = { table, ids, state: 'pending', createdAt: new Date().toISOString() };
+      await writeDurableJson(journalPath, journal);
+      committing = true;
+      await pool.query('COMMIT');
+      await writeInsertedIds(pool.uploadJournal.files[table], ids);
+      await writeDurableJson(journalPath, { ...journal, state: 'committed' });
+      insertedIds.push(...ids);
+    } catch (error) {
+      if (!committing) await pool.query('ROLLBACK');
+      // Pending records survive ambiguous COMMIT outcomes; never guess ownership.
+      throw error;
+    }
+    await delay(300);
   }
 
   return insertedIds;
+}
+
+async function writeDurableJson(path, value) {
+  const handle = await open(path, 'w');
+  try {
+    await handle.writeFile(JSON.stringify(value, null, 2));
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  const directory = await open(dirname(path), 'r');
+  try {
+    await directory.sync();
+  } finally {
+    await directory.close();
+  }
+}
+
+async function requireResolvedCommits(runId) {
+  for (const file of await readdir(runDirForId(runId))) {
+    if (file.startsWith('commit-') && file.endsWith('.json')) {
+      const journal = await readJsonFile(resolve(runDirForId(runId), file), {});
+      if (journal.state !== 'committed') throw new Error('Unresolved commit journal; reconcile before apply/rollback');
+    }
+  }
 }
 
 async function existingIds(pool, table, ids) {
@@ -2008,6 +2117,10 @@ export function requireScopedApply(options) {
   if (!scope.isScoped) {
     throw new Error("Scoped upload required: use --run-id plus --ym/--months/--from-ym/--to-ym before --apply=true");
   }
+  if (!options.regions || !['sale', 'rent', 'both'].includes(options.kind)
+    || !options['review-checksum'] || !options['backup-artifact']) {
+    throw new Error('Scoped apply requires --regions, --kind, --review-checksum and --backup-artifact');
+  }
 }
 
 export function scopedRows(rows, idFn, scope) {
@@ -2020,13 +2133,14 @@ export function scopedRows(rows, idFn, scope) {
     };
   }
 
-  const sourceRows = uniqueRows.filter((row) => rowRunId(row) === scope.runId);
+  const sourceRows = uniqueById(rows.filter((row) => rowRunId(row) === scope.runId), idFn);
   const candidateRows = [];
   const outOfScopeRows = [];
 
   for (const row of sourceRows) {
     const yearMonth = rowYearMonth(row);
-    if (yearMonth && scope.monthSet.has(yearMonth)) {
+    const dateMonth = row.tradeDate ? yearMonthFromTradeDate(row.tradeDate) : yearMonth;
+    if (yearMonth && dateMonth === yearMonth && scope.monthSet.has(yearMonth)) {
       candidateRows.push(row);
     } else {
       outOfScopeRows.push(row);
@@ -2068,7 +2182,15 @@ function scopedUploadArtifacts(runId) {
 }
 
 async function writeInsertedIds(path, ids) {
-  await writeJsonLines(path, ids.map((id) => ({ id })));
+  const previous = existsSync(path) ? readFileSync(path, 'utf8').trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line).id) : [];
+  const additions = [...new Set(ids)].filter((id) => !previous.includes(id));
+  const handle = await open(path, 'a');
+  try {
+    if (additions.length) await handle.writeFile(additions.map((id) => JSON.stringify({ id })).join('\n') + '\n');
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
 }
 
 async function markExtendedManifestUploaded(runId, months) {
@@ -2161,6 +2283,10 @@ async function rollbackUpload(options) {
 
   const apply = options.apply === "true";
   const artifacts = scopedUploadArtifacts(runId);
+  if (apply) {
+    if (process.env.DONJUP_EXTENDED_LOCK_HELD !== '1') throw new Error('Rollback apply requires atomic-lock wrapper');
+    await requireResolvedCommits(runId);
+  }
   const summaryPath = resolve(runDirForId(runId), "rollback-review.json");
   const ids = {
     sale: readInsertedIds(artifacts.saleInserted),
@@ -2374,9 +2500,17 @@ async function upload(options) {
 
   const apply = options.apply === "true";
   const scope = buildUploadScope(options);
+  const selectedRegions = options.regions ? new Set(String(options.regions).split(',')) : null;
+  const kinds = options.kind === 'sale' ? ['sale'] : options.kind === 'rent' ? ['rent'] : ['sale', 'rent'];
   const maxUpserts = parseScopedMaxUpserts(options["max-upserts"]);
-  const saleScope = scopedRows(readJsonLines(SALE_FILE), saleTransactionId, scope);
-  const rentScope = scopedRows(readJsonLines(RENT_FILE), rentTransactionId, scope);
+  const saleScope = scopedRows(kinds.includes('sale') ? readJsonLines(SALE_FILE) : [], saleTransactionId, scope);
+  const rentScope = scopedRows(kinds.includes('rent') ? readJsonLines(RENT_FILE) : [], rentTransactionId, scope);
+  for (const result of [saleScope, rentScope]) {
+    if (selectedRegions) {
+      result.outOfScopeRows.push(...result.candidateRows.filter((row) => !selectedRegions.has(row.regionCode)));
+      result.candidateRows = result.candidateRows.filter((row) => selectedRegions.has(row.regionCode));
+    }
+  }
   const saleRows = saleScope.candidateRows;
   const rentRows = rentScope.candidateRows;
   const complexesForUpload = complexRows(saleRows, rentRows);
@@ -2387,12 +2521,17 @@ async function upload(options) {
   const identityAliasRows = identityAliasRowsFromComplexRows(complexesForUpload);
   const saleRowsForDb = saleDbRows(saleRows);
   const rentRowsForDb = rentDbRows(rentRows, complexLookup);
+  const reviewChecksum = createHash('sha256').update(JSON.stringify({
+    runId: scope.runId, months: scope.months, regions: options.regions, kinds,
+    identityRows, identitySourceRows, identityAliasRows, complexesForUpload, saleRowsForDb, rentRowsForDb,
+  })).digest('hex');
   const summary = {
     mode: apply ? "apply" : "dry-run",
     scoped: scope.isScoped,
     runId: scope.runId,
     months: scope.months,
     maxUpserts,
+    reviewChecksum,
     localSaleRows: saleRows.length,
     localRentRows: rentRows.length,
     sourceSaleRows: saleScope.sourceRows.length,
@@ -2410,6 +2549,31 @@ async function upload(options) {
 
   const pool = await dbPool();
   try {
+    if (apply) {
+      if (process.env.DONJUP_EXTENDED_LOCK_HELD !== '1') throw new Error('Apply requires the atomic-lock wrapper');
+      const backup = await readJsonFile(resolve(String(options['backup-artifact'])), {});
+      if (backup.localBackupVerified !== true || backup.dbRestoreVerified !== true) {
+        throw new Error('Verified local backup and DB restore evidence required before apply');
+      }
+      const previousReview = await readJsonFile(artifacts.review, {});
+      if (options['review-checksum'] !== reviewChecksum || previousReview.reviewChecksum !== reviewChecksum) {
+        throw new Error('Review checksum mismatch; run dry-run and review first');
+      }
+      await requireResolvedCommits(scope.runId);
+      const manifest = await loadExtendedManifest();
+      const failedItems = Object.values(manifest.items).filter((item) => item.runId === scope.runId
+        && !['fetched', 'empty', 'verified', 'uploaded'].includes(item.status));
+      if (failedItems.length) throw new Error('Run contains incomplete collection items; apply refused');
+      for (const row of [...saleRows, ...rentRows]) {
+        if (!row.tradeDate || yearMonthFromTradeDate(row.tradeDate) !== rowYearMonth(row)) {
+          throw new Error('Invalid transaction date scope; apply refused');
+        }
+        const item = manifest.items[extendedItemKey(row.kind, rowYearMonth(row), row.regionCode)];
+        if (item?.runId !== scope.runId || !['fetched', 'empty', 'verified', 'uploaded'].includes(item.status)) {
+          throw new Error('Manifest coverage missing or incomplete; apply refused');
+        }
+      }
+    }
     const verification = await verifyDatabase(pool);
     if (!verification.ok) {
       throw new Error(`DB schema is not ready: ${verification.missing.join(", ")}`);
@@ -2444,11 +2608,27 @@ async function upload(options) {
     if (summary.outOfScopeSaleRows > 0 || summary.outOfScopeRentRows > 0) {
       throw new Error(`Scoped upload refused: outOfScopeRows > 0; review=${artifacts.review}`);
     }
-    if (review.totalInsertableRows > maxUpserts) {
+    const priorInserted = [artifacts.identityInserted, artifacts.identitySourceInserted, artifacts.aliasInserted,
+      artifacts.complexInserted, artifacts.saleInserted, artifacts.rentInserted]
+      .reduce((sum, path) => sum + readInsertedIds(path).length, 0);
+    if (review.totalInsertableRows + priorInserted > maxUpserts) {
       throw new Error(`Scoped upload refused: insertableRows ${review.totalInsertableRows} exceeds maxUpserts ${maxUpserts}; review=${artifacts.review}`);
     }
 
-    await pool.query("BEGIN");
+    pool.uploadJournal = {
+      dir: runDirForId(scope.runId), deadline: Date.now() + 120_000,
+      files: {
+        apt_complex_identities: artifacts.identityInserted,
+        apt_complex_identity_sources: artifacts.identitySourceInserted,
+        apt_complex_aliases: artifacts.aliasInserted,
+        apt_complexes: artifacts.complexInserted,
+        apt_transactions: artifacts.saleInserted,
+        apt_rent_transactions: artifacts.rentInserted,
+      },
+    };
+    for (const info of Object.values(rowsByTable)) {
+      info.rows.splice(0, info.rows.length, ...info.rows.filter((row) => !info.existing.has(row.id)));
+    }
     try {
       const insertedIdentityIds = await insertChunkReturningIds(
         pool,
@@ -2563,8 +2743,6 @@ async function upload(options) {
         rentRowsForDb
       );
 
-      await pool.query("COMMIT");
-
       await writeInsertedIds(artifacts.identityInserted, insertedIdentityIds);
       await writeInsertedIds(artifacts.identitySourceInserted, insertedIdentitySourceIds);
       await writeInsertedIds(artifacts.aliasInserted, insertedAliasIds);
@@ -2587,7 +2765,6 @@ async function upload(options) {
         rent: artifacts.rentInserted,
       };
     } catch (error) {
-      await pool.query("ROLLBACK");
       throw error;
     }
 
@@ -2596,7 +2773,7 @@ async function upload(options) {
       summary.extendedManifestUploadedItems = await markExtendedManifestUploaded(scope.runId, scope.months);
     }
 
-    if (summary.insertedSaleRows > 0 && options.recalculate !== "false") {
+    if (summary.insertedSaleRows > 0 && options.recalculate === "true") {
       summary.signalRecalculation = await recalculateSignals(
         pool,
         saleRows.map((row) => row.regionCode)
@@ -2605,7 +2782,7 @@ async function upload(options) {
 
     if (
       (summary.insertedComplexes > 0 || summary.insertedSaleRows > 0 || summary.insertedRentRows > 0)
-      && options["refresh-cache"] !== "false"
+      && options["refresh-cache"] === "true"
     ) {
       summary.cacheRefresh = await refreshPublicCaches(options);
     }
@@ -2665,7 +2842,7 @@ function usage() {
   node scripts/local-data-pipeline.mjs collect --kind=sale --ym=202605 --region=11680
   node scripts/local-data-pipeline.mjs extended-collect --batch=A --max-requests=140
   node scripts/local-data-pipeline.mjs upload --run-id=extended-period-... --ym=202604
-  node scripts/local-data-pipeline.mjs upload --run-id=extended-period-... --ym=202604 --apply=true --max-upserts=100000
+  # Apply only through the atomic-lock runner with reviewed checksum and verified backup evidence.
   node scripts/local-data-pipeline.mjs rollback-upload --run-id=extended-period-... --apply=true
   node scripts/local-data-pipeline.mjs recalculate-signals
   node scripts/local-data-pipeline.mjs reconcile-rents --apply=true

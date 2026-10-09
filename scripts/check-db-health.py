@@ -403,6 +403,19 @@ def build_warnings(
                 )
             )
 
+    for kind in ("sale", "rent"):
+        latest = (db_snapshot or {}).get("dateBounds", {}).get(kind, {}).get("max_trade_date")
+        if latest:
+            try:
+                age_days = (datetime.now(timezone.utc).date() - datetime.fromisoformat(str(latest)[:10]).date()).days
+                if age_days > 45:
+                    warnings.append(warning_entry(
+                        f"{kind}_data_stale", "Latest transaction is older than 45 days; collection recovery required.",
+                        age_days, 45,
+                    ))
+            except ValueError:
+                warnings.append(warning_entry(f"{kind}_date_invalid", "Invalid latest transaction date.", 1, 0))
+
     pageview_count = table_count(db_snapshot, "page_views")
     pageview_limit = thresholds["pageviewRowsWarn"]
     if pageview_count is not None and pageview_limit > 0 and pageview_count >= pageview_limit:

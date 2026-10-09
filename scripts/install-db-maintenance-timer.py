@@ -59,6 +59,7 @@ def template_context() -> dict[str, str]:
     return {
         "WORKDIR": str(ROOT),
         "PNPM": pnpm,
+        "PYTHON": sys.executable,
         "PATH": systemd_path(os.environ.get("PATH", ""), pnpm),
         "DOC_PATH": str(ROOT / "docs" / "database-free-tier-plan.md"),
     }

@@ -271,13 +271,20 @@ def main() -> int:
     parser.add_argument("--batches", default=DEFAULT_BACKUP_BATCHES)
     parser.add_argument("--months", type=int, default=1)
     parser.add_argument("--kind", choices=["sale", "rent", "both"], default="both")
-    parser.add_argument("--upload", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--upload", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--mode", choices=["observe", "collect", "apply"], default="observe")
     parser.add_argument("--verify-retries", type=int, default=5)
     parser.add_argument("--verify-delay", type=int, default=15)
     parser.add_argument("--prune-run-days", type=int, default=30)
     parser.add_argument("--prune-dry-run", action="store_true")
     parser.add_argument("--no-prune", action="store_true")
     args = parser.parse_args()
+    if args.mode == "observe":
+        args.no_backup = True
+        args.no_prune = True
+        args.upload = False
+    elif args.upload or args.mode == "apply":
+        parser.error("automatic apply is disabled; use reviewed scoped upload manually")
 
     if args.max_backup_age_hours < 0:
         parser.error("--max-backup-age-hours must be 0 or greater")

@@ -122,11 +122,15 @@ def main() -> int:
     parser.add_argument("--max-retries", type=int, default=2)
     parser.add_argument("--retry-delay-ms", type=int, default=30000)
     parser.add_argument("--timeout-ms", type=int, default=20000)
-    parser.add_argument("--max-upserts", type=int, default=100000)
+    parser.add_argument("--max-upserts", type=int, default=1000)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--refresh-cache", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--recalculate", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--review-checksum")
+    parser.add_argument("--backup-artifact")
+    parser.add_argument("--refresh-cache", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--recalculate", action=argparse.BooleanOptionalAction, default=False)
     args = parser.parse_args()
+    if args.apply and (not args.region or not args.ym or not args.review_checksum or not args.backup_artifact):
+        parser.error("apply requires explicit --region, --ym, --review-checksum and --backup-artifact")
 
     run_id = args.run_id or f"extended-period-{timestamp()}-{args.batch.lower()}"
     run_dir = runs_dir() / run_id
@@ -203,9 +207,12 @@ def main() -> int:
             f"--run-id={run_id}",
             f"--ym={','.join(months)}",
             f"--max-upserts={args.max_upserts}",
+            f"--kind={args.kind}",
             f"--refresh-cache={'true' if args.refresh_cache else 'false'}",
             f"--recalculate={'true' if args.recalculate else 'false'}",
         ]
+        if args.region:
+            upload_command.append(f"--regions={args.region}")
         dry_run = run_command(upload_command, log_path, "scoped upload dry-run")
         summary["uploadDryRunExit"] = dry_run.returncode
         summary["uploadDryRun"] = last_json_object(dry_run.stdout)
@@ -216,7 +223,7 @@ def main() -> int:
             return dry_run.returncode
 
         if args.apply:
-            apply_command = upload_command + ["--apply=true"]
+            apply_command = upload_command + ["--apply=true", f"--review-checksum={args.review_checksum}", f"--backup-artifact={args.backup_artifact}"]
             applied = run_command(apply_command, log_path, "scoped upload apply")
             summary["uploadApplyExit"] = applied.returncode
             summary["uploadApply"] = last_json_object(applied.stdout)

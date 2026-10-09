@@ -145,12 +145,14 @@ def main() -> int:
     parser.add_argument(
         "--upload",
         action=argparse.BooleanOptionalAction,
-        default=True,
-        help="upload after collection when DB verification passes, default: true",
+        default=False,
+        help="explicit upload opt-in; default: collect locally only",
     )
     parser.add_argument("--verify-retries", type=int, default=3)
     parser.add_argument("--verify-delay", type=int, default=10)
     args = parser.parse_args()
+    if args.upload:
+        parser.error("backup collects locally only; upload requires a separate reviewed scoped run")
 
     if os.environ.get("DONJUP_EXTENDED_LOCK_HELD") != "1":
         try:

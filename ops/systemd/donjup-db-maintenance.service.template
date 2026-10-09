@@ -1,9 +1,10 @@
 [Unit]
 Description=DonJup DB maintenance
 Documentation=file:{{DOC_PATH}}
+RequiresMountsFor={{WORKDIR}}
 
 [Service]
 Type=oneshot
 WorkingDirectory={{WORKDIR}}
 Environment="PATH={{PATH}}"
-ExecStart={{PNPM}} --silent db:maintenance
+ExecStart={{PYTHON}} scripts/run-db-maintenance.py --mode=observe --no-upload --no-prune
